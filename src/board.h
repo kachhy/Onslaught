@@ -1,6 +1,7 @@
 #ifndef BOARD_H
 #define BOARD_H
 
+#include <string.h> // for memset
 #include <vector>
 #include "bitboard.h"
 
@@ -21,7 +22,7 @@ enum Square {
 };
 
 enum Piece {
-    WHITE_PAWN = 0
+    WHITE_PAWN = 0,
     WHITE_KNIGHT,
     WHITE_BISHOP,
     WHITE_ROOK,
@@ -34,7 +35,7 @@ enum Piece {
     BLACK_QUEEN,
     BLACK_KING,
     NO_PIECE
-} Pieces;
+};
 
 // STM enum
 enum Side {
@@ -53,9 +54,10 @@ class Board {
 public:
     Board(); // Initializes board to default starting state
 
-    Piece pieceAt() const;
+    Piece pieceAt(uint8_t sq) const;
     void setOcc();
     void printBoard() const;
+    void clear();
 private:
     // Note: 0 is white side, 64 is black side
     BitBoard piece_bb[12];

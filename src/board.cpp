@@ -1,12 +1,9 @@
 #include "board.h"
 
 Board::Board() {
-    history.reserve(MAX_PLY);
+    clear();
 
-    // Clear all bitboards
-    for (uint8_t p = WHITE_PAWN; p <= BLACK_KING; p++) {
-        piece_bb[p] = 0ULL;
-    }
+    history.reserve(MAX_PLY);
 
     // Pawns
     piece_bb[WHITE_PAWN] = 0x000000000000FF00ULL;
@@ -43,14 +40,6 @@ Board::Board() {
     // Black Royals
     setBit(piece_bb[BLACK_QUEEN], D8);
     setBit(piece_bb[BLACK_KING],  E8);
-
-    // EP squares and Castling rights
-    ep_square = NO_SQUARE;
-    castling  = 0xF;
-
-    // Counters
-    move_number = 1;
-    fmr         = 0;
 
     setOcc();
 }
@@ -130,4 +119,22 @@ void Board::printBoard() const {
             std::cout << '\n';
     }
     std::cout << std::endl;
+}
+
+void Board::clear() {
+    memset(piece_bb, 0, sizeof(piece_bb));
+    memset(occ, 0, sizeof(occ));
+    history.clear();
+
+    // Turns
+    stm  = WHITE;
+    xstm = BLACK;
+
+    // Counters
+    move_number = 1;
+    fmr         = 0;
+
+    // EP squares and Castling rights
+    ep_square = NO_SQUARE;
+    castling  = 0xF;
 }
