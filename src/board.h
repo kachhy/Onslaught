@@ -21,7 +21,7 @@ enum Square {
 };
 
 enum Piece {
-    WHITE_PAWN = 0,
+    WHITE_PAWN = 0
     WHITE_KNIGHT,
     WHITE_BISHOP,
     WHITE_ROOK,
@@ -33,6 +33,7 @@ enum Piece {
     BLACK_ROOK,
     BLACK_QUEEN,
     BLACK_KING,
+    NO_PIECE
 } Pieces;
 
 // STM enum
@@ -52,11 +53,13 @@ class Board {
 public:
     Board(); // Initializes board to default starting state
 
+    Piece pieceAt() const;
     void setOcc();
+    void printBoard() const;
 private:
     // Note: 0 is white side, 64 is black side
-    BitBoard[12] piece_bb;
-    BitBoard[3] occ;
+    BitBoard piece_bb[12];
+    BitBoard occ[3];
     CastlingRights castling; // castling mask (i.e. 1111 = KQkq)
     Square ep_square;
     Side stm; // Side to move
