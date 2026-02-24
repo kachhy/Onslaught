@@ -4,8 +4,9 @@ Board::Board() {
     history.reserve(MAX_PLY);
 
     // Clear all bitboards
-    for (uint8_t p = WHITE_PAWN; p <= BLACK_KING; p++)
+    for (uint8_t p = WHITE_PAWN; p <= BLACK_KING; p++) {
         piece_bb[p] = 0ULL;
+    }
 
     // Pawns
     piece_bb[WHITE_PAWN] = 0x000000000000FF00ULL;
