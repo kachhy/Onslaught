@@ -3,6 +3,7 @@
 
 #include <string.h> // for memset
 #include <vector>
+#include <string>
 #include "bitboard.h"
 
 typedef uint8_t CastlingRights;
@@ -57,6 +58,7 @@ public:
     Piece pieceAt(uint8_t sq) const;
     void setOcc();
     void printBoard() const;
+    bool loadFEN(const std::string& fen);
     void clear();
 private:
     // Note: 0 is white side, 64 is black side
