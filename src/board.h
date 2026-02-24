@@ -36,7 +36,7 @@ enum Piece {
 } Pieces;
 
 // STM enum
-enum {
+enum Side {
     WHITE = 0,
     BLACK,
     BOTH // For occupancy only
@@ -59,8 +59,8 @@ private:
     BitBoard[3] occ;
     CastlingRights castling; // castling mask (i.e. 1111 = KQkq)
     Square ep_square;
-    uint8_t stm; // Side to move
-    uint8_t xstm; // Not side to move
+    Side stm; // Side to move
+    Side xstm; // Not side to move
 
     // Move counting
     uint8_t fmr; // For fifty-move rule draw
