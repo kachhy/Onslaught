@@ -7,6 +7,13 @@
 #include "bitboard.h"
 
 typedef uint8_t CastlingRights;
+typedef uint32_t Move;
+
+#define GenerateMove(from, to, piece, flags) (from) | ((to) << 6) | ((piece) << 12) | ((flags) << 16)
+#define From(move)                           ((static_cast<int>(move) & 0x0003f) >> 0)
+#define To(move)                             ((static_cast<int>(move) & 0x00fc0) >> 6)
+#define MovePiece(move)                      ((static_cast<int>(move) & 0x0f000) >> 12)
+#define Flags(move)                          ((static_cast<int>(move) & 0xf0000) >> 16)
 
 #define MAX_PLY    256
 
