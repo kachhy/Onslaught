@@ -70,7 +70,7 @@ Piece Board::pieceAt(uint8_t sq) const {
 
     for (uint8_t p = WHITE_PAWN; p <= BLACK_KING; p++) {
         if (getBit(piece_bb[p], sq)) {
-            return p;
+            return static_cast<Piece>(p);
         }
     }
 
