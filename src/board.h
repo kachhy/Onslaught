@@ -78,8 +78,8 @@ private:
     Side xstm; // Not side to move
 
     // Move counting
-    uint8_t fmr; // For fifty-move rule draw
     uint32_t move_number;
+    uint8_t fmr; // For fifty-move rule draw
 
     // History
     std::vector<BoardHistory> history;
