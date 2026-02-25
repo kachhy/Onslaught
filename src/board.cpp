@@ -80,19 +80,19 @@ Piece Board::pieceAt(uint8_t sq) const {
 void Board::printBoard() const {
     for (int8_t i = 63; i >= 0; i--) {
         switch (pieceAt(i)) {
-        case WHITE_PAWN: std::cout << 'P'; break;
-        case WHITE_KNIGHT: std::cout << 'N'; break;
-        case WHITE_BISHOP: std::cout << 'B'; break;
-        case WHITE_ROOK: std::cout << 'R'; break;
-        case WHITE_QUEEN: std::cout << 'Q'; break;
-        case WHITE_KING: std::cout << 'K'; break;
-        case BLACK_PAWN: std::cout << 'p'; break;
-        case BLACK_KNIGHT: std::cout << 'n'; break;
-        case BLACK_BISHOP: std::cout << 'b'; break;
-        case BLACK_ROOK: std::cout << 'r'; break;
-        case BLACK_QUEEN: std::cout << 'q'; break;
-        case BLACK_KING: std::cout << 'k'; break;
-        case NO_PIECE: std::cout << '.'; break;
+        case WHITE_PAWN: std::cout << "P "; break;
+        case WHITE_KNIGHT: std::cout << "N "; break;
+        case WHITE_BISHOP: std::cout << "B "; break;
+        case WHITE_ROOK: std::cout << "R "; break;
+        case WHITE_QUEEN: std::cout << "Q "; break;
+        case WHITE_KING: std::cout << "K "; break;
+        case BLACK_PAWN: std::cout << "p "; break;
+        case BLACK_KNIGHT: std::cout << "n "; break;
+        case BLACK_BISHOP: std::cout << "b "; break;
+        case BLACK_ROOK: std::cout << "r "; break;
+        case BLACK_QUEEN: std::cout << "q "; break;
+        case BLACK_KING: std::cout << "k "; break;
+        case NO_PIECE: std::cout << ". "; break;
         }
 
         if (i % 8 == 0)
