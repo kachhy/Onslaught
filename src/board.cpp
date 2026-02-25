@@ -4,7 +4,6 @@
 
 Board::Board() {
     clear();
-
     history.reserve(MAX_PLY);
 
     // Pawns
@@ -44,6 +43,11 @@ Board::Board() {
     setBit(piece_bb[BLACK_KING],  E8);
 
     setOcc();
+}
+
+Board(const std::string& fen) {
+    history.reserve(MAX_PLY);
+    loadFEN(fen);
 }
 
 void Board::setOcc() {

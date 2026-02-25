@@ -61,6 +61,7 @@ struct BoardHistory {
 class Board {
 public:
     Board(); // Initializes board to default starting state
+    Board(const std::string& fen);
 
     Piece pieceAt(uint8_t sq) const;
     void setOcc();
