@@ -45,7 +45,7 @@ Board::Board() {
     setOcc();
 }
 
-Board(const std::string& fen) {
+Board::Board(const std::string& fen) {
     history.reserve(MAX_PLY);
     loadFEN(fen);
 }
