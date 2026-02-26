@@ -48,6 +48,12 @@ int getMSB(const BitBoard& bitboard) {
     return 63 ^ __builtin_clzll(bitboard); // count leading zeros
 }
 
+int popLSB(BitBoard& bitboard) {
+    int lsb = getLSB(bitboard);
+    bitboard &= bitboard - 1;
+    return lsb;
+}
+
 void setBit(BitBoard& bitboard, int bit) {
     bitboard |= (BitBoard(1) << bit);
 }
@@ -95,9 +101,9 @@ BitBoard shiftPawnCapturesEast(const BitBoard& pawns, Side side) {
 void printBitboard(const BitBoard& bitboard) {
     for (int i = 0; i < 64; i++) {
         if (i % 8 == 0) {
-            std::cout << "\n" << (i / 8) << " ";
+            std::cout << "\n" << (8 - (i >> 3)) << " ";
         }
-        std::cout << getBit(bitboard, i);
+        std::cout << getBit(bitboard, i) << " ";
     }
-    std::cout << "\n  abcdefgh\n";
+    std::cout << "\n  a b c d e f g h\n";
 }

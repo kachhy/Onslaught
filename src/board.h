@@ -4,6 +4,7 @@
 #include <string.h> // for memset
 #include <vector>
 #include <string>
+#include "attacks.h"
 #include "bitboard.h"
 #include "types.h"
 
@@ -50,6 +51,7 @@ public:
     void printBoard() const;
     bool loadFEN(const std::string& fen);
     void clear();
+    BitBoard getOcc(Side side) const;
 private:
     // Note: 0 is white side, 64 is black side
     BitBoard piece_bb[12];
