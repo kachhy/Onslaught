@@ -41,6 +41,9 @@ int main() {
     // Get bishop attacks from this board
     printBitboard(getBishopAttacks(C1, b.getOcc(BOTH)));
     printBitboard(getBishopAttacks(G2, b.getOcc(BOTH)));
+
+    // Get queen attacks from this board
+    printBitboard(getQueenAttacks(D1, b.getOcc(BOTH)));
     
     return 0;
 }
