@@ -2,13 +2,26 @@
 #include <sstream>
 #include <cctype>
 
+DefaultPiece promPiece(Move move) {
+    if (Flags(move) & QUEEN_PROMO_FLAG) {
+        return KNIGHT;
+    }
+    if (Flags(move) & KNIGHT_PROMO_FLAG) {
+        return KNIGHT;
+    }
+    if (Flags(move) & ROOK_PROMO_FLAG) {
+        return ROOK;
+    }
+    return BISHOP;
+}
+
 Board::Board() {
     clear();
     history.reserve(MAX_PLY);
 
     // Pawns
-    piece_bb[WHITE_PAWN] = 0x000000000000FF00ULL;
-    piece_bb[BLACK_PAWN] = 0x00FF000000000000ULL;
+    piece_bb[WHITE_PAWN] = 0x00FF000000000000ULL;
+    piece_bb[BLACK_PAWN] = 0x000000000000FF00ULL;
 
     // White Knights
     setBit(piece_bb[WHITE_KNIGHT], B1);
@@ -51,11 +64,20 @@ Board::Board() {
     fmr         = 0;
 
     setOcc();
+    setPieceBoard();
 }
 
 Board::Board(const std::string& fen) {
     history.reserve(MAX_PLY);
     loadFEN(fen);
+}
+
+void Board::setPieceBoard() {
+    memset(piece_board, 0, sizeof(piece_board)); // TODO: unclear if we need this -> test
+
+    for (uint8_t i = 0; i < 64; i++) {
+        piece_board[i] = pieceAt(i);
+    }
 }
 
 void Board::setOcc() {
@@ -161,6 +183,20 @@ void Board::clear() {
     // EP squares and Castling rights
     ep_square = NO_SQUARE;
     castling  = 0xF;
+
+    for (uint8_t i = 0; i < 64; i++) {
+        castling_rights[i] = 0xf;
+    }
+
+    // White king and rooks
+    castling_rights[E1] = 0xf ^ (WHITE_KS | WHITE_QS);
+    castling_rights[H1] = 0xf ^ WHITE_KS;
+    castling_rights[A1] = 0xf ^ WHITE_QS;
+
+    // Black king and rooks
+    castling_rights[E8] = 0xf ^ (BLACK_KS | BLACK_QS);
+    castling_rights[H8] = 0xf ^ BLACK_KS;
+    castling_rights[A8] = 0xf ^ BLACK_QS;
 }
 
 bool Board::loadFEN(const std::string &fen) {
@@ -271,9 +307,122 @@ bool Board::loadFEN(const std::string &fen) {
     }
 
     setOcc();
+    setPieceBoard();
     return true;
 }
 
 BitBoard Board::getOcc(Side side) const {
     return occ[side];
+}
+
+void Board::makeMove(Move move) {
+    Square from      = From(move);
+    Square to        = To(move);
+    Piece piece      = MovePiece(move);
+    int captured     = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
+
+    history.emplace_back(castling, ep_square, fmr);
+
+    fmr++;
+    flipBits(piece_bb[piece], from, to);
+    flipBits(occ[stm], from, to);
+    flipBits(occ[BOTH], from, to);
+
+    piece_board[from] = NO_PIECE;
+    piece_board[to]   = piece;
+
+    if (Castle(move)) {
+        std::cout << "castle\n";
+        switch (to)
+        {
+            // K
+            case G1:
+                // move H rook
+                popBit(piece_bb[WHITE_ROOK], H1);
+                setBit(piece_bb[WHITE_ROOK], F1);
+                flipBit(occ[stm], H1);
+                flipBit(occ[BOTH], H1);
+                flipBit(occ[stm], F1);
+                flipBit(occ[BOTH], F1);
+                break;
+            // Q
+            case C1:
+                // move A rook
+                popBit(piece_bb[WHITE_ROOK], A1);
+                setBit(piece_bb[WHITE_ROOK], D1);
+                flipBit(occ[stm], A1);
+                flipBit(occ[BOTH], A1);
+                flipBit(occ[stm], D1);
+                flipBit(occ[BOTH], D1);
+                break;
+            // k
+            case G8:
+                popBit(piece_bb[BLACK_ROOK], H8);
+                setBit(piece_bb[BLACK_ROOK], F8);
+                flipBit(occ[stm], H8);
+                flipBit(occ[BOTH], H8);
+                flipBit(occ[stm], F8);
+                flipBit(occ[BOTH], F8);
+                break;
+            // q
+            case C8:
+                popBit(piece_bb[BLACK_ROOK], A8);
+                setBit(piece_bb[BLACK_ROOK], D8);
+                flipBit(occ[stm], A8);
+                flipBit(occ[BOTH], A8);
+                flipBit(occ[stm], D8);
+                flipBit(occ[BOTH], D8);
+                break;
+        }
+    }
+    else if (Capture(move)) {
+        std::cout << "capture\n";
+        Square sq = IsEP(move) ? static_cast<Square>(static_cast<int>(to) - (stm == WHITE ? NORTH : SOUTH)) : to;
+
+        if (IsEP(move)) {
+            piece_board[sq] = NO_PIECE;
+        }
+
+        flipBit(piece_bb[captured], sq);
+        flipBit(occ[xstm], sq);
+        flipBit(occ[BOTH], sq);
+
+        fmr = 0;
+    }
+
+    ep_square = NO_SQUARE;
+
+    if (castling) {
+        castling &= castling_rights[from];
+        castling &= castling_rights[to];
+    }
+
+    // Special pawn rules
+    if (piece == makePiece(PAWN, stm)) {
+        // Establish EP square if necessary
+        if ((from ^ to) == 16) {
+            Square new_ep_square = static_cast<Square>(to - (stm == WHITE ? NORTH : SOUTH));
+
+            if (getPawnAttacks(new_ep_square, stm) & piece_bb[makePiece(PAWN, xstm)]) {
+                ep_square = new_ep_square;
+            }
+        }
+        else if (Prom(move)) { // Promotion
+            int prom_piece = makePiece(promPiece(move), stm);
+            
+            flipBit(piece_bb[piece], to);
+            flipBit(piece_bb[prom_piece], to);
+
+            piece_board[to] = static_cast<Piece>(prom_piece);
+        }
+
+        fmr = 0;
+    }
+
+    move_number++;
+    xstm = stm;
+    stm = xstm == WHITE ? BLACK : WHITE; // optimizable
+}
+
+void Board::undoMove(Move move) {
 }

@@ -8,6 +8,9 @@
 
 typedef uint64_t BitBoard;
 
+#define NORTH -8
+#define SOUTH 8
+
 #define A_FILE 0x0101010101010101ULL
 #define B_FILE 0x0202020202020202ULL
 #define C_FILE 0x0404040404040404ULL

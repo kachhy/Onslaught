@@ -67,7 +67,7 @@ void flipBit(BitBoard& bitboard, int bit) {
 }
 
 void flipBits(BitBoard& bitboard, int bit_1, int bit_2) {
-    bitboard ^= bit1 ^ bit2;
+    bitboard ^= (BitBoard(1) << bit_1) | (BitBoard(1) << bit_2);
 }
 
 int getRank(Square square) {
