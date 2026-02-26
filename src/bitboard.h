@@ -2,6 +2,7 @@
 #define BITBOARD_H
 
 #include <iostream>
+#include <stdlib.h>
 #include <cstdint>
 
 typedef uint64_t BitBoard;
@@ -34,7 +35,25 @@ BitBoard shiftWest(const BitBoard& bitboard);
 BitBoard shiftNorthWest(const BitBoard& bitboard);
 
 int getBit(const BitBoard& bitboard, int bit);
-void setBit(BitBoard& bitboard, int square);
+int bitCount(const BitBoard& bitboard);
+int getLSB(const BitBoard& bitboard);
+int getMSB(const BitBoard& bitboard);
+
+void setBit(BitBoard& bitboard, int bit);
+void popBit(BitBoard& bitboard, int bit);
+void flipBit(BitBoard& bitboard, int bit);
+
+int getRank(int square);
+int getFile(int square);
+
+BitBoard rankMask(int rank);
+BitBoard fileMask(int file);
+
+BitBoard shiftPawnPushes(const BitBoard& pawns, int side);
+BitBoard shiftPawnAttacks(const BitBoard& pawns, int side);
+BitBoard shiftPawnCapturesWest(const BitBoard& pawns, int side);
+BitBoard shiftPawnCapturesEast(const BitBoard& pawns, int side);
+
 void printBitboard(const BitBoard& bitboard);
 
 #endif // BOARD_H
