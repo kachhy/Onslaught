@@ -4,6 +4,7 @@ void initAttacks() {
     populateBishopMasks();
     populateRookMasks();
 
+    populatePawnAttacks();
     populateKingAttacks();
     populateKnightAttacks();
     populateBishopAttacks();
@@ -14,6 +15,8 @@ int main() {
     // Populate attacks
     initAttacks();
 
+    printBitboard(pawn_attacks[WHITE][E4]);
+    printBitboard(pawn_attacks[BLACK][H3]);
     printBitboard(king_attacks[H2]);
     printBitboard(knight_attacks[E4]);
     printBitboard(knight_attacks[A1]);

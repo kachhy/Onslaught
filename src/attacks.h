@@ -6,10 +6,11 @@
 extern BitBoard bishop_masks[64];
 extern BitBoard rook_masks[64];
 
-extern BitBoard king_attacks[64];
+extern BitBoard pawn_attacks[2][64];
 extern BitBoard knight_attacks[64];
 extern BitBoard bishop_attacks[64][4096];
 extern BitBoard rook_attacks[64][4096];
+extern BitBoard king_attacks[64];
 
 // OTF attack generation
 BitBoard generateKingAttacks(Square sq);
@@ -26,6 +27,7 @@ void populateRookMasks();
 void populateBishopMasks();
 
 // For attacks
+void populatePawnAttacks();
 void populateKingAttacks();
 void populateKnightAttacks();
 void populateBishopAttacks();

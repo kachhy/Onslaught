@@ -3,10 +3,11 @@
 BitBoard bishop_masks[64];
 BitBoard rook_masks[64];
 
-BitBoard king_attacks[64];
+BitBoard pawn_attacks[2][64];
 BitBoard knight_attacks[64];
 BitBoard bishop_attacks[64][4096];
 BitBoard rook_attacks[64][4096];
+BitBoard king_attacks[64];
 
 const int bishop_relevant_bits[64] = {6, 5, 5, 5, 5, 5, 5, 6,
                                       5, 5, 5, 5, 5, 5, 5, 5,
@@ -25,6 +26,23 @@ const int rook_relevant_bits[64] = {12, 11, 11, 11, 11, 11, 11, 12,
                                     11, 10, 10, 10, 10, 10, 10, 11,
                                     11, 10, 10, 10, 10, 10, 10, 11,
                                     12, 11, 11, 11, 11, 11, 11, 12};
+
+BitBoard generatePawnAttacks(Square sq, Side side) {
+    BitBoard attacks = BitBoard(0);
+    BitBoard initial = BitBoard(0);
+    setBit(initial, sq);
+
+    if (side == WHITE) {
+        attacks |= shiftNorthEast(initial);
+        attacks |= shiftNorthWest(initial);
+    }
+    else {
+        attacks |= shiftSouthEast(initial);
+        attacks |= shiftSouthWest(initial);
+    }
+
+    return attacks;
+}
 
 BitBoard generateKingAttacks(Square sq) {
     BitBoard attacks = BitBoard(0);
@@ -237,6 +255,13 @@ void populateBishopMasks() {
 void populateRookMasks() {
     for (uint8_t sq = 0; sq < 64; sq++) {
         rook_masks[sq] = getRookMask(static_cast<Square>(sq));
+    }
+}
+
+void populatePawnAttacks() {
+    for (uint8_t sq = 0; sq < 64; sq++) {
+        pawn_attacks[WHITE][sq] = generatePawnAttacks(static_cast<Square>(sq), WHITE);
+        pawn_attacks[BLACK][sq] = generatePawnAttacks(static_cast<Square>(sq), BLACK);
     }
 }
 
