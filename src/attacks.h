@@ -3,19 +3,30 @@
 
 #include "bitboard.h"
 
+extern BitBoard rook_masks[64];
+extern BitBoard bishop_masks[64];
+
 extern BitBoard king_attacks[64];
 extern BitBoard knight_attacks[64];
+extern BitBoard bishop_attacks[64][4096];
+extern BitBoard rook_attacks[64][4096];
 
 // OTF attack generation
 BitBoard generateKingAttacks(Square sq);
 BitBoard generateKnightAttacks(Square sq);
 
 // Population functions
+// For masks
+void populateRookMasks();
+void populateBishopMasks();
+
+// For attacks
 void populateKingAttacks();
 void populateKnightAttacks();
+void populateBishopAttacks();
+void populateRookAttacks();
 
 // Magic numbers
-
 constexpr BitBoard rook_magics[64] = {
     0xa8002c000108020ULL,
     0x6c00049b0002001ULL,

@@ -1,6 +1,9 @@
 #include "board.h"
 
 void initAttacks() {
+    populateRookMasks();
+    populateBishopMasks();
+
     populateKingAttacks();
     populateKnightAttacks();
 }
