@@ -97,7 +97,7 @@ void printBitboard(const BitBoard& bitboard) {
         if (i % 8 == 0) {
             std::cout << "\n" << (i / 8) << " ";
         }
-        std::cout << getBit(bitboard, i);
+        std::cout << getBit(bitboard, i) << " ";
     }
-    std::cout << "\n  abcdefgh\n";
+    std::cout << "\n  a b c d e f g h\n";
 }
