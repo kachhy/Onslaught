@@ -85,8 +85,44 @@ Piece Board::pieceAt(uint8_t sq) const {
     return NO_PIECE; // Exceptional state
 }
 
+std::string Board::getCastlingString() const {
+    std::string out = "";
+    if (castling & 8) {
+        out += 'K';
+    }
+    else {
+        out += '-';
+    }
+
+    if (castling & 4) {
+        out += 'Q';
+    }
+    else {
+        out += '-';
+    }
+
+    if (castling & 2) {
+        out += 'k';
+    }
+    else {
+        out += '-';
+    }
+
+    if (castling & 1) {
+        out += 'q';
+    }
+    else {
+        out += '-';
+    }
+
+    return out;
+}
+
 void Board::printBoard() const {
     for (int8_t i = 0; i < 64; i++) {
+        if (i % 8 == 0) {
+            std::cout << "\n" << (8 - (i >> 3)) << " ";
+        }
         switch (pieceAt(i)) {
         case WHITE_PAWN: std::cout << "P "; break;
         case WHITE_KNIGHT: std::cout << "N "; break;
@@ -102,11 +138,11 @@ void Board::printBoard() const {
         case BLACK_KING: std::cout << "k "; break;
         case NO_PIECE: std::cout << ". "; break;
         }
-
-        if (i % 8 == 7)
-            std::cout << '\n';
     }
-    std::cout << std::endl;
+    std::cout << "\n  a b c d e f g h\n"
+              << "\nEP Square: " << board_coords[ep_square] 
+              << "\nCastling: " << getCastlingString()
+              << "\n" << std::endl;
 }
 
 void Board::clear() {

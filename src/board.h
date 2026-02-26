@@ -48,6 +48,7 @@ public:
 
     Piece pieceAt(uint8_t sq) const;
     void setOcc();
+    std::string getCastlingString() const;
     void printBoard() const;
     bool loadFEN(const std::string& fen);
     void clear();

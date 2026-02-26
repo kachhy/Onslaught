@@ -44,6 +44,10 @@ int main() {
 
     // Get queen attacks from this board
     printBitboard(getQueenAttacks(D1, b.getOcc(BOTH)));
+
+    // Check EP square
+    b.loadFEN("rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3");
+    b.printBoard();
     
     return 0;
 }

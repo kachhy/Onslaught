@@ -20,4 +20,6 @@ enum Side {
     BOTH // For occupancy only
 };
 
+extern const char* board_coords[];
+
 #endif // TYPES_H
