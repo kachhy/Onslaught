@@ -6,6 +6,8 @@ void initAttacks() {
 
     populateKingAttacks();
     populateKnightAttacks();
+    populateRookAttacks();
+    populateBishopAttacks();
 }
 
 int main() {

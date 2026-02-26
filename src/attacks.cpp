@@ -121,6 +121,95 @@ BitBoard getBishopMask(Square sq) {
     return attacks;
 }
 
+BitBoard computeBishopAttacks(Square sq, BitBoard blockers) {
+    BitBoard attacks = BitBoard(0);
+
+    int8_t initial_row = getRank(sq);
+    int8_t initial_file = getFile(sq);
+
+    for (int8_t rank = initial_row + 1, file = initial_file + 1; rank < 8 && file < 8; rank++, file++) {
+        attacks |= (1ULL << (rank * 8 + file));
+        if (getBit(blockers, rank * 8 + file)) {
+            break;
+        }
+    }
+
+    for (int8_t rank = initial_row - 1, file = initial_file + 1; rank >= 0 && file < 8; rank--, file++) {
+        attacks |= (1ULL << (rank * 8 + file));
+        if (getBit(blockers, rank * 8 + file)) {
+            break;
+        }
+    }
+
+    for (int8_t rank = initial_row + 1, file = initial_file - 1; rank < 8 && file >= 0; rank++, file--) {
+        attacks |= (1ULL << (rank * 8 + file));
+        if (getBit(blockers, rank * 8 + file)) {
+            break;
+        }
+    }
+
+    for (int8_t rank = initial_row - 1, file = initial_file - 1; rank >= 0 && file >= 0; rank--, file--) {
+        attacks |= (1ULL << (rank * 8 + file));
+        if (getBit(blockers, rank * 8 + file)) {
+            break;
+        }
+    }
+
+    return attacks;
+}
+
+BitBoard computeRookAttacks(Square sq, BitBoard blockers) {
+    BitBoard attacks = BitBoard(0);
+
+    int8_t initial_rank = getRank(sq);
+    int8_t initial_file = getFile(sq);
+
+    for (int8_t rank = initial_rank + 1; rank < 8; rank++) {
+        attacks |= (1ULL << (rank * 8 + initial_file));
+        if (getBit(blockers, rank * 8 + initial_file)) {
+            break;
+        }
+    }
+
+    for (int8_t rank = initial_rank - 1; rank >= 0; rank--) {
+        attacks |= (1ULL << (rank * 8 + initial_file));
+        if (getBit(blockers, rank * 8 + initial_file)) {
+            break;
+        }
+    }
+
+    for (int8_t file = initial_file + 1; file < 8; file++) {
+        attacks |= (1ULL << (initial_rank * 8 + file));
+        if (getBit(blockers, initial_rank * 8 + file)) {
+            break;
+        }
+    }
+
+    for (int8_t file = initial_file - 1; file >= 0; file--) {
+        attacks |= (1ULL << (initial_rank * 8 + file));
+        if (getBit(blockers, initial_rank * 8 + file)) {
+            break;
+        }
+    }
+
+    return attacks;
+}
+
+BitBoard setPieceLayoutOcc(uint16_t idx, uint8_t bits, BitBoard attacks) {
+    BitBoard occ = BitBoard(0);
+
+    for (uint8_t i = 0; i < bits; i++) {
+        Square sq = static_cast<Square>(popLSB(attacks));
+
+        // TODO: change to getBit for simplicity
+        if (idx & (1 << i)) {
+            setBit(occ, sq);
+        }
+    }
+
+    return occ;
+}
+
 void populateRookMasks() {
     for (uint8_t sq = 0; sq < 64; sq++) {
         rook_masks[sq] = getRookMask(static_cast<Square>(sq));
@@ -147,10 +236,28 @@ void populateKnightAttacks() {
 
 void populateBishopAttacks() {
     for (uint8_t sq = 0; sq < 64; sq++) {
+        BitBoard mask  = bishop_masks[sq];
+        uint8_t r_bits = bishop_relevant_bits[sq];
+        uint16_t n     = (1 << r_bits);
+
+        for (uint16_t i = 0; i < n; i++) {
+            BitBoard occ   = setPieceLayoutOcc(i, r_bits, mask);
+            uint16_t index = (occ * bishop_magics[sq]) >> (64 - r_bits);
+            bishop_attacks[sq][index] = computeBishopAttacks(static_cast<Square>(sq), occ);
+        }
     }
 }
 
 void populateRookAttacks() {
     for (uint8_t sq = 0; sq < 64; sq++) {
+        BitBoard mask  = rook_masks[sq];
+        uint8_t r_bits = rook_relevant_bits[sq];
+        uint16_t n     = (1 << r_bits);
+
+        for (uint16_t i = 0; i < n; i++) {
+            BitBoard occ   = setPieceLayoutOcc(i, r_bits, mask);
+            uint16_t index = (occ * rook_magics[sq]) >> (64 - r_bits);
+            rook_attacks[sq][index] = computeRookAttacks(static_cast<Square>(sq), occ);
+        }
     }
 }
