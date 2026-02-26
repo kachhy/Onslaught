@@ -42,6 +42,14 @@ Board::Board() {
     setBit(piece_bb[BLACK_QUEEN], D8);
     setBit(piece_bb[BLACK_KING],  E8);
 
+    // EP squares and Castling rights
+    ep_square = NO_SQUARE;
+    castling  = 0xF;
+
+    // Counters
+    move_number = 1;
+    fmr         = 0;
+
     setOcc();
 }
 
