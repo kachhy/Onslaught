@@ -44,16 +44,16 @@ void setBit(BitBoard& bitboard, int bit);
 void popBit(BitBoard& bitboard, int bit);
 void flipBit(BitBoard& bitboard, int bit);
 
-int getRank(int square);
-int getFile(int square);
+int getRank(Square square);
+int getFile(Square square);
 
 BitBoard rankMask(int rank);
 BitBoard fileMask(int file);
 
-BitBoard shiftPawnPushes(const BitBoard& pawns, int side);
-BitBoard shiftPawnAttacks(const BitBoard& pawns, int side);
-BitBoard shiftPawnCapturesWest(const BitBoard& pawns, int side);
-BitBoard shiftPawnCapturesEast(const BitBoard& pawns, int side);
+BitBoard shiftPawnPushes(const BitBoard& pawns, Side side);
+BitBoard shiftPawnAttacks(const BitBoard& pawns, Side side);
+BitBoard shiftPawnCapturesWest(const BitBoard& pawns, Side side);
+BitBoard shiftPawnCapturesEast(const BitBoard& pawns, Side side);
 
 void printBitboard(const BitBoard& bitboard);
 

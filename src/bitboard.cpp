@@ -60,11 +60,11 @@ void flipBit(BitBoard& bitboard, int bit) {
     bitboard ^= (BitBoard(1) << bit);
 }
 
-int getRank(int square) {
+int getRank(Square square) {
     return square >> 3;
 }
 
-int getFile(int square) {
+int getFile(Square square) {
     return square & 7;
 }
 
@@ -76,19 +76,19 @@ BitBoard fileMask(int file) {
     return BitBoard(0x0101010101010101ULL) << file;
 }
 
-BitBoard shiftPawnPushes(const BitBoard& pawns, int side) {
+BitBoard shiftPawnPushes(const BitBoard& pawns, Side side) {
     return (side == WHITE) ? shiftNorth(pawns) : shiftSouth(pawns);
 }
 
-BitBoard shiftPawnAttacks(const BitBoard& pawns, int side) {
+BitBoard shiftPawnAttacks(const BitBoard& pawns, Side side) {
     return (side == WHITE) ? shiftNorthWest(pawns) | shiftNorthEast(pawns) : shiftSouthWest(pawns) | shiftSouthEast(pawns);
 }
 
-BitBoard shiftPawnCapturesWest(const BitBoard& pawns, int side) {
+BitBoard shiftPawnCapturesWest(const BitBoard& pawns, Side side) {
     return (side == WHITE) ? shiftNorthWest(pawns) : shiftSouthWest(pawns);
 }
 
-BitBoard shiftPawnCapturesEast(const BitBoard& pawns, int side) {
+BitBoard shiftPawnCapturesEast(const BitBoard& pawns, Side side) {
     return (side == WHITE) ? shiftNorthEast(pawns) : shiftSouthEast(pawns);
 }
 
