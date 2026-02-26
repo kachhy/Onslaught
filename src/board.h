@@ -1,10 +1,19 @@
 #ifndef BOARD_H
 #define BOARD_H
 
+#include <string.h> // for memset
 #include <vector>
+#include <string>
 #include "bitboard.h"
 
 typedef uint8_t CastlingRights;
+typedef uint32_t Move;
+
+#define GenerateMove(from, to, piece, flags) (from) | ((to) << 6) | ((piece) << 12) | ((flags) << 16)
+#define From(move)                           ((static_cast<int>(move) & 0x0003f) >> 0)
+#define To(move)                             ((static_cast<int>(move) & 0x00fc0) >> 6)
+#define MovePiece(move)                      ((static_cast<int>(move) & 0x0f000) >> 12)
+#define Flags(move)                          ((static_cast<int>(move) & 0xf0000) >> 16)
 
 #define MAX_PLY    256
 
@@ -21,7 +30,7 @@ enum Square {
 };
 
 enum Piece {
-    WHITE_PAWN = 0
+    WHITE_PAWN = 0,
     WHITE_KNIGHT,
     WHITE_BISHOP,
     WHITE_ROOK,
@@ -34,7 +43,7 @@ enum Piece {
     BLACK_QUEEN,
     BLACK_KING,
     NO_PIECE
-} Pieces;
+};
 
 // STM enum
 enum Side {
@@ -52,10 +61,13 @@ struct BoardHistory {
 class Board {
 public:
     Board(); // Initializes board to default starting state
+    Board(const std::string& fen);
 
-    Piece pieceAt() const;
+    Piece pieceAt(uint8_t sq) const;
     void setOcc();
     void printBoard() const;
+    bool loadFEN(const std::string& fen);
+    void clear();
 private:
     // Note: 0 is white side, 64 is black side
     BitBoard piece_bb[12];
@@ -66,8 +78,8 @@ private:
     Side xstm; // Not side to move
 
     // Move counting
-    uint8_t fmr; // For fifty-move rule draw
     uint32_t move_number;
+    uint8_t fmr; // For fifty-move rule draw
 
     // History
     std::vector<BoardHistory> history;
