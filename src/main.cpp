@@ -2,6 +2,7 @@
 
 void initAttacks() {
     populateKingAttacks();
+    populateKnightAttacks();
 }
 
 int main() {
@@ -9,6 +10,8 @@ int main() {
     initAttacks();
 
     printBitboard(king_attacks[H2]);
+    printBitboard(knight_attacks[E4]);
+    printBitboard(knight_attacks[A1]);
 
     // Board tests
     Board b; // ideally default position
