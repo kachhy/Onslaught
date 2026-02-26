@@ -15,6 +15,11 @@ extern BitBoard rook_attacks[64][4096];
 BitBoard generateKingAttacks(Square sq);
 BitBoard generateKnightAttacks(Square sq);
 
+// Getting attacks
+BitBoard getBishopAttacks(Square sq, BitBoard occ);
+BitBoard getRookAttacks(Square sq, BitBoard occ);
+BitBoard getQueenAttacks(Square sq, BitBoard occ);
+
 // Population functions
 // For masks
 void populateRookMasks();

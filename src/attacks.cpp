@@ -77,6 +77,24 @@ BitBoard generateKnightAttacks(Square sq) {
     return attacks;
 }
 
+BitBoard getBishopAttacks(Square sq, BitBoard occ) {
+    occ &= bishop_masks[sq];
+    occ *= bishop_magics[sq];
+    occ >>= 64 - (bishop_relevant_bits[sq]);
+    return bishop_attacks[sq][occ];
+}
+
+BitBoard getRookAttacks(Square sq, BitBoard occ) {
+    occ &= rook_masks[sq];
+    occ *= rook_magics[sq];
+    occ >>= 64 - (rook_relevant_bits[sq]);
+    return rook_attacks[sq][occ];
+}
+
+BitBoard getQueenAttacks(Square sq, BitBoard occ) {
+    return getBishopAttacks(sq, occ) | getRookAttacks(sq, occ);
+}
+
 BitBoard getRookMask(Square sq) {
     BitBoard attacks = BitBoard(0);
 
