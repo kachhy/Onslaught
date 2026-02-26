@@ -11,10 +11,8 @@ void initAttacks() {
     populateRookAttacks();
 }
 
-int main() {
-    // Populate attacks
-    initAttacks();
-
+void tests() {
+    // Test attacks
     printBitboard(getPawnAttacks(E4, WHITE));
     printBitboard(pawn_attacks[BLACK][H3]);
     printBitboard(getKingAttacks(H2));
@@ -48,6 +46,14 @@ int main() {
     // Check EP square
     b.loadFEN("rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3");
     b.printBoard();
-    
+}
+
+int main() {
+    // Populate attacks
+    initAttacks();
+
+    // Run tests
+    tests();
+
     return 0;
 }
