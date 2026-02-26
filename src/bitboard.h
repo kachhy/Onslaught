@@ -44,6 +44,7 @@ int popLSB(BitBoard& bitboard);
 void setBit(BitBoard& bitboard, int bit);
 void popBit(BitBoard& bitboard, int bit);
 void flipBit(BitBoard& bitboard, int bit);
+void flipBits(BitBoard& bitboard, int bit_1, int bit_2);
 
 int getRank(Square square);
 int getFile(Square square);
