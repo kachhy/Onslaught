@@ -1,6 +1,15 @@
 #include "board.h"
 
+void initAttacks() {
+    populateKingAttacks();
+}
+
 int main() {
+    // Populate attacks
+    initAttacks();
+
+    printBitboard(king_attacks[H2]);
+
     // Board tests
     Board b; // ideally default position
     std::cout << "Starting position:\n";

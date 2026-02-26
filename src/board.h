@@ -4,6 +4,7 @@
 #include <string.h> // for memset
 #include <vector>
 #include <string>
+#include "attacks.h"
 #include "bitboard.h"
 #include "types.h"
 
