@@ -5,7 +5,7 @@ BitBoard rook_masks[64];
 
 BitBoard pawn_attacks[2][64];
 BitBoard knight_attacks[64];
-BitBoard bishop_attacks[64][4096];
+BitBoard bishop_attacks[64][512];
 BitBoard rook_attacks[64][4096];
 BitBoard king_attacks[64];
 
