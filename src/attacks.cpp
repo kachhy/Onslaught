@@ -95,6 +95,10 @@ BitBoard generateKnightAttacks(Square sq) {
     return attacks;
 }
 
+BitBoard getPawnAttacks(Square sq, Side side) {
+    return pawn_attacks[side][sq];
+}
+
 BitBoard getBishopAttacks(Square sq, BitBoard occ) {
     occ &= bishop_masks[sq];
     occ *= bishop_magics[sq];

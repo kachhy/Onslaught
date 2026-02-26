@@ -17,6 +17,7 @@ BitBoard generateKingAttacks(Square sq);
 BitBoard generateKnightAttacks(Square sq);
 
 // Getting attacks
+BitBoard getPawnAttacks(Square sq, Side side);
 BitBoard getBishopAttacks(Square sq, BitBoard occ);
 BitBoard getRookAttacks(Square sq, BitBoard occ);
 BitBoard getQueenAttacks(Square sq, BitBoard occ);
