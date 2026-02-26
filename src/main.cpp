@@ -1,13 +1,13 @@
 #include "board.h"
 
 void initAttacks() {
-    populateRookMasks();
     populateBishopMasks();
+    populateRookMasks();
 
     populateKingAttacks();
     populateKnightAttacks();
-    populateRookAttacks();
     populateBishopAttacks();
+    populateRookAttacks();
 }
 
 int main() {

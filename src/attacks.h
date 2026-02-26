@@ -3,8 +3,8 @@
 
 #include "bitboard.h"
 
-extern BitBoard rook_masks[64];
 extern BitBoard bishop_masks[64];
+extern BitBoard rook_masks[64];
 
 extern BitBoard king_attacks[64];
 extern BitBoard knight_attacks[64];

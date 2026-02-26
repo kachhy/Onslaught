@@ -1,7 +1,7 @@
 #include "attacks.h"
 
-BitBoard rook_masks[64];
 BitBoard bishop_masks[64];
+BitBoard rook_masks[64];
 
 BitBoard king_attacks[64];
 BitBoard knight_attacks[64];
@@ -210,15 +210,15 @@ BitBoard setPieceLayoutOcc(uint16_t idx, uint8_t bits, BitBoard attacks) {
     return occ;
 }
 
-void populateRookMasks() {
-    for (uint8_t sq = 0; sq < 64; sq++) {
-        rook_masks[sq] = getRookMask(static_cast<Square>(sq));
-    }
-}
-
 void populateBishopMasks() {
     for (uint8_t sq = 0; sq < 64; sq++) {
         bishop_masks[sq] = getBishopMask(static_cast<Square>(sq));
+    }
+}
+
+void populateRookMasks() {
+    for (uint8_t sq = 0; sq < 64; sq++) {
+        rook_masks[sq] = getRookMask(static_cast<Square>(sq));
     }
 }
 
