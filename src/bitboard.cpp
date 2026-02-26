@@ -101,7 +101,7 @@ BitBoard shiftPawnCapturesEast(const BitBoard& pawns, Side side) {
 void printBitboard(const BitBoard& bitboard) {
     for (int i = 0; i < 64; i++) {
         if (i % 8 == 0) {
-            std::cout << "\n" << (i / 8) << " ";
+            std::cout << "\n" << (8 - (i >> 3)) << " ";
         }
         std::cout << getBit(bitboard, i) << " ";
     }

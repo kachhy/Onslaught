@@ -86,7 +86,7 @@ Piece Board::pieceAt(uint8_t sq) const {
 }
 
 void Board::printBoard() const {
-    for (int8_t i = 63; i >= 0; i--) {
+    for (int8_t i = 0; i < 64; i++) {
         switch (pieceAt(i)) {
         case WHITE_PAWN: std::cout << "P "; break;
         case WHITE_KNIGHT: std::cout << "N "; break;
@@ -103,7 +103,7 @@ void Board::printBoard() const {
         case NO_PIECE: std::cout << ". "; break;
         }
 
-        if (i % 8 == 0)
+        if (i % 8 == 7)
             std::cout << '\n';
     }
     std::cout << std::endl;
@@ -141,11 +141,11 @@ bool Board::loadFEN(const std::string &fen) {
     iss >> fullmoveStr;
 
     // Parse piece placement (ranks 8 -> 1)
-    int rank = 7;
+    int rank = 0;
     int file = 0;
     for (char c : placement) {
         if (c == '/') {
-            --rank;
+            ++rank;
             file = 0;
             continue;
         }
@@ -155,7 +155,7 @@ bool Board::loadFEN(const std::string &fen) {
             continue;
         }
 
-        if (file >= 8 || rank < 0) {
+        if (file >= 8 || rank > 7) {
             return false; // malformed
         }
 
@@ -210,7 +210,7 @@ bool Board::loadFEN(const std::string &fen) {
         ep_square = NO_SQUARE;
     } else if (epStr.size() == 2 && epStr[0] >= 'a' && epStr[0] <= 'h' && epStr[1] >= '1' && epStr[1] <= '8') {
         int f = epStr[0] - 'a';
-        int r = epStr[1] - '1';
+        int r = '8' - epStr[1];
         ep_square = static_cast<Square>(r * 8 + f);
     } else {
         return false;
