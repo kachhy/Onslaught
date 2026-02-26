@@ -17,7 +17,7 @@ int main() {
 
     printBitboard(getPawnAttacks(E4, WHITE));
     printBitboard(pawn_attacks[BLACK][H3]);
-    printBitboard(king_attacks[H2]);
+    printBitboard(getKingAttacks(H2));
     printBitboard(getKnightAttacks(E4));
     printBitboard(knight_attacks[A1]);
 

@@ -121,6 +121,10 @@ BitBoard getQueenAttacks(Square sq, BitBoard occ) {
     return getBishopAttacks(sq, occ) | getRookAttacks(sq, occ);
 }
 
+BitBoard getKingAttacks(Square sq) {
+    return king_attacks[sq];
+}
+
 BitBoard getRookMask(Square sq) {
     BitBoard attacks = BitBoard(0);
 

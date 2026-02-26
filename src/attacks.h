@@ -22,6 +22,7 @@ BitBoard getKnightAttacks(Square sq);
 BitBoard getBishopAttacks(Square sq, BitBoard occ);
 BitBoard getRookAttacks(Square sq, BitBoard occ);
 BitBoard getQueenAttacks(Square sq, BitBoard occ);
+BitBoard getKingAttacks(Square sq);
 
 // Population functions
 // For masks
