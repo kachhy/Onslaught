@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include "bitboard.h"
+#include "types.h"
 
 typedef uint8_t CastlingRights;
 typedef uint32_t Move;
@@ -45,12 +46,6 @@ enum Piece {
     NO_PIECE
 };
 
-// STM enum
-enum Side {
-    WHITE = 0,
-    BLACK,
-    BOTH // For occupancy only
-};
 
 struct BoardHistory {
     CastlingRights castling; 

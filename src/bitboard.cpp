@@ -1,94 +1,94 @@
 #include "bitboard.h"
 
-inline BitBoard shiftNorth(const BitBoard& bitboard) {
+BitBoard shiftNorth(const BitBoard& bitboard) {
     return bitboard >> 8;
 }
 
-inline BitBoard shiftNorthEast(const BitBoard& bitboard) {
+BitBoard shiftNorthEast(const BitBoard& bitboard) {
     return (bitboard & ~H_FILE) >> 7;
 }
 
-inline BitBoard shiftEast(const BitBoard& bitboard) {
+BitBoard shiftEast(const BitBoard& bitboard) {
     return (bitboard & ~H_FILE) << 1;
 }
 
-inline BitBoard shiftSouthEast(const BitBoard& bitboard) {
+BitBoard shiftSouthEast(const BitBoard& bitboard) {
     return (bitboard & ~H_FILE) << 9;
 }
 
-inline BitBoard shiftSouth(const BitBoard& bitboard) {
+BitBoard shiftSouth(const BitBoard& bitboard) {
     return bitboard << 8;
 }
 
-inline BitBoard shiftSouthWest(const BitBoard& bitboard) {
+BitBoard shiftSouthWest(const BitBoard& bitboard) {
     return (bitboard & ~A_FILE) << 7;
 }
 
-inline BitBoard shiftWest(const BitBoard& bitboard) {
+BitBoard shiftWest(const BitBoard& bitboard) {
     return (bitboard & ~A_FILE) >> 1;
 }
 
-inline BitBoard shiftNorthWest(const BitBoard& bitboard) {
+BitBoard shiftNorthWest(const BitBoard& bitboard) {
     return (bitboard & ~A_FILE) >> 9;
 }
 
-inline int getBit(const BitBoard& bitboard, int bit) {
+int getBit(const BitBoard& bitboard, int bit) {
     return static_cast<int>((bitboard >> bit) & BitBoard(1));
 }
 
-inline int bitCount(const BitBoard& bitboard) {
+int bitCount(const BitBoard& bitboard) {
     return __builtin_popcountll(bitboard);
 }
 
-inline int getLSB(const BitBoard& bitboard) {
+int getLSB(const BitBoard& bitboard) {
     return __builtin_ctzll(bitboard); // count trailing zeros
 }
 
-inline int getMSB(const BitBoard& bitboard) {
+int getMSB(const BitBoard& bitboard) {
     return 63 ^ __builtin_clzll(bitboard); // count leading zeros
 }
 
-inline void setBit(BitBoard& bitboard, int bit) {
+void setBit(BitBoard& bitboard, int bit) {
     bitboard |= (BitBoard(1) << bit);
 }
 
-inline void popBit(BitBoard& bitboard, int bit) {
+void popBit(BitBoard& bitboard, int bit) {
     bitboard &= ~(BitBoard(1) << bit);
 }
 
-inline void flipBit(BitBoard& bitboard, int bit) {
-    bitboard ^= ~(BitBoard(1) << bit);
+void flipBit(BitBoard& bitboard, int bit) {
+    bitboard ^= (BitBoard(1) << bit);
 }
 
-inline int getRank(int square) {
+int getRank(int square) {
     return square >> 3;
 }
 
-inline int getFile(int square) {
+int getFile(int square) {
     return square & 7;
 }
 
-inline BitBoard rankMask(int rank) {
+BitBoard rankMask(int rank) {
     return BitBoard(0xFF) << (rank * 8);
 }
 
-inline BitBoard fileMask(int file) {
+BitBoard fileMask(int file) {
     return BitBoard(0x0101010101010101ULL) << file;
 }
 
-inline BitBoard shiftPawnPushes(const BitBoard& pawns, int side) {
+BitBoard shiftPawnPushes(const BitBoard& pawns, int side) {
     return (side == WHITE) ? shiftNorth(pawns) : shiftSouth(pawns);
 }
 
-inline BitBoard shiftPawnAttacks(const BitBoard& pawns, int side) {
+BitBoard shiftPawnAttacks(const BitBoard& pawns, int side) {
     return (side == WHITE) ? shiftNorthWest(pawns) | shiftNorthEast(pawns) : shiftSouthWest(pawns) | shiftSouthEast(pawns);
 }
 
-inline BitBoard shiftPawnCapturesWest(const BitBoard& pawns, int side) {
+BitBoard shiftPawnCapturesWest(const BitBoard& pawns, int side) {
     return (side == WHITE) ? shiftNorthWest(pawns) : shiftSouthWest(pawns);
 }
 
-inline BitBoard shiftPawnCapturesEast(const BitBoard& pawns, int side) {
+BitBoard shiftPawnCapturesEast(const BitBoard& pawns, int side) {
     return (side == WHITE) ? shiftNorthEast(pawns) : shiftSouthEast(pawns);
 }
 
