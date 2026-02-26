@@ -3,6 +3,24 @@
 BitBoard king_attacks[64];
 BitBoard knight_attacks[64];
 
+const int bishop_relevant_bits[64] = {6, 5, 5, 5, 5, 5, 5, 6,
+                                      5, 5, 5, 5, 5, 5, 5, 5,
+                                      5, 5, 7, 7, 7, 7, 5, 5,
+                                      5, 5, 7, 9, 9, 7, 5, 5,
+                                      5, 5, 7, 9, 9, 7, 5, 5,
+                                      5, 5, 7, 7, 7, 7, 5, 5,
+                                      5, 5, 5, 5, 5, 5, 5, 5,
+                                      6, 5, 5, 5, 5, 5, 5, 6};
+
+const int rook_relevant_bits[64] = {12, 11, 11, 11, 11, 11, 11, 12,
+                                    11, 10, 10, 10, 10, 10, 10, 11,
+                                    11, 10, 10, 10, 10, 10, 10, 11,
+                                    11, 10, 10, 10, 10, 10, 10, 11,
+                                    11, 10, 10, 10, 10, 10, 10, 11,
+                                    11, 10, 10, 10, 10, 10, 10, 11,
+                                    11, 10, 10, 10, 10, 10, 10, 11,
+                                    12, 11, 11, 11, 11, 11, 11, 12};
+
 BitBoard generateKingAttacks(Square sq) {
     BitBoard attacks = BitBoard(0);
     BitBoard initial = BitBoard(0);
