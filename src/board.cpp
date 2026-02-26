@@ -237,3 +237,7 @@ bool Board::loadFEN(const std::string &fen) {
     setOcc();
     return true;
 }
+
+BitBoard Board::getOcc(Side side) const {
+    return occ[side];
+}

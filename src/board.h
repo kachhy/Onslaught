@@ -51,6 +51,7 @@ public:
     void printBoard() const;
     bool loadFEN(const std::string& fen);
     void clear();
+    BitBoard getOcc(Side side) const;
 private:
     // Note: 0 is white side, 64 is black side
     BitBoard piece_bb[12];
