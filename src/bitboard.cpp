@@ -66,7 +66,7 @@ void flipBit(BitBoard& bitboard, int bit) {
     bitboard ^= (BitBoard(1) << bit);
 }
 
-oid flipBits(BitBoard& bitboard, int bit_1, int bit_2) {
+void flipBits(BitBoard& bitboard, int bit_1, int bit_2) {
     bitboard ^= bit1 ^ bit2;
 }
 
