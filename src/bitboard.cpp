@@ -48,9 +48,9 @@ int getMSB(const BitBoard& bitboard) {
     return 63 ^ __builtin_clzll(bitboard); // count leading zeros
 }
 
-int popLSB(Bitboard& bitboard) {
+int popLSB(BitBoard& bitboard) {
     int lsb = getLSB(bitboard);
-    bb &= bb - 1;
+    bitboard &= bitboard - 1;
     return lsb;
 }
 

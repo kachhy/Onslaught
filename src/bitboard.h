@@ -39,7 +39,7 @@ int getBit(const BitBoard& bitboard, int bit);
 int bitCount(const BitBoard& bitboard);
 int getLSB(const BitBoard& bitboard);
 int getMSB(const BitBoard& bitboard);
-int popLSB(Bitboard& bitboard);
+int popLSB(BitBoard& bitboard);
 
 void setBit(BitBoard& bitboard, int bit);
 void popBit(BitBoard& bitboard, int bit);
