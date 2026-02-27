@@ -47,8 +47,11 @@ struct BoardHistory {
     Square ep_square;
     uint8_t fmr;
     Piece captured_piece;
+    BitBoard checkers;
+    BitBoard pinned;
 
-    BoardHistory(CastlingRights castling, Square ep_square, uint8_t fmr, Piece captured_piece) : castling(castling), ep_square(ep_square), fmr(fmr), captured_piece(captured_piece) {}
+    BoardHistory(CastlingRights castling, Square ep_square, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard pinned)
+                : castling(castling), ep_square(ep_square), fmr(fmr), captured_piece(captured_piece), checkers(checkers), pinned(pinned) {}
 };
 
 class Board {
@@ -56,24 +59,34 @@ public:
     Board(); // Initializes board to default starting state
     Board(const std::string& fen);
 
-    Piece pieceAt(uint8_t sq) const;
     void setPieceBoard();
     void setOcc();
-    std::string getCastlingString() const;
-    void printBoard() const;
     bool loadFEN(const std::string& fen);
     void clear();
+    
+    // Observers
+    Piece pieceAt(uint8_t sq) const;
     BitBoard getOcc(Side side) const;
+    std::string getCastlingString() const;
+    void printBoard() const;
+
+    BitBoard getCheckersMask() const { return checkers; }
+    BitBoard getPinMask() const { return pinned; }
+    bool inCheck() const { return static_cast<bool>(checkers); }
 
     // Make and undo move
     void makeMove(Move move);
     void undoMove(Move move);
 private:
+    void setSpecials();
+
     // Note: 0 is white side, 64 is black side
     BitBoard piece_bb[12];
     BitBoard occ[3];
     Piece piece_board[64];
     int castling_rights[64];
+    BitBoard checkers;
+    BitBoard pinned;
     CastlingRights castling; // castling mask (i.e. 1111 = KQkq)
     Square ep_square;
     Side stm; // Side to move

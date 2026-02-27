@@ -262,6 +262,8 @@ bool Board::loadFEN(const std::string &fen) {
 
     setOcc();
     setPieceBoard();
+    setSpecials();
+
     return true;
 }
 
@@ -275,7 +277,7 @@ void Board::makeMove(Move move) {
     Piece piece      = MovePiece(move);
     Piece captured   = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
 
-    history.emplace_back(castling, ep_square, fmr, captured);
+    history.emplace_back(castling, ep_square, fmr, captured, checkers, pinned);
 
     fmr++;
     flipBits(piece_bb[piece], from, to);
@@ -374,6 +376,8 @@ void Board::makeMove(Move move) {
     move_number += (stm == BLACK);
     xstm = stm;
     stm = xstm == WHITE ? BLACK : WHITE; // optimizable
+
+    setSpecials();
 }
 
 void Board::undoMove(Move move) {
@@ -385,6 +389,8 @@ void Board::undoMove(Move move) {
     castling  = hist_data.castling;
     ep_square = hist_data.ep_square;
     fmr       = hist_data.fmr;
+    checkers  = hist_data.checkers;
+    pinned    = hist_data.pinned;
 
     move_number -= (stm == BLACK);
     stm          = xstm;
@@ -462,4 +468,27 @@ void Board::undoMove(Move move) {
     }
 
     history.pop_back();
+}
+
+void Board::setSpecials() {
+    Square king_square = static_cast<Square>(getLSB(piece_bb[makePiece(KING, stm)]));
+
+    pinned    = BitBoard(0);
+    checkers  = (getKnightAttacks(king_square) & occ[makePiece(KNIGHT, xstm)]);
+    checkers |= (getPawnAttacks(king_square, stm) & occ[makePiece(PAWN, xstm)]);
+
+    BitBoard sliders = (piece_bb[makePiece(BISHOP, xstm)] | piece_bb[makePiece(QUEEN, xstm)]) & getBishopAttacks(king_square, BitBoard(0));
+    sliders         |= (piece_bb[makePiece(ROOK, xstm)] | piece_bb[makePiece(QUEEN, xstm)]) & getRookAttacks(king_square, BitBoard(0));
+
+    while (sliders) {
+        Square sq = static_cast<Square>(popLSB(sliders));
+        BitBoard blockers = between_squares[king_square][sq] & occ[BOTH];
+
+        if (!blockers) {
+            setBit(checkers, sq);
+        }
+        else if (bitCount(blockers) == 1) {
+            pinned |= blockers & occ[stm];
+        }
+    }
 }
