@@ -115,6 +115,7 @@ void Board::printBoard() const {
         }
     }
     std::cout << "\n  a b c d e f g h\n"
+              << "\nTurn: " << (stm == WHITE ? "White" : "Black")
               << "\nEP Square: " << board_coords[ep_square] 
               << "\nCastling: " << getCastlingString()
               << "\n" << std::endl;
