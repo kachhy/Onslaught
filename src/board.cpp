@@ -360,7 +360,7 @@ void Board::makeMove(Move move) {
             }
         }
         else if (Prom(move)) { // Promotion
-            int prom_piece = makePiece(promPiece(move), stm);
+            Piece prom_piece = makePiece(promPiece(move), stm);
             
             flipBit(piece_bb[piece], to);
             flipBit(piece_bb[prom_piece], to);
