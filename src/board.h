@@ -12,35 +12,37 @@ typedef uint8_t CastlingRights;
 typedef uint32_t Move;
 
 // Move flags
-#define QUIET_FLAG        0b0000
-#define CASTLE_FLAG       0b0001
-#define CAPTURE_FLAG      0b0100
-#define EP_FLAG           0b0110
-#define PROMO_FLAG        0b1000
-#define KNIGHT_PROMO_FLAG 0b1000
-#define BISHOP_PROMO_FLAG 0b1001
-#define ROOK_PROMO_FLAG   0b1010
-#define QUEEN_PROMO_FLAG  0b1011
+constexpr inline uint8_t QUIET_FLAG        = 0b0000;
+constexpr inline uint8_t CASTLE_FLAG       = 0b0001;
+constexpr inline uint8_t CAPTURE_FLAG      = 0b0100;
+constexpr inline uint8_t EP_FLAG           = 0b0110;
+constexpr inline uint8_t PROMO_FLAG        = 0b1000;
+constexpr inline uint8_t KNIGHT_PROMO_FLAG = 0b1000;
+constexpr inline uint8_t BISHOP_PROMO_FLAG = 0b1001;
+constexpr inline uint8_t ROOK_PROMO_FLAG   = 0b1010;
+constexpr inline uint8_t QUEEN_PROMO_FLAG  = 0b1011;
 
 // Castling rights flags
-#define WHITE_KS 0x8
-#define WHITE_QS 0x4
-#define BLACK_KS 0x2
-#define BLACK_QS 0x1
+constexpr inline uint8_t WHITE_KS = 0x8;
+constexpr inline uint8_t WHITE_QS = 0x4;
+constexpr inline uint8_t BLACK_KS = 0x2;
+constexpr inline uint8_t BLACK_QS = 0x1;
 
-#define GenerateMove(from, to, piece, flags) (from) | ((to) << 6) | ((piece) << 12) | ((flags) << 16)
-#define From(move)                           static_cast<Square>((static_cast<int>(move) & 0x0003f) >> 0)
-#define To(move)                             static_cast<Square>((static_cast<int>(move) & 0x00fc0) >> 6)
-#define MovePiece(move)                      static_cast<Piece>((static_cast<int>(move) & 0x0f000) >> 12)
-#define Flags(move)                          ((static_cast<int>(move) & 0xf0000) >> 16)
-#define Capture(move)                        (Flags(move) & CAPTURE_FLAG)
-#define IsEP(move)                           (Flags(move) == EP_FLAG)
-#define Castle(move)                         (Flags(move) == CASTLE_FLAG)
-#define Prom(move)                           (Flags(move) & PROMO_FLAG)
+constexpr inline Move GenerateMove(Square from, Square to, Piece piece, uint32_t flags) {
+    return (static_cast<Move>(from)) | (static_cast<Move>(to) << 6) | (static_cast<Move>(piece) << 12) | (static_cast<Move>(flags) << 16);
+}
+constexpr inline Square From(Move move) { return static_cast<Square>((static_cast<int>(move) & 0x0003f) >> 0); }
+constexpr inline Square To(Move move) { return static_cast<Square>((static_cast<int>(move) & 0x00fc0) >> 6); }
+constexpr inline Piece MovePiece(Move move) { return static_cast<Piece>((static_cast<int>(move) & 0x0f000) >> 12); }
+constexpr inline uint32_t Flags(Move move) { return ((static_cast<uint32_t>(move) & 0x000f0000u) >> 16); }
+constexpr inline bool Capture(Move move) { return (Flags(move) & CAPTURE_FLAG) != 0; }
+constexpr inline bool IsEP(Move move) { return Flags(move) == EP_FLAG; }
+constexpr inline bool Castle(Move move) { return Flags(move) == CASTLE_FLAG; }
+constexpr inline bool Prom(Move move) { return (Flags(move) & PROMO_FLAG) != 0; }
 
 DefaultPiece promPiece(Move move);
 
-#define MAX_PLY    256
+constexpr inline uint16_t MAX_PLY = 256;
 
 struct BoardHistory {
     CastlingRights castling; 
