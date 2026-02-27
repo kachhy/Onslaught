@@ -8,6 +8,15 @@
 
 using BitBoard = uint64_t;
 
+constexpr inline int8_t NORTH = -8
+constexpr inline int8_t SOUTH = 8
+constexpr inline int8_t EAST = 1
+constexpr inline int8_t WEST = -1
+constexpr inline int8_t NORTHEAST = -7
+constexpr inline int8_t NORTHWEST = -9
+constexpr inline int8_t SOUTHEAST = 9
+constexpr inline int8_t SOUTHWEST = 7
+
 constexpr inline BitBoard A_FILE = 0x0101010101010101ULL;
 constexpr inline BitBoard B_FILE = 0x0202020202020202ULL;
 constexpr inline BitBoard C_FILE = 0x0404040404040404ULL;
@@ -43,6 +52,7 @@ constexpr int getMSB(const BitBoard& bitboard);
 void setBit(BitBoard& bitboard, int bit);
 void popBit(BitBoard& bitboard, int bit);
 void flipBit(BitBoard& bitboard, int bit);
+void flipBits(BitBoard& bitboard, int bit_1, int bit_2);
 
 constexpr int getRank(int square);
 constexpr int getFile(int square);

@@ -12,6 +12,8 @@ extern BitBoard bishop_attacks[64][512];
 extern BitBoard rook_attacks[64][4096];
 extern BitBoard king_attacks[64];
 
+extern BitBoard between_squares[64][64];
+
 // OTF attack generation
 BitBoard generateKingAttacks(Square sq);
 BitBoard generateKnightAttacks(Square sq);
@@ -35,6 +37,9 @@ void populateKingAttacks();
 void populateKnightAttacks();
 void populateBishopAttacks();
 void populateRookAttacks();
+
+// For between squares
+void populateBetweenSquares();
 
 // Magic numbers
 constexpr BitBoard rook_magics[64] = {

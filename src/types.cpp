@@ -11,3 +11,10 @@ const char* board_coords[] = {
     "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1", 
     "NS"
 };
+
+Piece makePiece(DefaultPiece piece, Side color) {
+    if (color == WHITE) {
+        return static_cast<Piece>(piece);
+    }
+    return static_cast<Piece>(static_cast<int>(piece) + static_cast<int>(BLACK_PAWN));
+}

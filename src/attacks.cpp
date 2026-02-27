@@ -9,6 +9,8 @@ BitBoard bishop_attacks[64][512];
 BitBoard rook_attacks[64][4096];
 BitBoard king_attacks[64];
 
+BitBoard between_squares[64][64];
+
 const int bishop_relevant_bits[64] = {6, 5, 5, 5, 5, 5, 5, 6,
                                       5, 5, 5, 5, 5, 5, 5, 5,
                                       5, 5, 7, 7, 7, 7, 5, 5,
@@ -313,6 +315,46 @@ void populateRookAttacks() {
             BitBoard occ   = setPieceLayoutOcc(i, r_bits, mask);
             uint16_t index = (occ * rook_magics[sq]) >> (64 - r_bits);
             rook_attacks[sq][index] = computeRookAttacks(static_cast<Square>(sq), occ);
+        }
+    }
+}
+
+void populateBetweenSquares() {
+    uint8_t index;
+
+    for (uint8_t from = 0; from < 64; from++) {
+        for (uint8_t to = from + 1; to < 64; to++) {
+            if (getRank(from) == getRank(to)) {
+                index = to + WEST;
+                while (index > from) {
+                    setBit(between_squares[from][to], index);
+                    index += WEST;
+                }
+            } else if (getFile(from) == getFile(to)) {
+                index = to + NORTH;
+                while (index > from) {
+                    setBit(between_squares[from][to], index);
+                    index += NORTH;
+                }
+            } else if ((to - from) % 9 == 0 && (getFile(to) > getFile(from))) {
+                index = to + NORTHWEST;
+                while (index > from) {
+                    setBit(between_squares[from][to], index);
+                    index += NORTHWEST;
+                }
+            } else if ((to - from) % 7 == 0 && (getFile(to) < getFile(from))) {
+                index = to + NORTHEAST;
+                while (index > from) {
+                    setBit(between_squares[from][to], index);
+                    index += NORTHEAST;
+                }
+            }
+        }
+    }
+
+    for (uint8_t from = 0; from < 64; from++) {
+        for (uint8_t to = 0; to < from; to++) {
+            between_squares[from][to] = between_squares[to][from];
         }
     }
 }

@@ -66,6 +66,10 @@ void flipBit(BitBoard& bitboard, int bit) {
     bitboard ^= (BitBoard(1) << bit);
 }
 
+void flipBits(BitBoard& bitboard, int bit_1, int bit_2) {
+    bitboard ^= (BitBoard(1) << bit_1) | (BitBoard(1) << bit_2);
+}
+
 constexpr inline int getRank(int square) {
     return square >> 3;
 }
