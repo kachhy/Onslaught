@@ -1,6 +1,8 @@
 #include "board.h"
 
 void initAttacks() {
+    populateBetweenSquares();
+
     populateBishopMasks();
     populateRookMasks();
 

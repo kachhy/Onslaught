@@ -78,6 +78,14 @@ int getFile(Square square) {
     return square & 7;
 }
 
+int getRank(uint8_t square) {
+    return square >> 3;
+}
+
+int getFile(uint8_t square) {
+    return square & 7;
+}
+
 BitBoard rankMask(int rank) {
     return BitBoard(0xFF) << (rank * 8);
 }

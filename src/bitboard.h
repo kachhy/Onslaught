@@ -10,6 +10,12 @@ typedef uint64_t BitBoard;
 
 #define NORTH -8
 #define SOUTH 8
+#define EAST 1
+#define WEST -1
+#define NORTHEAST -7
+#define NORTHWEST -9
+#define SOUTHEAST 9
+#define SOUTHWEST 7
 
 #define A_FILE 0x0101010101010101ULL
 #define B_FILE 0x0202020202020202ULL
@@ -51,6 +57,8 @@ void flipBits(BitBoard& bitboard, int bit_1, int bit_2);
 
 int getRank(Square square);
 int getFile(Square square);
+int getRank(uint8_t square);
+int getFile(uint8_t square);
 
 BitBoard rankMask(int rank);
 BitBoard fileMask(int file);
