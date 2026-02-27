@@ -8,14 +8,14 @@
 
 using BitBoard = uint64_t;
 
-constexpr inline int8_t NORTH = -8
-constexpr inline int8_t SOUTH = 8
-constexpr inline int8_t EAST = 1
-constexpr inline int8_t WEST = -1
-constexpr inline int8_t NORTHEAST = -7
-constexpr inline int8_t NORTHWEST = -9
-constexpr inline int8_t SOUTHEAST = 9
-constexpr inline int8_t SOUTHWEST = 7
+constexpr inline int8_t NORTH = -8;
+constexpr inline int8_t SOUTH = 8;
+constexpr inline int8_t EAST = 1;
+constexpr inline int8_t WEST = -1;
+constexpr inline int8_t NORTHEAST = -7;
+constexpr inline int8_t NORTHWEST = -9;
+constexpr inline int8_t SOUTHEAST = 9;
+constexpr inline int8_t SOUTHWEST = 7;
 
 constexpr inline BitBoard A_FILE = 0x0101010101010101ULL;
 constexpr inline BitBoard B_FILE = 0x0202020202020202ULL;
@@ -35,35 +35,36 @@ constexpr inline BitBoard RANK_6 = 0x0000000000FF0000ULL;
 constexpr inline BitBoard RANK_7 = 0x000000000000FF00ULL;
 constexpr inline BitBoard RANK_8 = 0x00000000000000FFULL;
 
-constexpr BitBoard shiftNorth(const BitBoard& bitboard);
-constexpr BitBoard shiftNorthEast(const BitBoard& bitboard);
-constexpr BitBoard shiftEast(const BitBoard& bitboard);
-constexpr BitBoard shiftSouthEast(const BitBoard& bitboard);
-constexpr BitBoard shiftSouth(const BitBoard& bitboard);
-constexpr BitBoard shiftSouthWest(const BitBoard& bitboard);
-constexpr BitBoard shiftWest(const BitBoard& bitboard);
-constexpr BitBoard shiftNorthWest(const BitBoard& bitboard);
+constexpr inline BitBoard shiftNorth(const BitBoard& bitboard) { return bitboard >> 8; }
+constexpr inline BitBoard shiftNorthEast(const BitBoard& bitboard) { return (bitboard & ~H_FILE) >> 7; }
+constexpr inline BitBoard shiftEast(const BitBoard& bitboard) { return (bitboard & ~H_FILE) << 1; }
+constexpr inline BitBoard shiftSouthEast(const BitBoard& bitboard) { return (bitboard & ~H_FILE) << 9; }
+constexpr inline BitBoard shiftSouth(const BitBoard& bitboard) { return bitboard << 8; }
+constexpr inline BitBoard shiftSouthWest(const BitBoard& bitboard) { return (bitboard & ~A_FILE) << 7; }
+constexpr inline BitBoard shiftWest(const BitBoard& bitboard) { return (bitboard & ~A_FILE) >> 1; }
+constexpr inline BitBoard shiftNorthWest(const BitBoard& bitboard) { return (bitboard & ~A_FILE) >> 9; }
 
-constexpr int getBit(const BitBoard& bitboard, int bit);
-constexpr int bitCount(const BitBoard& bitboard);
-constexpr int getLSB(const BitBoard& bitboard);
-constexpr int getMSB(const BitBoard& bitboard);
+constexpr inline int getBit(const BitBoard& bitboard, int bit) { return static_cast<int>((bitboard >> bit) & BitBoard(1)); }
+constexpr inline int bitCount(const BitBoard& bitboard) { return __builtin_popcountll(bitboard); }
+constexpr inline int getLSB(const BitBoard& bitboard) { return __builtin_ctzll(bitboard); }
+constexpr inline int getMSB(const BitBoard& bitboard) { return 63 ^ __builtin_clzll(bitboard); }
+constexpr inline int popLSB(BitBoard& bitboard) { int lsb = getLSB(bitboard); bitboard &= bitboard - 1; return lsb; }
 
 void setBit(BitBoard& bitboard, int bit);
 void popBit(BitBoard& bitboard, int bit);
 void flipBit(BitBoard& bitboard, int bit);
 void flipBits(BitBoard& bitboard, int bit_1, int bit_2);
 
-constexpr int getRank(int square);
-constexpr int getFile(int square);
+constexpr int getRank(int square) { return square >> 3; }
+constexpr int getFile(int square) { return square & 7; }
 
-constexpr BitBoard getRankMask(int rank);
-constexpr BitBoard getFileMask(int file);
+constexpr BitBoard getRankMask(int rank) { return BitBoard(0xFF) << (rank * 8); }
+constexpr BitBoard getFileMask(int file) { return BitBoard(0x0101010101010101ULL) << file; }
 
-constexpr BitBoard shiftPawnPushes(const BitBoard& pawns, int side);
-constexpr BitBoard shiftPawnAttacks(const BitBoard& pawns, int side);
-constexpr BitBoard shiftPawnCapturesWest(const BitBoard& pawns, int side);
-constexpr BitBoard shiftPawnCapturesEast(const BitBoard& pawns, int side);
+constexpr BitBoard shiftPawnPushes(const BitBoard& pawns, int side) { return (side == WHITE) ? shiftNorth(pawns) : shiftSouth(pawns); }
+constexpr BitBoard shiftPawnAttacks(const BitBoard& pawns, int side) { return (side == WHITE) ? shiftNorthWest(pawns) | shiftNorthEast(pawns) : shiftSouthWest(pawns) | shiftSouthEast(pawns); }
+constexpr BitBoard shiftPawnCapturesWest(const BitBoard& pawns, int side) { return (side == WHITE) ? shiftNorthWest(pawns) : shiftSouthWest(pawns); }
+constexpr BitBoard shiftPawnCapturesEast(const BitBoard& pawns, int side) { return (side == WHITE) ? shiftNorthEast(pawns) : shiftSouthEast(pawns); }
 
 void printBitboard(const BitBoard& bitboard);
 
