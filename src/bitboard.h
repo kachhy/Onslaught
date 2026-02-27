@@ -6,67 +6,64 @@
 #include <cstdint>
 #include "types.h"
 
-typedef uint64_t BitBoard;
+using BitBoard = uint64_t;
 
-#define NORTH -8
-#define SOUTH 8
-#define EAST 1
-#define WEST -1
-#define NORTHEAST -7
-#define NORTHWEST -9
-#define SOUTHEAST 9
-#define SOUTHWEST 7
+constexpr inline int8_t NORTH = -8
+constexpr inline int8_t SOUTH = 8
+constexpr inline int8_t EAST = 1
+constexpr inline int8_t WEST = -1
+constexpr inline int8_t NORTHEAST = -7
+constexpr inline int8_t NORTHWEST = -9
+constexpr inline int8_t SOUTHEAST = 9
+constexpr inline int8_t SOUTHWEST = 7
 
-#define A_FILE 0x0101010101010101ULL
-#define B_FILE 0x0202020202020202ULL
-#define C_FILE 0x0404040404040404ULL
-#define D_FILE 0x0808080808080808ULL
-#define E_FILE 0x1010101010101010ULL
-#define F_FILE 0x2020202020202020ULL
-#define G_FILE 0x4040404040404040ULL
-#define H_FILE 0x8080808080808080ULL
+constexpr inline BitBoard A_FILE = 0x0101010101010101ULL;
+constexpr inline BitBoard B_FILE = 0x0202020202020202ULL;
+constexpr inline BitBoard C_FILE = 0x0404040404040404ULL;
+constexpr inline BitBoard D_FILE = 0x0808080808080808ULL;
+constexpr inline BitBoard E_FILE = 0x1010101010101010ULL;
+constexpr inline BitBoard F_FILE = 0x2020202020202020ULL;
+constexpr inline BitBoard G_FILE = 0x4040404040404040ULL;
+constexpr inline BitBoard H_FILE = 0x8080808080808080ULL;
 
-#define RANK_1 0xFF00000000000000ULL
-#define RANK_2 0x00FF000000000000ULL
-#define RANK_3 0x0000FF0000000000ULL
-#define RANK_4 0x000000FF00000000ULL
-#define RANK_5 0x00000000FF000000ULL
-#define RANK_6 0x0000000000FF0000ULL
-#define RANK_7 0x000000000000FF00ULL
-#define RANK_8 0x00000000000000FFULL
+constexpr inline BitBoard RANK_1 = 0xFF00000000000000ULL;
+constexpr inline BitBoard RANK_2 = 0x00FF000000000000ULL;
+constexpr inline BitBoard RANK_3 = 0x0000FF0000000000ULL;
+constexpr inline BitBoard RANK_4 = 0x000000FF00000000ULL;
+constexpr inline BitBoard RANK_5 = 0x00000000FF000000ULL;
+constexpr inline BitBoard RANK_6 = 0x0000000000FF0000ULL;
+constexpr inline BitBoard RANK_7 = 0x000000000000FF00ULL;
+constexpr inline BitBoard RANK_8 = 0x00000000000000FFULL;
 
-BitBoard shiftNorth(const BitBoard& bitboard);
-BitBoard shiftNorthEast(const BitBoard& bitboard);
-BitBoard shiftEast(const BitBoard& bitboard);
-BitBoard shiftSouthEast(const BitBoard& bitboard);
-BitBoard shiftSouth(const BitBoard& bitboard);
-BitBoard shiftSouthWest(const BitBoard& bitboard);
-BitBoard shiftWest(const BitBoard& bitboard);
-BitBoard shiftNorthWest(const BitBoard& bitboard);
+constexpr BitBoard shiftNorth(const BitBoard& bitboard);
+constexpr BitBoard shiftNorthEast(const BitBoard& bitboard);
+constexpr BitBoard shiftEast(const BitBoard& bitboard);
+constexpr BitBoard shiftSouthEast(const BitBoard& bitboard);
+constexpr BitBoard shiftSouth(const BitBoard& bitboard);
+constexpr BitBoard shiftSouthWest(const BitBoard& bitboard);
+constexpr BitBoard shiftWest(const BitBoard& bitboard);
+constexpr BitBoard shiftNorthWest(const BitBoard& bitboard);
 
-int getBit(const BitBoard& bitboard, int bit);
-int bitCount(const BitBoard& bitboard);
-int getLSB(const BitBoard& bitboard);
-int getMSB(const BitBoard& bitboard);
-int popLSB(BitBoard& bitboard);
+constexpr int getBit(const BitBoard& bitboard, int bit);
+constexpr int bitCount(const BitBoard& bitboard);
+constexpr int getLSB(const BitBoard& bitboard);
+constexpr int getMSB(const BitBoard& bitboard);
 
 void setBit(BitBoard& bitboard, int bit);
 void popBit(BitBoard& bitboard, int bit);
 void flipBit(BitBoard& bitboard, int bit);
 void flipBits(BitBoard& bitboard, int bit_1, int bit_2);
 
-int getRank(Square square);
-int getFile(Square square);
-int getRank(uint8_t square);
-int getFile(uint8_t square);
+constexpr int getRank(int square);
+constexpr int getFile(int square);
 
-BitBoard rankMask(int rank);
-BitBoard fileMask(int file);
+constexpr BitBoard getRankMask(int rank);
+constexpr BitBoard getFileMask(int file);
 
-BitBoard shiftPawnPushes(const BitBoard& pawns, Side side);
-BitBoard shiftPawnAttacks(const BitBoard& pawns, Side side);
-BitBoard shiftPawnCapturesWest(const BitBoard& pawns, Side side);
-BitBoard shiftPawnCapturesEast(const BitBoard& pawns, Side side);
+constexpr BitBoard shiftPawnPushes(const BitBoard& pawns, int side);
+constexpr BitBoard shiftPawnAttacks(const BitBoard& pawns, int side);
+constexpr BitBoard shiftPawnCapturesWest(const BitBoard& pawns, int side);
+constexpr BitBoard shiftPawnCapturesEast(const BitBoard& pawns, int side);
 
 void printBitboard(const BitBoard& bitboard);
 
