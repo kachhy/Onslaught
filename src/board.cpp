@@ -157,14 +157,14 @@ bool Board::loadFEN(const std::string &fen) {
     clear();
 
     std::istringstream iss(fen);
-    std::string placement, active, castlingStr, epStr, halfmoveStr, fullmoveStr;
+    std::string placement, active, castling_str, ep_str, halfmove_str, fullmove_str;
 
-    if (!(iss >> placement >> active >> castlingStr >> epStr)) {
+    if (!(iss >> placement >> active >> castling_str >> ep_str)) {
         return false;
     }
 
-    iss >> halfmoveStr;
-    iss >> fullmoveStr;
+    iss >> halfmove_str;
+    iss >> fullmove_str;
 
     // Parse piece placement (ranks 8 -> 1)
     int rank = 0;
@@ -219,8 +219,8 @@ bool Board::loadFEN(const std::string &fen) {
 
     // Castling rights: KQkq -> bits 1,2,4,8
     castling = 0;
-    if (castlingStr != "-") {
-        for (char ch : castlingStr) {
+    if (castling_str != "-") {
+        for (char ch : castling_str) {
             switch (ch) {
             case 'K': castling |= 1; break;
             case 'Q': castling |= 2; break;
@@ -232,29 +232,29 @@ bool Board::loadFEN(const std::string &fen) {
     }
 
     // En-passant
-    if (epStr == "-") {
+    if (ep_str == "-") {
         ep_square = NO_SQUARE;
-    } else if (epStr.size() == 2 && epStr[0] >= 'a' && epStr[0] <= 'h' && epStr[1] >= '1' && epStr[1] <= '8') {
-        int f = epStr[0] - 'a';
-        int r = '8' - epStr[1];
+    } else if (ep_str.size() == 2 && ep_str[0] >= 'a' && ep_str[0] <= 'h' && ep_str[1] >= '1' && ep_str[1] <= '8') {
+        int f = ep_str[0] - 'a';
+        int r = '8' - ep_str[1];
         ep_square = static_cast<Square>(r * 8 + f);
     } else {
         return false;
     }
 
     // Halfmove clock
-    if (!halfmoveStr.empty()) {
+    if (!halfmove_str.empty()) {
         try {
-            fmr = static_cast<uint8_t>(std::stoi(halfmoveStr));
+            fmr = static_cast<uint8_t>(std::stoi(halfmove_str));
         } catch (...) {
             fmr = 0;
         }
     }
 
     // Fullmove number
-    if (!fullmoveStr.empty()) {
+    if (!fullmove_str.empty()) {
         try {
-            move_number = static_cast<uint32_t>(std::stoul(fullmoveStr));
+            move_number = static_cast<uint32_t>(std::stoul(fullmove_str));
         } catch (...) {
             move_number = 1;
         }
