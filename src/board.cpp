@@ -371,7 +371,7 @@ void Board::makeMove(Move move) {
         fmr = 0;
     }
 
-    move_number++;
+    move_number += (stm == BLACK);
     xstm = stm;
     stm = xstm == WHITE ? BLACK : WHITE; // optimizable
 }
