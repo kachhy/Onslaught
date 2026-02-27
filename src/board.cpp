@@ -273,9 +273,9 @@ void Board::makeMove(Move move) {
     Square from      = From(move);
     Square to        = To(move);
     Piece piece      = MovePiece(move);
-    int captured     = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
+    Piece captured   = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
 
-    history.emplace_back(castling, ep_square, fmr);
+    history.emplace_back(castling, ep_square, fmr, captured);
 
     fmr++;
     flipBits(piece_bb[piece], from, to);
@@ -286,7 +286,6 @@ void Board::makeMove(Move move) {
     piece_board[to]   = piece;
 
     if (Castle(move)) {
-        std::cout << "castle\n";
         switch (to)
         {
             // K
@@ -330,7 +329,6 @@ void Board::makeMove(Move move) {
         }
     }
     else if (Capture(move)) {
-        std::cout << "capture\n";
         Square sq = IsEP(move) ? static_cast<Square>(static_cast<int>(to) - (stm == WHITE ? NORTH : SOUTH)) : to;
 
         if (IsEP(move)) {
@@ -379,4 +377,89 @@ void Board::makeMove(Move move) {
 }
 
 void Board::undoMove(Move move) {
+    Square from      = From(move);
+    Square to        = To(move);
+    Piece piece      = MovePiece(move);
+
+    BoardHistory& hist_data = history.back();
+    castling  = hist_data.castling;
+    ep_square = hist_data.ep_square;
+    fmr       = hist_data.fmr;
+
+    move_number -= (stm == BLACK);
+    stm          = xstm;
+    xstm         = stm == WHITE ? BLACK : WHITE; // optimizable
+
+    if (Prom(move)) {
+        Piece prom_piece = makePiece(promPiece(move), stm);
+
+        flipBit(piece_bb[piece], to);
+        flipBit(piece_bb[prom_piece], to);
+
+        piece_board[to] = piece;
+    }
+
+    flipBits(piece_bb[piece], to, from);
+    flipBits(occ[stm], to, from);
+    flipBits(occ[BOTH], to, from);
+
+    piece_board[from] = piece;
+    piece_board[to]   = NO_PIECE;
+
+    if (Castle(move)) {
+        switch (to)
+        {
+            // White Kingside (K) - Rook was on F1, move back to H1
+            case G1:
+                popBit(piece_bb[WHITE_ROOK], F1);
+                setBit(piece_bb[WHITE_ROOK], H1);
+                flipBit(occ[stm], F1);
+                flipBit(occ[BOTH], F1);
+                flipBit(occ[stm], H1);
+                flipBit(occ[BOTH], H1);
+                break;
+
+            // White Queenside (Q) - Rook was on D1, move back to A1
+            case C1:
+                popBit(piece_bb[WHITE_ROOK], D1);
+                setBit(piece_bb[WHITE_ROOK], A1);
+                flipBit(occ[stm], D1);
+                flipBit(occ[BOTH], D1);
+                flipBit(occ[stm], A1);
+                flipBit(occ[BOTH], A1);
+                break;
+
+            // Black Kingside (k) - Rook was on F8, move back to H8
+            case G8:
+                popBit(piece_bb[BLACK_ROOK], F8);
+                setBit(piece_bb[BLACK_ROOK], H8);
+                flipBit(occ[stm], F8);
+                flipBit(occ[BOTH], F8);
+                flipBit(occ[stm], H8);
+                flipBit(occ[BOTH], H8);
+                break;
+
+            // Black Queenside (q) - Rook was on D8, move back to A8
+            case C8:
+                popBit(piece_bb[BLACK_ROOK], D8);
+                setBit(piece_bb[BLACK_ROOK], A8);
+                flipBit(occ[stm], D8);
+                flipBit(occ[BOTH], D8);
+                flipBit(occ[stm], A8);
+                flipBit(occ[BOTH], A8);
+                break;
+        }
+    }
+    else if (Capture(move)) {
+        Square sq      = IsEP(move) ? static_cast<Square>(static_cast<int>(to) - (stm == WHITE ? NORTH : SOUTH)) : to;
+        Piece captured = hist_data.captured_piece;
+
+        flipBit(piece_bb[captured], sq);
+        flipBit(occ[xstm], sq);
+        flipBit(occ[BOTH], sq);
+
+        piece_board[sq] = captured;
+    }
+
+    history.pop_back();
 }

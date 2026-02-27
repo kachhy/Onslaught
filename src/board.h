@@ -46,8 +46,9 @@ struct BoardHistory {
     CastlingRights castling; 
     Square ep_square;
     uint8_t fmr;
+    Piece captured_piece;
 
-    BoardHistory(CastlingRights castling, Square ep_square, uint8_t fmr) : castling(castling), ep_square(ep_square), fmr(fmr) {}
+    BoardHistory(CastlingRights castling, Square ep_square, uint8_t fmr, Piece captured_piece) : castling(castling), ep_square(ep_square), fmr(fmr), captured_piece(captured_piece) {}
 };
 
 class Board {

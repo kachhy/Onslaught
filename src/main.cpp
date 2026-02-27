@@ -72,6 +72,39 @@ void tests() {
     b2.printBoard();
     b2.makeMove(GenerateMove(E1, F1, WHITE_KING, 0));
     b2.printBoard();
+
+    b2.undoMove(GenerateMove(E1, F1, WHITE_KING, 0));
+    b2.printBoard();
+
+    b2.undoMove(GenerateMove(E8, G8, BLACK_KING, CASTLE_FLAG));
+    b2.printBoard();
+
+    b2.undoMove(GenerateMove(F1, E2, WHITE_BISHOP, 0));
+    b2.printBoard();
+
+    b2.undoMove(GenerateMove(F8, D6, BLACK_BISHOP, CAPTURE_FLAG));
+    b2.printBoard();
+
+    b2.undoMove(GenerateMove(G1, F3, WHITE_KNIGHT, 0));
+    b2.printBoard();
+
+    b2.undoMove(GenerateMove(E7, E6, BLACK_PAWN, 0));
+    b2.printBoard();
+
+    b2.undoMove(GenerateMove(E5, D6, WHITE_PAWN, CAPTURE_FLAG | EP_FLAG));
+    b2.printBoard();
+
+    b2.undoMove(GenerateMove(D7, D5, BLACK_PAWN, 0));
+    b2.printBoard();
+
+    b2.undoMove(GenerateMove(E4, E5, WHITE_PAWN, 0));
+    b2.printBoard();
+
+    b2.undoMove(GenerateMove(G8, F6, BLACK_KNIGHT, 0));
+    b2.printBoard();
+
+    b2.undoMove(GenerateMove(E2, E4, WHITE_PAWN, 0));
+    b2.printBoard();
 }
 
 int main() {
