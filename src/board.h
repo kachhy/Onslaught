@@ -44,25 +44,11 @@ DefaultPiece promPiece(Move move);
 
 constexpr inline uint16_t MAX_PLY = 256;
 
-struct BoardHistory {
-    CastlingRights castling; 
-    Square ep_square;
-    uint8_t fmr;
-    Piece captured_piece;
-    BitBoard checkers;
-    BitBoard pinned;
-
-    BoardHistory(CastlingRights castling, Square ep_square, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard pinned)
-                : castling(castling), ep_square(ep_square), fmr(fmr), captured_piece(captured_piece), checkers(checkers), pinned(pinned) {}
-};
-
 class Board {
 public:
     Board(); // Initializes board to default starting state
     Board(const std::string& fen);
 
-    void setPieceBoard();
-    void setOcc();
     bool loadFEN(const std::string& fen);
     void clear();
     
@@ -80,7 +66,22 @@ public:
     void makeMove(Move move);
     void undoMove(Move move);
 private:
+    struct BoardHistory {
+        CastlingRights castling; 
+        Square ep_square;
+        uint8_t fmr;
+        Piece captured_piece;
+        BitBoard checkers;
+        BitBoard pinned;
+
+        BoardHistory(CastlingRights castling, Square ep_square, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard pinned)
+                    : castling(castling), ep_square(ep_square), fmr(fmr), captured_piece(captured_piece), checkers(checkers), pinned(pinned) {}
+    };
+
+    // Private member functions
     void setSpecials();
+    void setPieceBoard();
+    void setOcc();
 
     // Note: 0 is white side, 64 is black side
     BitBoard piece_bb[12];
