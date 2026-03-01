@@ -28,6 +28,10 @@ constexpr inline uint8_t WHITE_QS = 0x4;
 constexpr inline uint8_t BLACK_KS = 0x2;
 constexpr inline uint8_t BLACK_QS = 0x1;
 
+// Engine constants
+constexpr inline uint16_t MAX_PLY = 256;
+
+// Move encoding/decoding
 constexpr inline Move GenerateMove(Square from, Square to, Piece piece, uint32_t flags) {
     return (static_cast<Move>(from)) | (static_cast<Move>(to) << 6) | (static_cast<Move>(piece) << 12) | (static_cast<Move>(flags) << 16);
 }
@@ -39,10 +43,7 @@ constexpr inline bool Capture(Move move) { return (Flags(move) & CAPTURE_FLAG) !
 constexpr inline bool IsEP(Move move) { return Flags(move) == EP_FLAG; }
 constexpr inline bool Castle(Move move) { return Flags(move) == CASTLE_FLAG; }
 constexpr inline bool Prom(Move move) { return (Flags(move) & PROMO_FLAG) != 0; }
-
 DefaultPiece promPiece(Move move);
-
-constexpr inline uint16_t MAX_PLY = 256;
 
 class Board {
 public:
