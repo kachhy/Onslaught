@@ -107,6 +107,8 @@ void tests() {
     b2.undoMove(GenerateMove(E2, E4, WHITE_PAWN, 0));
     b2.printBoard();
     assert(tt.fetch(b2, dummy_entry) == true && "TT hit failed.");
+
+    tt.clear();
     
     
 
