@@ -62,6 +62,7 @@ public:
 
     BitBoard getCheckersMask() const { return checkers; }
     BitBoard getPinMask() const { return pinned; }
+    uint64_t hash() const { return zobrist_hash; }
     bool inCheck() const { return static_cast<bool>(checkers); }
 
     // Make and undo move
