@@ -399,8 +399,9 @@ void Board::makeMove(Move move) {
         fmr = 0;
     }
 
-    if (!Prom(move))
+    if (!Prom(move)) {
         zobrist_hash ^= piece_keys[piece][to];
+    }
 
     move_number += (stm == BLACK);
     xstm = stm;
