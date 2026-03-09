@@ -7,6 +7,7 @@
 #include "attacks.h"
 #include "bitboard.h"
 #include "types.h"
+#include "zobrist.h"
 
 typedef uint8_t CastlingRights;
 typedef uint32_t Move;
@@ -74,9 +75,10 @@ private:
         Piece captured_piece;
         BitBoard checkers;
         BitBoard pinned;
+        uint64_t zobrist_hash;
 
-        BoardHistory(CastlingRights castling, Square ep_square, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard pinned)
-                    : castling(castling), ep_square(ep_square), fmr(fmr), captured_piece(captured_piece), checkers(checkers), pinned(pinned) {}
+        BoardHistory(CastlingRights castling, Square ep_square, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard pinned, uint64_t zobrist_hash)
+                    : castling(castling), ep_square(ep_square), fmr(fmr), captured_piece(captured_piece), checkers(checkers), pinned(pinned), zobrist_hash(zobrist_hash) {}
     };
 
     // Private member functions
@@ -102,6 +104,9 @@ private:
 
     // History
     std::vector<BoardHistory> history;
+
+    // Hashing
+    uint64_t zobrist_hash;
 };
 
 #endif // BOARD_H

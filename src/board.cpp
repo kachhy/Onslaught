@@ -277,7 +277,7 @@ void Board::makeMove(Move move) {
     Piece piece      = MovePiece(move);
     Piece captured   = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
 
-    history.emplace_back(castling, ep_square, fmr, captured, checkers, pinned);
+    history.emplace_back(castling, ep_square, fmr, captured, checkers, pinned, zobrist_hash);
 
     fmr++;
     flipBits(piece_bb[piece], from, to);
@@ -386,11 +386,12 @@ void Board::undoMove(Move move) {
     Piece piece      = MovePiece(move);
 
     BoardHistory& hist_data = history.back();
-    castling  = hist_data.castling;
-    ep_square = hist_data.ep_square;
-    fmr       = hist_data.fmr;
-    checkers  = hist_data.checkers;
-    pinned    = hist_data.pinned;
+    castling     = hist_data.castling;
+    ep_square    = hist_data.ep_square;
+    fmr          = hist_data.fmr;
+    checkers     = hist_data.checkers;
+    pinned       = hist_data.pinned;
+    zobrist_hash = hist_data.zobrist_hash;
 
     move_number -= (stm == BLACK);
     stm          = xstm;
