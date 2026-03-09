@@ -118,6 +118,7 @@ void Board::printBoard() const {
               << "\nTurn: " << (stm == WHITE ? "White" : "Black")
               << "\nEP Square: " << board_coords[ep_square] 
               << "\nCastling: " << getCastlingString()
+              << "\nZobrist: " << zobrist_hash
               << "\n" << std::endl;
 }
 
