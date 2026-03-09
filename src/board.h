@@ -8,8 +8,8 @@
 #include "bitboard.h"
 #include "types.h"
 
-typedef uint8_t CastlingRights;
-typedef uint32_t Move;
+using CastlingRights = uint8_t;
+using Move = uint32_t;
 
 // Move flags
 constexpr inline uint8_t QUIET_FLAG        = 0b0000;
@@ -39,6 +39,8 @@ constexpr inline bool Capture(Move move) { return (Flags(move) & CAPTURE_FLAG) !
 constexpr inline bool IsEP(Move move) { return Flags(move) == EP_FLAG; }
 constexpr inline bool Castle(Move move) { return Flags(move) == CASTLE_FLAG; }
 constexpr inline bool Prom(Move move) { return (Flags(move) & PROMO_FLAG) != 0; }
+
+constexpr inline Side getPieceSide(Piece piece) { return piece <= WHITE_KING ? WHITE : BLACK; }
 
 DefaultPiece promPiece(Move move);
 
@@ -72,6 +74,10 @@ public:
     std::string getCastlingString() const;
     void printBoard() const;
 
+    CastlingRights getCastlingRights() const { return castling; }
+    Side getSTM() const { return stm; }
+    Side getXSTM() const { return xstm; }
+    BitBoard getPieceBB(Piece p) const { return piece_bb[p]; }
     BitBoard getCheckersMask() const { return checkers; }
     BitBoard getPinMask() const { return pinned; }
     bool inCheck() const { return static_cast<bool>(checkers); }

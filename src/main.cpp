@@ -1,4 +1,22 @@
 #include "board.h"
+#include "movegen.h"
+
+long perft_test(Board& board, int depth) {
+    
+    if (depth == 0) {
+        return 1ULL;
+    }
+    long nodes = 0;
+
+    MoveList m;
+    for (int i = 0; i < m.size(); i++) {
+        board.makeMove(m[i]);
+        nodes += perft_test(board, depth - 1);
+        board.undoMove(m[i]);
+    }
+    std::cout << nodes << " " << depth << "\n";
+    return nodes;
+}
 
 void initAttacks() {
     populateBetweenSquares();
@@ -107,6 +125,13 @@ void tests() {
 
     b2.undoMove(GenerateMove(E2, E4, WHITE_PAWN, 0));
     b2.printBoard();
+
+
+    Board pert_board;
+    pert_board.printBoard();
+    int depth = 1;
+    long res=perft_test(pert_board, depth);
+    std::cout << "perft test with depth " << depth << " result: " << res << "\n";
 }
 
 int main() {
