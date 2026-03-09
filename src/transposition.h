@@ -4,8 +4,6 @@
 #include <string.h>
 #include "board.h"
 
-constexpr inline size_t TABLE_SIZE = 16 * 1024;
-
 struct Entry {
     uint64_t hash;
     Move best_move;
@@ -14,14 +12,17 @@ struct Entry {
     size_t depth, last_seen;
 };
 
-class TTable {
-public:
-    struct EntryTriple {
-        Entry entries[3];
-        size_t count;
+struct EntryTriple {
+    Entry entries[3];
+    size_t count;
 
-        EntryTriple() : count(0) {}
-    };
+    EntryTriple() : count(0) {}
+};
+
+constexpr inline size_t ENTRY_TRIPLE_SIZE = sizeof(EntryTriple);
+constexpr inline size_t TABLE_SIZE        = (16 * 1024 * 1024) / ENTRY_TRIPLE_SIZE; // 16 MB
+
+class TTable {
 private:
     EntryTriple table[TABLE_SIZE];
     size_t table_age;
