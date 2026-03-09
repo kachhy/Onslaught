@@ -1,5 +1,7 @@
 #include "board.h"
 #include "zobrist.h"
+#include "transposition.h"
+#include <cassert>
 
 void initAttacks() {
     populateBetweenSquares();
@@ -50,14 +52,18 @@ void tests() {
     // b.loadFEN("rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3");
     // b.printBoard();
 
-    // Test make move
+    // Test make move and TT
+    Entry dummy_entry;
     Board b2;
+    tt.insert(b2, 0, 0, EXACTBOUND, 1);
     b2.printBoard();
     b2.makeMove(GenerateMove(E2, E4, WHITE_PAWN, 0));
+    tt.insert(b2, 0, 0, EXACTBOUND, 1);
     b2.printBoard();
     b2.makeMove(GenerateMove(G8, F6, BLACK_KNIGHT, 0));
     b2.printBoard();
     b2.makeMove(GenerateMove(E4, E5, WHITE_PAWN, 0));
+    tt.insert(b2, 0, 0, EXACTBOUND, 1);
     b2.printBoard();
     b2.makeMove(GenerateMove(D7, D5, BLACK_PAWN, 0));
     b2.printBoard();
@@ -91,12 +97,18 @@ void tests() {
     b2.printBoard();
     b2.undoMove(GenerateMove(D7, D5, BLACK_PAWN, 0));
     b2.printBoard();
+    assert(tt.fetch(b2, dummy_entry) == true && "TT hit failed.");
     b2.undoMove(GenerateMove(E4, E5, WHITE_PAWN, 0));
     b2.printBoard();
+    assert(tt.fetch(b2, dummy_entry) == false && "TT hit succeeded and should not have.");
     b2.undoMove(GenerateMove(G8, F6, BLACK_KNIGHT, 0));
     b2.printBoard();
+    assert(tt.fetch(b2, dummy_entry) == true && "TT hit failed.");
     b2.undoMove(GenerateMove(E2, E4, WHITE_PAWN, 0));
     b2.printBoard();
+    assert(tt.fetch(b2, dummy_entry) == true && "TT hit failed.");
+    
+    
 
     // Test random numbers
     // RNGU64 rand_engine = RNGU64(DEFAULT_U64_SEED);
