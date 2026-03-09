@@ -24,13 +24,14 @@ constexpr inline size_t TABLE_SIZE        = (16 * 1024 * 1024) / ENTRY_TRIPLE_SI
 class TTable {
 private:
     EntryTriple table[TABLE_SIZE];
-    size_t table_age;
+    size_t table_age, table_size;
 public:
     TTable();
 
     void insert(const Board& board, Move best_move, int32_t score, TTBound bound, size_t depth);
     bool fetch(const Board& board, Entry& entry);
     void clear();
+    inline size_t size() const { return table_size; }
 };
 
 extern TTable tt;

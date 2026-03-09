@@ -12,6 +12,7 @@ void TTable::insert(const Board& board, Move best_move, int32_t score, TTBound b
     if (table[hash].count < 3) {
         table[hash].entries[table[hash].count] = {board.hash(), best_move, score, bound, depth, table_age};
         table[hash].count++;
+        table_size++; // We added a new entry
         return;
     }
 
@@ -54,4 +55,5 @@ bool TTable::fetch(const Board& board, Entry& entry) {
 void TTable::clear() {
     static_assert(std::is_trivially_copyable_v<EntryTriple>, "EntryTriple must be trivial for memset to be safe.");
     memset(table, 0, sizeof(table));
+    table_size = 0;
 }
