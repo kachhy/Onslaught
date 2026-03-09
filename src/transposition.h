@@ -13,9 +13,7 @@ struct Entry {
 
 struct EntryTriple {
     Entry entries[3];
-    size_t count;
-
-    EntryTriple() : count(0) {}
+    size_t count; // Default 0 after clear()
 };
 
 constexpr inline size_t ENTRY_TRIPLE_SIZE = sizeof(EntryTriple);
