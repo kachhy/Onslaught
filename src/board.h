@@ -7,6 +7,7 @@
 #include "attacks.h"
 #include "bitboard.h"
 #include "types.h"
+#include "zobrist.h"
 
 using CastlingRights = uint8_t;
 using Move = uint32_t;
@@ -28,6 +29,10 @@ constexpr inline uint8_t WHITE_QS = 0x4;
 constexpr inline uint8_t BLACK_KS = 0x2;
 constexpr inline uint8_t BLACK_QS = 0x1;
 
+// Engine constants
+constexpr inline uint16_t MAX_PLY = 256;
+
+// Move encoding/decoding
 constexpr inline Move GenerateMove(Square from, Square to, Piece piece, uint32_t flags) {
     return (static_cast<Move>(from)) | (static_cast<Move>(to) << 6) | (static_cast<Move>(piece) << 12) | (static_cast<Move>(flags) << 16);
 }
@@ -44,27 +49,11 @@ constexpr inline Side getPieceSide(Piece piece) { return piece <= WHITE_KING ? W
 
 DefaultPiece promPiece(Move move);
 
-constexpr inline uint16_t MAX_PLY = 256;
-
-struct BoardHistory {
-    CastlingRights castling; 
-    Square ep_square;
-    uint8_t fmr;
-    Piece captured_piece;
-    BitBoard checkers;
-    BitBoard pinned;
-
-    BoardHistory(CastlingRights castling, Square ep_square, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard pinned)
-                : castling(castling), ep_square(ep_square), fmr(fmr), captured_piece(captured_piece), checkers(checkers), pinned(pinned) {}
-};
-
 class Board {
 public:
     Board(); // Initializes board to default starting state
     Board(const std::string& fen);
 
-    void setPieceBoard();
-    void setOcc();
     bool loadFEN(const std::string& fen);
     void clear();
     
@@ -80,13 +69,33 @@ public:
     BitBoard getPieceBB(Piece p) const { return piece_bb[p]; }
     BitBoard getCheckersMask() const { return checkers; }
     BitBoard getPinMask() const { return pinned; }
+    uint64_t hash() const { return zobrist_hash; }
     bool inCheck() const { return static_cast<bool>(checkers); }
 
     // Make and undo move
     void makeMove(Move move);
     void undoMove(Move move);
+
+    // Zobrist setup
+    void refreshZobrist();
 private:
+    struct BoardHistory {
+        CastlingRights castling; 
+        Square ep_square;
+        uint8_t fmr;
+        Piece captured_piece;
+        BitBoard checkers;
+        BitBoard pinned;
+        uint64_t zobrist_hash;
+
+        BoardHistory(CastlingRights castling, Square ep_square, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard pinned, uint64_t zobrist_hash)
+                    : castling(castling), ep_square(ep_square), fmr(fmr), captured_piece(captured_piece), checkers(checkers), pinned(pinned), zobrist_hash(zobrist_hash) {}
+    };
+
+    // Private member functions
     void setSpecials();
+    void setPieceBoard();
+    void setOcc();
 
     // Note: 0 is white side, 64 is black side
     BitBoard piece_bb[12];
@@ -106,6 +115,9 @@ private:
 
     // History
     std::vector<BoardHistory> history;
+
+    // Hashing
+    uint64_t zobrist_hash;
 };
 
 #endif // BOARD_H

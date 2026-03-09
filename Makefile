@@ -26,8 +26,6 @@ OBJ=$(patsubst src/%.cpp,$(OBJDIR)/%.o,$(SRC))
 DEPS=$(OBJ:.o=.d)
 BIN=$(OBJDIR)/Axiom
 
-all: debug
-
 debug: $(BIN)
 release: $(BIN)
 lto: $(BIN)

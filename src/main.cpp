@@ -1,5 +1,8 @@
 #include "board.h"
 #include "movegen.h"
+#include "zobrist.h"
+#include "transposition.h"
+#include <cassert>
 
 long perft_test(Board& board, int depth) {
     
@@ -67,14 +70,19 @@ void tests() {
     // b.loadFEN("rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3");
     // b.printBoard();
 
-    // Test make move
+    // Test make move and TT
+    Entry dummy_entry;
     Board b2;
+    tt.insert(b2, 0, 0, EXACTBOUND, 1);
     b2.printBoard();
     b2.makeMove(GenerateMove(E2, E4, WHITE_PAWN, 0));
+    tt.insert(b2, 0, 0, EXACTBOUND, 1);
     b2.printBoard();
     b2.makeMove(GenerateMove(G8, F6, BLACK_KNIGHT, 0));
     b2.printBoard();
     b2.makeMove(GenerateMove(E4, E5, WHITE_PAWN, 0));
+    tt.insert(b2, 0, 0, EXACTBOUND, 1);
+    tt.insert(b2, 0, 0, EXACTBOUND, 1);
     b2.printBoard();
     b2.makeMove(GenerateMove(D7, D5, BLACK_PAWN, 0));
     b2.printBoard();
@@ -92,51 +100,52 @@ void tests() {
     b2.printBoard();
     b2.makeMove(GenerateMove(E1, F1, WHITE_KING, 0));
     b2.printBoard();
-
     b2.undoMove(GenerateMove(E1, F1, WHITE_KING, 0));
     b2.printBoard();
-
     b2.undoMove(GenerateMove(E8, G8, BLACK_KING, CASTLE_FLAG));
     b2.printBoard();
-
     b2.undoMove(GenerateMove(F1, E2, WHITE_BISHOP, 0));
     b2.printBoard();
-
     b2.undoMove(GenerateMove(F8, D6, BLACK_BISHOP, CAPTURE_FLAG));
     b2.printBoard();
-
     b2.undoMove(GenerateMove(G1, F3, WHITE_KNIGHT, 0));
     b2.printBoard();
-
     b2.undoMove(GenerateMove(E7, E6, BLACK_PAWN, 0));
     b2.printBoard();
-
     b2.undoMove(GenerateMove(E5, D6, WHITE_PAWN, CAPTURE_FLAG | EP_FLAG));
     b2.printBoard();
-
     b2.undoMove(GenerateMove(D7, D5, BLACK_PAWN, 0));
     b2.printBoard();
-
+    assert(tt.fetch(b2, dummy_entry) == true && "TT hit failed.");
     b2.undoMove(GenerateMove(E4, E5, WHITE_PAWN, 0));
     b2.printBoard();
-
+    assert(tt.fetch(b2, dummy_entry) == false && "TT hit succeeded and should not have.");
     b2.undoMove(GenerateMove(G8, F6, BLACK_KNIGHT, 0));
     b2.printBoard();
-
+    assert(tt.fetch(b2, dummy_entry) == true && "TT hit failed.");
     b2.undoMove(GenerateMove(E2, E4, WHITE_PAWN, 0));
     b2.printBoard();
+    assert(tt.fetch(b2, dummy_entry) == true && "TT hit failed.");
 
+    std::cout << tt.size() << std::endl;
+    tt.clear();
+    std::cout << tt.size() << std::endl;
+    
+    
 
-    Board pert_board;
-    pert_board.printBoard();
-    int depth = 1;
-    long res=perft_test(pert_board, depth);
-    std::cout << "perft test with depth " << depth << " result: " << res << "\n";
+    // Test random numbers
+    // RNGU64 rand_engine = RNGU64(DEFAULT_U64_SEED);
+    // for (uint8_t sq = 0; sq < 64; sq++) {
+    //     std::cout << rand_engine.next() << std::endl;
+    // }
 }
 
 int main() {
     // Populate attacks
     initAttacks();
+
+    // Populate zobrist keys
+    initZobrist();
 
     // Run tests
     tests();

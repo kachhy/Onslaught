@@ -47,6 +47,12 @@ enum Piece {
     NO_PIECE
 };
 
+enum TTBound {
+    EXACTBOUND = 0,
+    LOWERBOUND,
+    UPPERBOUND
+};
+
 extern const char* board_coords[];
 
 // Type helper functions
