@@ -10,6 +10,13 @@ void TTable::insert(const Board& board, Move best_move, int32_t score, TTBound b
     const uint64_t hash = board.hash() % TABLE_SIZE;
 
     if (table[hash].count < 3) {
+        // Ensure entry doesn't already exist
+        for (uint8_t i = 0; i < table[hash].count; i++) {
+            if (table[hash].entries[i].hash == board.hash()) {
+                return;
+            }
+        }
+
         table[hash].entries[table[hash].count] = {board.hash(), best_move, score, bound, depth, table_age};
         table[hash].count++;
         table_size++; // We added a new entry
