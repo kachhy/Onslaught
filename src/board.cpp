@@ -263,6 +263,7 @@ bool Board::loadFEN(const std::string &fen) {
     setOcc();
     setPieceBoard();
     setSpecials();
+    refreshZobrist();
 
     return true;
 }
@@ -469,6 +470,31 @@ void Board::undoMove(Move move) {
     }
 
     history.pop_back();
+}
+
+void Board::refreshZobrist() {
+    zobrist_hash = 0ULL;
+    BitBoard bb;
+
+    for (uint8_t pc = static_cast<uint8_t>(WHITE_PAWN); pc <= static_cast<uint8_t>(BLACK_KING); pc++)
+    {
+        bb = piece_bb[pc];
+        while (bb) // This can in theory be a for loop. Maybe it looks nicer, maybe it doesn't?
+        {
+            uint8_t sq = popLSB(bb);
+            zobrist_hash ^= piece_keys[pc][sq];
+        }
+    }
+
+    if (ep_square != NO_SQUARE) {
+        zobrist_hash ^= ep_keys[ep_square];
+    }
+
+    zobrist_hash ^= castle_keys[castling];
+
+    if (stm == BLACK) {
+        zobrist_hash ^= side_key;
+    }
 }
 
 void Board::setSpecials() {

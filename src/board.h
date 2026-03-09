@@ -67,6 +67,9 @@ public:
     // Make and undo move
     void makeMove(Move move);
     void undoMove(Move move);
+
+    // Zobrist setup
+    void refreshZobrist();
 private:
     struct BoardHistory {
         CastlingRights castling; 
