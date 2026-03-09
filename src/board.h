@@ -13,24 +13,24 @@ using CastlingRights = uint8_t;
 using Move = uint32_t;
 
 // Move flags
-constexpr inline uint8_t QUIET_FLAG        = 0b0000;
-constexpr inline uint8_t CASTLE_FLAG       = 0b0001;
-constexpr inline uint8_t CAPTURE_FLAG      = 0b0100;
-constexpr inline uint8_t EP_FLAG           = 0b0110;
-constexpr inline uint8_t PROMO_FLAG        = 0b1000;
-constexpr inline uint8_t KNIGHT_PROMO_FLAG = 0b1000;
-constexpr inline uint8_t BISHOP_PROMO_FLAG = 0b1001;
-constexpr inline uint8_t ROOK_PROMO_FLAG   = 0b1010;
-constexpr inline uint8_t QUEEN_PROMO_FLAG  = 0b1011;
+constexpr uint8_t QUIET_FLAG        = 0b0000;
+constexpr uint8_t CASTLE_FLAG       = 0b0001;
+constexpr uint8_t CAPTURE_FLAG      = 0b0100;
+constexpr uint8_t EP_FLAG           = 0b0110;
+constexpr uint8_t PROMO_FLAG        = 0b1000;
+constexpr uint8_t KNIGHT_PROMO_FLAG = 0b1000;
+constexpr uint8_t BISHOP_PROMO_FLAG = 0b1001;
+constexpr uint8_t ROOK_PROMO_FLAG   = 0b1010;
+constexpr uint8_t QUEEN_PROMO_FLAG  = 0b1011;
 
 // Castling rights flags
-constexpr inline uint8_t WHITE_KS = 0x8;
-constexpr inline uint8_t WHITE_QS = 0x4;
-constexpr inline uint8_t BLACK_KS = 0x2;
-constexpr inline uint8_t BLACK_QS = 0x1;
+constexpr uint8_t WHITE_KS = 0x8;
+constexpr uint8_t WHITE_QS = 0x4;
+constexpr uint8_t BLACK_KS = 0x2;
+constexpr uint8_t BLACK_QS = 0x1;
 
 // Engine constants
-constexpr inline uint16_t MAX_PLY = 256;
+constexpr uint16_t MAX_PLY = 256;
 
 // Move encoding/decoding
 constexpr inline Move GenerateMove(Square from, Square to, Piece piece, uint32_t flags) {

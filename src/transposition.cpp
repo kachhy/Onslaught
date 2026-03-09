@@ -60,7 +60,7 @@ bool TTable::fetch(const Board& board, Entry& entry) {
 }
 
 void TTable::clear() {
-    static_assert(std::is_trivially_copyable_v<EntryTriple>, "EntryTriple must be trivial for memset to be safe.");
+    static_assert(std::is_trivially_copyable<EntryTriple>::value, "EntryTriple must be trivial for memset to be safe.");
     memset(table, 0, sizeof(table));
     table_size = 0;
 }
