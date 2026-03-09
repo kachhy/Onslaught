@@ -3,6 +3,7 @@
 #include "zobrist.h"
 #include "transposition.h"
 #include <cassert>
+#include <cstddef>
 
 long perft_test(Board& board, int depth) {
     
@@ -12,7 +13,7 @@ long perft_test(Board& board, int depth) {
     long nodes = 0;
 
     MoveList m;
-    for (int i = 0; i < m.size(); i++) {
+    for (size_t i = 0; i < m.size(); i++) {
         board.makeMove(m[i]);
         nodes += perft_test(board, depth - 1);
         board.undoMove(m[i]);

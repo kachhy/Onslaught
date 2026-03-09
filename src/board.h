@@ -64,6 +64,7 @@ public:
     void printBoard() const;
 
     CastlingRights getCastlingRights() const { return castling; }
+    Square getEPSquare() const { return ep_square; }
     Side getSTM() const { return stm; }
     Side getXSTM() const { return xstm; }
     BitBoard getPieceBB(Piece p) const { return piece_bb[p]; }
