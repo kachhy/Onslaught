@@ -1,7 +1,6 @@
 #ifndef TRANSPOSITION_H
 #define TRANSPOSITION_H
 
-#include <string.h>
 #include "board.h"
 
 struct Entry {
