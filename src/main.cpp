@@ -64,6 +64,7 @@ void tests() {
     b2.printBoard();
     b2.makeMove(GenerateMove(E4, E5, WHITE_PAWN, 0));
     tt.insert(b2, 0, 0, EXACTBOUND, 1);
+    tt.insert(b2, 0, 0, EXACTBOUND, 1);
     b2.printBoard();
     b2.makeMove(GenerateMove(D7, D5, BLACK_PAWN, 0));
     b2.printBoard();
@@ -108,7 +109,9 @@ void tests() {
     b2.printBoard();
     assert(tt.fetch(b2, dummy_entry) == true && "TT hit failed.");
 
+    std::cout << tt.size() << std::endl;
     tt.clear();
+    std::cout << tt.size() << std::endl;
     
     
 
