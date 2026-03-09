@@ -272,6 +272,7 @@ BitBoard Board::getOcc(Side side) const {
     return occ[side];
 }
 
+// TODO: zobrist hash apply consteval functions
 void Board::makeMove(Move move) {
     Square from      = From(move);
     Square to        = To(move);
@@ -288,6 +289,8 @@ void Board::makeMove(Move move) {
     piece_board[from] = NO_PIECE;
     piece_board[to]   = piece;
 
+    zobrist_hash ^= piece_keys[piece][from];
+
     if (Castle(move)) {
         switch (to)
         {
@@ -300,6 +303,9 @@ void Board::makeMove(Move move) {
                 flipBit(occ[BOTH], H1);
                 flipBit(occ[stm], F1);
                 flipBit(occ[BOTH], F1);
+
+                zobrist_hash ^= piece_keys[WHITE_ROOK][H1];
+                zobrist_hash ^= piece_keys[WHITE_ROOK][F1];
                 break;
             // Q
             case C1:
@@ -310,6 +316,9 @@ void Board::makeMove(Move move) {
                 flipBit(occ[BOTH], A1);
                 flipBit(occ[stm], D1);
                 flipBit(occ[BOTH], D1);
+
+                zobrist_hash ^= piece_keys[WHITE_ROOK][A1];
+                zobrist_hash ^= piece_keys[WHITE_ROOK][D1];
                 break;
             // k
             case G8:
@@ -319,6 +328,9 @@ void Board::makeMove(Move move) {
                 flipBit(occ[BOTH], H8);
                 flipBit(occ[stm], F8);
                 flipBit(occ[BOTH], F8);
+
+                zobrist_hash ^= piece_keys[BLACK_ROOK][H8];
+                zobrist_hash ^= piece_keys[BLACK_ROOK][F8];
                 break;
             // q
             case C8:
@@ -328,6 +340,9 @@ void Board::makeMove(Move move) {
                 flipBit(occ[BOTH], A8);
                 flipBit(occ[stm], D8);
                 flipBit(occ[BOTH], D8);
+
+                zobrist_hash ^= piece_keys[BLACK_ROOK][A8];
+                zobrist_hash ^= piece_keys[BLACK_ROOK][D8];
                 break;
         }
     }
@@ -342,14 +357,21 @@ void Board::makeMove(Move move) {
         flipBit(occ[xstm], sq);
         flipBit(occ[BOTH], sq);
 
+        zobrist_hash ^= piece_keys[captured][sq];
+
         fmr = 0;
     }
 
-    ep_square = NO_SQUARE;
+    if (ep_square != NO_SQUARE) {
+        zobrist_hash ^= ep_keys[ep_square];
+        ep_square = NO_SQUARE;
+    }
 
     if (castling) {
+        zobrist_hash ^= castle_keys[castling];
         castling &= castling_rights[from];
         castling &= castling_rights[to];
+        zobrist_hash ^= castle_keys[castling];
     }
 
     // Special pawn rules
@@ -360,6 +382,7 @@ void Board::makeMove(Move move) {
 
             if (getPawnAttacks(new_ep_square, stm) & piece_bb[makePiece(PAWN, xstm)]) {
                 ep_square = new_ep_square;
+                zobrist_hash ^= ep_keys[new_ep_square];
             }
         }
         else if (Prom(move)) { // Promotion
@@ -369,10 +392,14 @@ void Board::makeMove(Move move) {
             flipBit(piece_bb[prom_piece], to);
 
             piece_board[to] = static_cast<Piece>(prom_piece);
+            zobrist_hash ^= piece_keys[prom_piece][to];
         }
 
         fmr = 0;
     }
+
+    if (!Prom(move))
+        zobrist_hash ^= piece_keys[piece][to];
 
     move_number += (stm == BLACK);
     xstm = stm;
