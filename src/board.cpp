@@ -393,15 +393,13 @@ void Board::makeMove(Move move) {
             flipBit(piece_bb[prom_piece], to);
 
             piece_board[to] = static_cast<Piece>(prom_piece);
-            zobrist_hash ^= piece_keys[prom_piece][to];
+            zobrist_hash ^= piece_keys[prom_piece][to] ^ piece_keys[piece][to];
         }
 
         fmr = 0;
     }
 
-    if (!Prom(move)) {
-        zobrist_hash ^= piece_keys[piece][to];
-    }
+    zobrist_hash ^= piece_keys[piece][to];
 
     move_number += (stm == BLACK);
     xstm = stm;
