@@ -1,4 +1,5 @@
 #include "board.h"
+#include "zobrist.h"
 
 void initAttacks() {
     populateBetweenSquares();
@@ -107,11 +108,20 @@ void tests() {
 
     b2.undoMove(GenerateMove(E2, E4, WHITE_PAWN, 0));
     b2.printBoard();
+
+    // Test random numbers
+    // RNGU64 rand_engine = RNGU64(DEFAULT_U64_SEED);
+    // for (uint8_t sq = 0; sq < 64; sq++) {
+    //     std::cout << rand_engine.next() << std::endl;
+    // }
 }
 
 int main() {
     // Populate attacks
     initAttacks();
+
+    // Populate zobrist keys
+    initZobrist();
 
     // Run tests
     tests();
