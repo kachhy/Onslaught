@@ -16,8 +16,8 @@ struct EntryTriple {
     size_t count; // Default 0 after clear()
 };
 
-constexpr inline size_t ENTRY_TRIPLE_SIZE = sizeof(EntryTriple);
-constexpr inline size_t TABLE_SIZE        = (16 * 1024 * 1024) / ENTRY_TRIPLE_SIZE; // 16 MB
+constexpr size_t ENTRY_TRIPLE_SIZE = sizeof(EntryTriple);
+constexpr size_t TABLE_SIZE        = (16 * 1024 * 1024) / ENTRY_TRIPLE_SIZE; // 16 MB
 
 class TTable {
 private:
