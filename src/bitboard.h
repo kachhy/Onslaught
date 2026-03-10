@@ -68,6 +68,6 @@ constexpr BitBoard shiftPawnCapturesEast(const BitBoard pawns, int side) { retur
 
 constexpr inline bool multipleActiveBits(BitBoard bitboard) { return bitboard & (bitboard - 1); }
 
-void printBitboard(const BitBoard& bitboard);
+void printBitboard(const BitBoard bitboard);
 
 #endif // BOARD_H
