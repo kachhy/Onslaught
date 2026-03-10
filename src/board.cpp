@@ -48,9 +48,9 @@ void Board::setOcc() {
 }
 
 Piece Board::pieceAt(uint8_t sq) const {
-    if (!getBit(occ[BOTH], sq))
+    if (!getBit(occ[BOTH], sq)) {
         return NO_PIECE;
-
+    }
     for (uint8_t p = WHITE_PAWN; p <= BLACK_KING; p++) {
         if (getBit(piece_bb[p], sq)) {
             return static_cast<Piece>(p);

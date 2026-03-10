@@ -1,7 +1,72 @@
 #include "board.h"
+#include "movegen.h"
 #include "zobrist.h"
 #include "transposition.h"
 #include <cassert>
+#include <chrono>
+#include <cstddef>
+#include <iomanip>
+
+unsigned long long perft_test(Board& board, int depth) {
+    if (depth == 0) {
+        return 1ULL;
+    }
+    unsigned long long nodes = 0;
+    MoveList m = getLegalMoves(board);
+    for (size_t i = 0; i < m.size(); i++) {
+        board.makeMove(m[i]);
+        nodes += perft_test(board, depth - 1);
+        board.undoMove(m[i]);
+    }
+    return nodes;
+}
+
+void perft_tests() {
+    std::vector<unsigned long long> nodes_starter = {
+        1ULL,
+        20ULL,
+        400ULL,
+        8902ULL,
+        197281ULL,
+        4865609ULL,
+        119060324ULL,
+        3195901860ULL,
+        84998978956ULL,
+        2439530234167ULL,
+        69352859712417ULL,
+        2097651003696806ULL,
+        62854969236701747ULL
+    };
+    std::vector<unsigned long long> nodes_position_5 = {
+        1ULL,
+        44ULL,
+        1486ULL,
+        62379ULL,
+        2103487ULL,
+        89941194ULL
+    };
+    std::cout << "\nStandard board start perft tests:\n";
+    std::locale us_locale("en_US.UTF-8");
+    std::cout.imbue(us_locale);
+    for (int i = 0; i <= 6; i++) {
+        auto start = std::chrono::high_resolution_clock::now();
+        Board testing_board_1;
+        unsigned long long result = perft_test(testing_board_1, i);
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+        std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(13) <<  nodes_starter[i] << " | result: " << std::setw(13) << result << " | " << (result == nodes_starter[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(8) << duration.count() << "ms\n";
+    }
+    std::cout << "\nPosition 5 perft tests (rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8):\n";
+    std::cout.imbue(us_locale);
+    for (int i = 0; i <= 5; i++) {
+        auto start = std::chrono::high_resolution_clock::now();
+        Board testing_board_2("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
+        unsigned long long result = perft_test(testing_board_2, i);
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+        std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(13) <<  nodes_position_5[i] << " | result: " << std::setw(13) << result << " | " << (result == nodes_position_5[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(8) << duration.count() << "ms\n";
+    }
+}
 
 void initAttacks() {
     populateBetweenSquares();
@@ -120,6 +185,7 @@ void tests() {
     // for (uint8_t sq = 0; sq < 64; sq++) {
     //     std::cout << rand_engine.next() << std::endl;
     // }
+
 }
 
 int main() {
@@ -131,6 +197,7 @@ int main() {
 
     // Run tests
     tests();
+    perft_tests();
 
     return 0;
 }
