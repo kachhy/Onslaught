@@ -9,28 +9,28 @@
 #include "types.h"
 #include "zobrist.h"
 
-typedef uint8_t CastlingRights;
-typedef uint32_t Move;
+using CastlingRights = uint8_t;
+using Move = uint32_t;
 
 // Move flags
-constexpr inline uint8_t QUIET_FLAG        = 0b0000;
-constexpr inline uint8_t CASTLE_FLAG       = 0b0001;
-constexpr inline uint8_t CAPTURE_FLAG      = 0b0100;
-constexpr inline uint8_t EP_FLAG           = 0b0110;
-constexpr inline uint8_t PROMO_FLAG        = 0b1000;
-constexpr inline uint8_t KNIGHT_PROMO_FLAG = 0b1000;
-constexpr inline uint8_t BISHOP_PROMO_FLAG = 0b1001;
-constexpr inline uint8_t ROOK_PROMO_FLAG   = 0b1010;
-constexpr inline uint8_t QUEEN_PROMO_FLAG  = 0b1011;
+constexpr uint8_t QUIET_FLAG        = 0b0000;
+constexpr uint8_t CASTLE_FLAG       = 0b0001;
+constexpr uint8_t CAPTURE_FLAG      = 0b0100;
+constexpr uint8_t EP_FLAG           = 0b0110;
+constexpr uint8_t PROMO_FLAG        = 0b1000;
+constexpr uint8_t KNIGHT_PROMO_FLAG = 0b1000;
+constexpr uint8_t BISHOP_PROMO_FLAG = 0b1001;
+constexpr uint8_t ROOK_PROMO_FLAG   = 0b1010;
+constexpr uint8_t QUEEN_PROMO_FLAG  = 0b1011;
 
 // Castling rights flags
-constexpr inline uint8_t WHITE_KS = 0x8;
-constexpr inline uint8_t WHITE_QS = 0x4;
-constexpr inline uint8_t BLACK_KS = 0x2;
-constexpr inline uint8_t BLACK_QS = 0x1;
+constexpr uint8_t WHITE_KS = 0x8;
+constexpr uint8_t WHITE_QS = 0x4;
+constexpr uint8_t BLACK_KS = 0x2;
+constexpr uint8_t BLACK_QS = 0x1;
 
 // Engine constants
-constexpr inline uint16_t MAX_PLY = 256;
+constexpr uint16_t MAX_PLY = 256;
 
 // Move encoding/decoding
 constexpr inline Move GenerateMove(Square from, Square to, Piece piece, uint32_t flags) {
@@ -44,6 +44,9 @@ constexpr inline bool Capture(Move move) { return (Flags(move) & CAPTURE_FLAG) !
 constexpr inline bool IsEP(Move move) { return Flags(move) == EP_FLAG; }
 constexpr inline bool Castle(Move move) { return Flags(move) == CASTLE_FLAG; }
 constexpr inline bool Prom(Move move) { return (Flags(move) & PROMO_FLAG) != 0; }
+
+constexpr inline Side getPieceSide(Piece piece) { return piece <= WHITE_KING ? WHITE : BLACK; }
+
 DefaultPiece promPiece(Move move);
 
 class Board {
@@ -60,6 +63,12 @@ public:
     std::string getCastlingString() const;
     void printBoard() const;
 
+    CastlingRights getCastlingRights() const { return castling; }
+    Square getEPSquare() const { return ep_square; }
+    Square getKingSquare() const { return static_cast<Square>(getLSB(piece_bb[makePiece(KING, stm)])); }
+    Side getSTM() const { return stm; }
+    Side getXSTM() const { return xstm; }
+    BitBoard getPieceBB(Piece p) const { return piece_bb[p]; }
     BitBoard getCheckersMask() const { return checkers; }
     BitBoard getPinMask() const { return pinned; }
     uint64_t hash() const { return zobrist_hash; }
