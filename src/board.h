@@ -65,6 +65,7 @@ public:
 
     CastlingRights getCastlingRights() const { return castling; }
     Square getEPSquare() const { return ep_square; }
+    Square getKingSquare() const { return static_cast<Square>(getLSB(piece_bb[makePiece(KING, stm)])); }
     Side getSTM() const { return stm; }
     Side getXSTM() const { return xstm; }
     BitBoard getPieceBB(Piece p) const { return piece_bb[p]; }
