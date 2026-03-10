@@ -38,7 +38,7 @@ void perft_tests() {
         62854969236701747ULL
     };
     std::vector<unsigned long long> nodes_position_5 = {
-        0ULL,
+        1ULL,
         44ULL,
         1486ULL,
         62379ULL,

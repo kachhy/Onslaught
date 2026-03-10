@@ -23,6 +23,9 @@ MoveList getNoisyMoves(const Board& board) {
 
 MoveList getPseudoLegalMoves(const Board &board) {
     MoveList output;
+    if (bitCount(board.getCheckersMask()) > 1) {
+        
+    }
     getMovesPawn(output, board, makePiece(PAWN, board.getSTM()), LEGAL_MOVE_MOVEGEN);
     for (int i = makePiece(PAWN, board.getSTM()) + 1; i <= makePiece(KING, board.getSTM()); i++) {
         getMovesPiece(output, board, static_cast<Piece>(i), LEGAL_MOVE_MOVEGEN);
@@ -31,7 +34,9 @@ MoveList getPseudoLegalMoves(const Board &board) {
 }
 
 MoveList getLegalMoves(const Board& board) {
-    // TODO: Not suck
+    MoveList out;
+    out = getPseudoLegalMoves(board);
+    return out;
 }
 
 BitBoard getPieceAttacks(const Board& board, Piece piece, Square square) {
