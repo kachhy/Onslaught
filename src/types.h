@@ -57,5 +57,6 @@ extern const char* board_coords[];
 
 // Type helper functions
 Piece makePiece(DefaultPiece piece, Side color);
+DefaultPiece makeDefaultPiece(Piece piece);
 
 #endif // TYPES_H
