@@ -92,7 +92,7 @@ void getMovesPawn(MoveList& moves, const Board& board, Piece piece, MoveFlag mov
     }
     if (move_flag & NOISY_MOVE_MOVEGEN) {
         while (cur_pawn_bb > 0) {
-            Square cur_from_square =  static_cast<Square>(popLSB(cur_pawn_bb));
+            Square cur_from_square = static_cast<Square>(popLSB(cur_pawn_bb));
             Square ep_square = board.getEPSquare();
             BitBoard cur_pawn_attacks = getPieceAttacks(board, piece, cur_from_square) & (board.getOcc(static_cast<Side>(getPieceSide(piece) ^ 1)) | (ep_square == NO_SQUARE ? 0 : BitBoard(1) << ep_square));
             while(cur_pawn_attacks > 0) {

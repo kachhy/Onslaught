@@ -61,6 +61,7 @@ public:
     Piece pieceAt(uint8_t sq) const;
     BitBoard getOcc(Side side) const;
     std::string getCastlingString() const;
+    bool isDraw(uint32_t ply) const;
     void printBoard() const;
 
     CastlingRights getCastlingRights() const { return castling; }
@@ -73,6 +74,7 @@ public:
     BitBoard getPinMask() const { return pinned; }
     uint64_t hash() const { return zobrist_hash; }
     bool inCheck() const { return static_cast<bool>(checkers); }
+    uint8_t getFMR() const { return fmr; }
 
     // Make and undo move
     void makeMove(Move move);
@@ -84,20 +86,26 @@ private:
     struct BoardHistory {
         CastlingRights castling; 
         Square ep_square;
+        uint32_t null_move_number;
         uint8_t fmr;
         Piece captured_piece;
         BitBoard checkers;
         BitBoard pinned;
         uint64_t zobrist_hash;
 
-        BoardHistory(CastlingRights castling, Square ep_square, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard pinned, uint64_t zobrist_hash)
-                    : castling(castling), ep_square(ep_square), fmr(fmr), captured_piece(captured_piece), checkers(checkers), pinned(pinned), zobrist_hash(zobrist_hash) {}
+        BoardHistory(CastlingRights castling, Square ep_square, uint32_t null_move_number, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard pinned, uint64_t zobrist_hash)
+                    : castling(castling), ep_square(ep_square), null_move_number(null_move_number), fmr(fmr),
+                      captured_piece(captured_piece), checkers(checkers), pinned(pinned), zobrist_hash(zobrist_hash) {}
     };
 
     // Private member functions
     void setSpecials();
     void setPieceBoard();
     void setOcc();
+
+    // Draw detection functions
+    bool isMaterialDraw() const;
+    bool isRepetitionDraw(uint32_t ply) const;
 
     // Note: 0 is white side, 64 is black side
     BitBoard piece_bb[12];
@@ -113,6 +121,7 @@ private:
 
     // Move counting
     uint32_t move_number;
+    uint32_t null_move_number; // For repetition checking
     uint8_t fmr; // For fifty-move rule draw
 
     // History
@@ -121,5 +130,8 @@ private:
     // Hashing
     uint64_t zobrist_hash;
 };
+
+#include "movegen.h"
+bool isFiftyMoveRuleDraw(Board& board);
 
 #endif // BOARD_H
