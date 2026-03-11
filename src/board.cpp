@@ -2,6 +2,29 @@
 #include <sstream>
 #include <cctype>
 
+std::string moveToStr(Move move) {
+    if (move == NO_MOVE) {
+        return "0000";
+    }
+
+    auto squareToStr = [](Square sq) -> std::string {
+        int s = static_cast<int>(sq);
+        std::string result;
+        result += static_cast<char>('a' + (s % 8));
+        result += static_cast<char>('1' + (s / 8));
+        return result;
+    };
+
+    std::string result = squareToStr(From(move)) + squareToStr(To(move));
+
+    if (Prom(move)) {
+        constexpr char promoPieces[] = { 'p', 'n', 'b', 'r', 'q', 'k' }; // Promote to king should never happen but just in case
+        result += promoPieces[static_cast<int>(promPiece(move))];
+    }
+
+    return result;
+}
+
 DefaultPiece promPiece(Move move) {
     if (Flags(move) & QUEEN_PROMO_FLAG) {
         return KNIGHT;

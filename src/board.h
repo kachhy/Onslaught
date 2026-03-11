@@ -2,6 +2,7 @@
 #define BOARD_H
 
 #include <string.h> // for memset
+#include <string>
 #include <vector>
 #include <string>
 #include "attacks.h"
@@ -33,6 +34,7 @@ constexpr uint8_t BLACK_QS = 0x1;
 constexpr uint16_t MAX_PLY = 256;
 
 // Move encoding/decoding
+constexpr Move NO_MOVE = 0;
 constexpr inline Move GenerateMove(Square from, Square to, Piece piece, uint32_t flags) {
     return (static_cast<Move>(from)) | (static_cast<Move>(to) << 6) | (static_cast<Move>(piece) << 12) | (static_cast<Move>(flags) << 16);
 }
@@ -44,6 +46,7 @@ constexpr inline bool Capture(Move move) { return (Flags(move) & CAPTURE_FLAG) !
 constexpr inline bool IsEP(Move move) { return Flags(move) == EP_FLAG; }
 constexpr inline bool Castle(Move move) { return Flags(move) == CASTLE_FLAG; }
 constexpr inline bool Prom(Move move) { return (Flags(move) & PROMO_FLAG) != 0; }
+std::string moveToStr(Move move);
 
 constexpr inline Side getPieceSide(Piece piece) { return piece <= WHITE_KING ? WHITE : BLACK; }
 
