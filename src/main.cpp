@@ -2,6 +2,7 @@
 #include "movegen.h"
 #include "zobrist.h"
 #include "transposition.h"
+#include "search.h"
 #include <cassert>
 #include <chrono>
 #include <cstddef>
@@ -21,7 +22,7 @@ unsigned long long perft_test(Board& board, int depth) {
     return nodes;
 }
 
-void perft_tests() {
+void perftTests() {
     std::vector<unsigned long long> nodes_starter = {
         1ULL,
         20ULL,
@@ -65,6 +66,17 @@ void perft_tests() {
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
         std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(13) <<  nodes_position_5[i] << " | result: " << std::setw(13) << result << " | " << (result == nodes_position_5[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(8) << duration.count() << "ms\n";
+    }
+}
+
+void searchTests() {
+    for (int i = 0; i <= 7; i++) {
+        auto start = std::chrono::high_resolution_clock::now();
+        Board testing_board;
+        int result = search(testing_board, i);
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+        std::cout << "depth: " << std::setw(2) << i << " | score: " << std::setw(13) << result << " | Time: " << std::setw(8) << duration.count() << "ms\n";
     }
 }
 
@@ -197,7 +209,8 @@ int main() {
 
     // Run tests
     tests();
-    perft_tests();
+    perftTests();
+    searchTests();
 
     return 0;
 }
