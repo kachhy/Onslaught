@@ -21,6 +21,11 @@ ifneq ($(filter lto,$(MAKECMDGOALS)),)
 	LDFLAGS += -flto
 	OBJDIR:=$(OBJDIR)/lto
 endif
+ifneq ($(filter pg,$(MAKECMDGOALS)),)
+	CXXFLAGS += -pg
+	LDFLAGS += -pg
+	OBJDIR:=$(OBJDIR)/pg
+endif
 
 OBJ=$(patsubst src/%.cpp,$(OBJDIR)/%.o,$(SRC))
 DEPS=$(OBJ:.o=.d)
@@ -29,6 +34,7 @@ BIN=$(OBJDIR)/Axiom
 debug: $(BIN)
 release: $(BIN)
 lto: $(BIN)
+pg: $(BIN)
 
 $(BIN): $(OBJ)
 	@echo "  LINK $@"
