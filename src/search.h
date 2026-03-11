@@ -1,9 +1,11 @@
 #ifndef SEARCH_H
 #define SEARCH_H
 
+#include "transposition.h"
 #include "movegen.h"
 #include "eval.h"
 
-int search(Board& board, int depth, int alpha = -SCORE_MAX, int beta = SCORE_MAX, int ply = 0);
+int search(Board& board, int depth, int alpha, int beta, int ply = 0);
+Move search(Board& board, int depth, int& best_score);
 
 #endif // SEARCH_H
