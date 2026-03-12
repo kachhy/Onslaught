@@ -18,3 +18,10 @@ Piece makePiece(DefaultPiece piece, Side color) {
     }
     return static_cast<Piece>(static_cast<int>(piece) + static_cast<int>(BLACK_PAWN));
 }
+
+DefaultPiece makeDefaultPiece(Piece piece) {
+    if (piece <= static_cast<int>(WHITE_KING)) {
+        return static_cast<DefaultPiece>(piece);
+    }
+    return static_cast<DefaultPiece>(static_cast<int>(piece) - static_cast<int>(BLACK_PAWN));
+}
