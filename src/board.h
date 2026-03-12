@@ -113,6 +113,7 @@ private:
     void setThreatened();
     void setPieceBoard();
     void setOcc();
+    void setPhase();
 
     // Draw detection functions
     bool isMaterialDraw() const;
@@ -135,6 +136,9 @@ private:
     uint32_t move_number;
     uint32_t null_move_number; // For repetition checking
     uint8_t fmr; // For fifty-move rule draw
+
+    // Phase score
+    uint16_t phase_score;
 
     // History
     std::vector<BoardHistory> history;

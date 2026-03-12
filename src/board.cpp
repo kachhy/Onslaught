@@ -74,6 +74,15 @@ void Board::setOcc() {
     }
 }
 
+void Board::setPhase() {
+    phase_score = phase_scores[PAWN] * 16 + phase_scores[KNIGHT] * 4 + phase_scores[BISHOP] * 4 + phase_scores[ROOK] * 4 + phase_scores[QUEEN] * 2;
+    phase_score -= phase_scores[PAWN] * bitCount(piece_bb[WHITE_PAWN] | piece_bb[BLACK_PAWN]);
+    phase_score -= phase_scores[KNIGHT] * bitCount(piece_bb[WHITE_KNIGHT] | piece_bb[BLACK_KNIGHT]);
+    phase_score -= phase_scores[BISHOP] * bitCount(piece_bb[WHITE_BISHOP] | piece_bb[BLACK_BISHOP]);
+    phase_score -= phase_scores[ROOK] * bitCount(piece_bb[WHITE_ROOK] | piece_bb[BLACK_ROOK]);
+    phase_score -= phase_scores[QUEEN] * bitCount(piece_bb[WHITE_QUEEN] | piece_bb[BLACK_QUEEN]);
+}
+
 Piece Board::pieceAt(uint8_t sq) const {
     if (!getBit(occ[BOTH], sq)) {
         return NO_PIECE;
@@ -213,6 +222,7 @@ void Board::printBoard() const {
               << "\nEP Square: " << board_coords[ep_square] 
               << "\nCastling: " << getCastlingString()
               << "\nZobrist: " << zobrist_hash
+              << "\nPhase: " << phase_score
               << "\n" << std::endl;
 }
 
@@ -362,6 +372,7 @@ bool Board::loadFEN(const std::string &fen) {
     setOcc();
     setPieceBoard();
     setSpecials();
+    setPhase();
     refreshZobrist();
 
     return true;
@@ -371,7 +382,7 @@ BitBoard Board::getOcc(Side side) const {
     return occ[side];
 }
 
-// TODO: zobrist hash apply consteval functions
+// TODO: zobrist hash apply consteval functions (C++20 migration)
 void Board::makeMove(Move move) {
     Square from      = From(move);
     Square to        = To(move);
@@ -454,6 +465,8 @@ void Board::makeMove(Move move) {
             piece_board[sq] = NO_PIECE;
         }
 
+        phase_score += phase_scores[makeDefaultPiece(captured)];
+
         flipBit(piece_bb[captured], sq);
         flipBit(occ[xstm], sq);
         flipBit(occ[BOTH], sq);
@@ -524,7 +537,6 @@ void Board::undoMove(Move move) {
     pinned            = hist_data.pinned;
     zobrist_hash      = hist_data.zobrist_hash;
 
-
     move_number -= (stm == BLACK);
     stm          = xstm;
     xstm         = stm == WHITE ? BLACK : WHITE; // optimizable
@@ -592,6 +604,8 @@ void Board::undoMove(Move move) {
     else if (Capture(move)) {
         Square sq      = IsEP(move) ? static_cast<Square>(static_cast<int>(to) - (stm == WHITE ? NORTH : SOUTH)) : to;
         Piece captured = hist_data.captured_piece;
+
+        phase_score -= phase_scores[makeDefaultPiece(captured)];
 
         flipBit(piece_bb[captured], sq);
         flipBit(occ[xstm], sq);

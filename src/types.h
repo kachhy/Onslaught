@@ -54,6 +54,7 @@ enum TTBound {
 };
 
 extern const char* board_coords[];
+extern int phase_scores[5];
 
 // Type helper functions
 Piece makePiece(DefaultPiece piece, Side color);

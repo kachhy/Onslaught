@@ -12,6 +12,14 @@ const char* board_coords[] = {
     "NS"
 };
 
+int phase_scores[5] = {
+    0, // PAWN
+    1, // KNIGHT
+    1, // BISHOP
+    2, // ROOK
+    4 // QUEEN
+};
+
 Piece makePiece(DefaultPiece piece, Side color) {
     if (color == WHITE) {
         return static_cast<Piece>(piece);
