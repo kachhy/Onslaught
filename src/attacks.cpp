@@ -358,3 +358,29 @@ void populateBetweenSquares() {
         }
     }
 }
+
+BitBoard getPieceAttacks(Piece piece, Square sq, BitBoard occ) {
+    switch (piece) {
+        case BLACK_KING:
+        case WHITE_KING:
+            return getKingAttacks(sq);
+        case BLACK_QUEEN:
+        case WHITE_QUEEN:
+            return getQueenAttacks(sq, occ);
+        case BLACK_ROOK:
+        case WHITE_ROOK:
+            return getRookAttacks(sq, occ);
+        case BLACK_BISHOP:
+        case WHITE_BISHOP:
+            return getBishopAttacks(sq, occ);
+        case BLACK_KNIGHT:
+        case WHITE_KNIGHT:
+            return getKnightAttacks(sq);
+        case BLACK_PAWN:
+            return getPawnAttacks(sq, BLACK);
+        case WHITE_PAWN:
+            return getPawnAttacks(sq, WHITE);
+        default:
+            return BitBoard(0);
+    }
+}

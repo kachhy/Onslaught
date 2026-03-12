@@ -1,7 +1,5 @@
 #include "movegen.h"
 #include "bitboard.h"
-#include "board.h"
-#include "types.h"
 
 MoveList getQuietMoves(const Board& board) {
     MoveList output;
@@ -23,6 +21,7 @@ MoveList getNoisyMoves(const Board& board) {
 
 MoveList getPseudoLegalMoves(const Board &board) {
     MoveList output;
+    // only legal king moves if there are 2 or more checkers
     if (bitCount(board.getCheckersMask()) > 1) {
         
     }
@@ -37,32 +36,6 @@ MoveList getLegalMoves(const Board& board) {
     MoveList out;
     out = getPseudoLegalMoves(board);
     return out;
-}
-
-BitBoard getPieceAttacks(const Board& board, Piece piece, Square square) {
-    switch (piece) {
-        case BLACK_KING:
-        case WHITE_KING:
-            return getKingAttacks(square);
-        case BLACK_QUEEN:
-        case WHITE_QUEEN:
-            return getQueenAttacks(square, board.getOcc(BOTH));
-        case BLACK_ROOK:
-        case WHITE_ROOK:
-            return getRookAttacks(square, board.getOcc(BOTH));
-        case BLACK_BISHOP:
-        case WHITE_BISHOP:
-            return getBishopAttacks(square, board.getOcc(BOTH));
-        case BLACK_KNIGHT:
-        case WHITE_KNIGHT:
-            return getKnightAttacks(square);
-        case BLACK_PAWN:
-            return getPawnAttacks(square, BLACK);
-        case WHITE_PAWN:
-            return getPawnAttacks(square, WHITE);
-        default:
-            return BitBoard(0);
-    }
 }
 
 void getMovesPawn(MoveList& moves, const Board& board, Piece piece, MoveFlag move_flag) {
@@ -94,7 +67,7 @@ void getMovesPawn(MoveList& moves, const Board& board, Piece piece, MoveFlag mov
         while (cur_pawn_bb > 0) {
             Square cur_from_square =  static_cast<Square>(popLSB(cur_pawn_bb));
             Square ep_square = board.getEPSquare();
-            BitBoard cur_pawn_attacks = getPieceAttacks(board, piece, cur_from_square) & (board.getOcc(static_cast<Side>(getPieceSide(piece) ^ 1)) | (ep_square == NO_SQUARE ? 0 : BitBoard(1) << ep_square));
+            BitBoard cur_pawn_attacks = getPieceAttacks(piece, cur_from_square, board.getOcc(BOTH)) & (board.getOcc(static_cast<Side>(getPieceSide(piece) ^ 1)) | (ep_square == NO_SQUARE ? 0 : BitBoard(1) << ep_square));
             while(cur_pawn_attacks > 0) {
                 Square cur_to_square = static_cast<Square>(popLSB(cur_pawn_attacks));
                 if ((BitBoard(1) << cur_to_square) & (RANK_1 | RANK_8)) {
@@ -112,16 +85,17 @@ void getMovesPawn(MoveList& moves, const Board& board, Piece piece, MoveFlag mov
 
 void getMovesPiece(MoveList& moves, const Board& board, Piece piece, MoveFlag move_flag) {
     BitBoard cur_piece_bb = board.getPieceBB(piece);
+    BitBoard occ_both = board.getOcc(BOTH);
     while (cur_piece_bb > 0) {
         Square cur_from_square = static_cast<Square>(popLSB(cur_piece_bb));
         if (move_flag & QUIET_MOVE_MOVEGEN) {
-            BitBoard cur_piece_attacks = getPieceAttacks(board, piece, cur_from_square) & ~board.getOcc(BOTH);
+            BitBoard cur_piece_attacks = getPieceAttacks(piece, cur_from_square, occ_both) & ~occ_both;
             while (cur_piece_attacks > 0) {
                 moves.emplace_back(GenerateMove(cur_from_square, static_cast<Square>(popLSB(cur_piece_attacks)), piece, QUIET_FLAG));
             }
         }
         if (move_flag & NOISY_MOVE_MOVEGEN) {
-            BitBoard cur_piece_attacks = getPieceAttacks(board, piece, cur_from_square) & board.getOcc(static_cast<Side>(getPieceSide(piece) ^ 1));
+            BitBoard cur_piece_attacks = getPieceAttacks(piece, cur_from_square, occ_both) & board.getOcc(static_cast<Side>(getPieceSide(piece) ^ 1));
             while (cur_piece_attacks > 0) {
                 moves.emplace_back(GenerateMove(cur_from_square, static_cast<Square>(popLSB(cur_piece_attacks)), piece, CAPTURE_FLAG));
             }
