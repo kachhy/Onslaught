@@ -67,6 +67,9 @@ public:
     CastlingRights getCastlingRights() const { return castling; }
     Square getEPSquare() const { return ep_square; }
     Square getKingSquare() const { return static_cast<Square>(getLSB(piece_bb[makePiece(KING, stm)])); }
+    BitBoard getThreatened(Side side) const { return threatened[side]; }
+    BitBoard getThreatenedBySTM() const { return threatened[xstm]; }
+    BitBoard getThreatenedByXSTM() const { return threatened[stm]; }
     Side getSTM() const { return stm; }
     Side getXSTM() const { return xstm; }
     BitBoard getPieceBB(Piece p) const { return piece_bb[p]; }
@@ -90,16 +93,21 @@ private:
         uint8_t fmr;
         Piece captured_piece;
         BitBoard checkers;
+        BitBoard threatened[2];
         BitBoard pinned;
         uint64_t zobrist_hash;
 
-        BoardHistory(CastlingRights castling, Square ep_square, uint32_t null_move_number, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard pinned, uint64_t zobrist_hash)
-                    : castling(castling), ep_square(ep_square), null_move_number(null_move_number), fmr(fmr),
-                      captured_piece(captured_piece), checkers(checkers), pinned(pinned), zobrist_hash(zobrist_hash) {}
+        BoardHistory(CastlingRights castling, Square ep_square, uint32_t null_move_number, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard threatened_white, BitBoard threatened_black, BitBoard pinned, uint64_t zobrist_hash)
+                    : castling(castling), ep_square(ep_square), null_move_number(null_move_number), fmr(fmr), 
+                      captured_piece(captured_piece), checkers(checkers), pinned(pinned), zobrist_hash(zobrist_hash) {
+                        threatened[WHITE] = threatened_white;
+                        threatened[BLACK] = threatened_black;
+                    }
     };
 
     // Private member functions
     void setSpecials();
+    void setThreatened();
     void setPieceBoard();
     void setOcc();
 
@@ -113,6 +121,7 @@ private:
     Piece piece_board[64];
     int castling_rights[64];
     BitBoard checkers;
+    BitBoard threatened[2];
     BitBoard pinned;
     CastlingRights castling; // castling mask (i.e. 1111 = KQkq)
     Square ep_square;

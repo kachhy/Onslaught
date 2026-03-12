@@ -23,8 +23,6 @@ MoveList getNoisyMoves(const Board& board);
 MoveList getPseudoLegalMoves(const Board &board);
 MoveList getLegalMoves(const Board &board);
 
-BitBoard getPieceAttacks(const Board& board, Piece piece, Square square);
-
 void getMovesPawn(MoveList& moves, const Board& board, Piece piece, MoveFlag move_flag);
 void getMovesPiece(MoveList& moves, const Board& board, Piece piece, MoveFlag move_flag);
 
