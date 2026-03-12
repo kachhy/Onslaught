@@ -75,12 +75,12 @@ void Board::setOcc() {
 }
 
 void Board::setPhase() {
-    phase_score = phase_scores[PAWN] * 16 + phase_scores[KNIGHT] * 4 + phase_scores[BISHOP] * 4 + phase_scores[ROOK] * 4 + phase_scores[QUEEN] * 2;
-    phase_score -= phase_scores[PAWN] * bitCount(piece_bb[WHITE_PAWN] | piece_bb[BLACK_PAWN]);
-    phase_score -= phase_scores[KNIGHT] * bitCount(piece_bb[WHITE_KNIGHT] | piece_bb[BLACK_KNIGHT]);
-    phase_score -= phase_scores[BISHOP] * bitCount(piece_bb[WHITE_BISHOP] | piece_bb[BLACK_BISHOP]);
-    phase_score -= phase_scores[ROOK] * bitCount(piece_bb[WHITE_ROOK] | piece_bb[BLACK_ROOK]);
-    phase_score -= phase_scores[QUEEN] * bitCount(piece_bb[WHITE_QUEEN] | piece_bb[BLACK_QUEEN]);
+    phase_score = 0;
+    phase_score += phase_scores[PAWN] * bitCount(piece_bb[WHITE_PAWN] | piece_bb[BLACK_PAWN]);
+    phase_score += phase_scores[KNIGHT] * bitCount(piece_bb[WHITE_KNIGHT] | piece_bb[BLACK_KNIGHT]);
+    phase_score += phase_scores[BISHOP] * bitCount(piece_bb[WHITE_BISHOP] | piece_bb[BLACK_BISHOP]);
+    phase_score += phase_scores[ROOK] * bitCount(piece_bb[WHITE_ROOK] | piece_bb[BLACK_ROOK]);
+    phase_score += phase_scores[QUEEN] * bitCount(piece_bb[WHITE_QUEEN] | piece_bb[BLACK_QUEEN]);
 }
 
 Piece Board::pieceAt(uint8_t sq) const {
@@ -465,7 +465,7 @@ void Board::makeMove(Move move) {
             piece_board[sq] = NO_PIECE;
         }
 
-        phase_score += phase_scores[makeDefaultPiece(captured)];
+        phase_score -= phase_scores[makeDefaultPiece(captured)];
 
         flipBit(piece_bb[captured], sq);
         flipBit(occ[xstm], sq);
@@ -501,6 +501,8 @@ void Board::makeMove(Move move) {
         }
         else if (Prom(move)) { // Promotion
             Piece prom_piece = makePiece(promPiece(move), stm);
+
+            phase_score += phase_scores[makeDefaultPiece(prom_piece)];
             
             flipBit(piece_bb[piece], to);
             flipBit(piece_bb[prom_piece], to);
@@ -543,6 +545,8 @@ void Board::undoMove(Move move) {
 
     if (Prom(move)) {
         Piece prom_piece = makePiece(promPiece(move), stm);
+        
+        phase_score -= phase_scores[makeDefaultPiece(prom_piece)];
 
         flipBit(piece_bb[piece], to);
         flipBit(piece_bb[prom_piece], to);
