@@ -1,3 +1,5 @@
+#include "attacks.h"
+#include "bitboard.h"
 #include "board.h"
 #include "movegen.h"
 #include "zobrist.h"
@@ -209,6 +211,7 @@ int main() {
     // Populate zobrist keys
     initZobrist();
 
+    
     // Run tests
     tests();
     perftTests();

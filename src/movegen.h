@@ -20,10 +20,11 @@ constexpr inline BitBoard getDoublePushRank(Side side) { return side == WHITE ? 
 
 MoveList getQuietMoves(const Board& board);
 MoveList getNoisyMoves(const Board& board);
-MoveList getPseudoLegalMoves(const Board &board);
+MoveList addPieceLegalMoves(const Board &board);
 MoveList getLegalMoves(const Board &board);
 
-void getMovesPawn(MoveList& moves, const Board& board, Piece piece, MoveFlag move_flag);
-void getMovesPiece(MoveList& moves, const Board& board, Piece piece, MoveFlag move_flag);
+void addPseudoLegalMovesPawn(MoveList& moves, const Board& board, Piece piece, MoveFlag move_flag);
+void addPieceLegalMoves(MoveList& moves, const Board& board, Piece piece, MoveFlag move_flag);
+void addLegalKingMoves(MoveList& moves, const Board& board);
 
 #endif // MOVEGEN_H

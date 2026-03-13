@@ -1,7 +1,6 @@
 #include "board.h"
 #include "attacks.h"
 #include "bitboard.h"
-#include "movegen.h"
 #include "types.h"
 #include <sstream>
 #include <cctype>
@@ -321,10 +320,10 @@ bool Board::loadFEN(const std::string &fen) {
     if (castling_str != "-") {
         for (char ch : castling_str) {
             switch (ch) {
-            case 'K': castling |= 1; break;
-            case 'Q': castling |= 2; break;
-            case 'k': castling |= 4; break;
-            case 'q': castling |= 8; break;
+            case 'K': castling |= WHITE_KS; break;
+            case 'Q': castling |= WHITE_QS; break;
+            case 'k': castling |= BLACK_KS; break;
+            case 'q': castling |= BLACK_QS; break;
             default: break;
             }
         }
@@ -519,8 +518,8 @@ void Board::undoMove(Move move) {
     null_move_number  = hist_data.null_move_number;
     fmr               = hist_data.fmr;
     checkers          = hist_data.checkers;
-    threatened[WHITE] = hist_data.threatened[WHITE];
-    threatened[BLACK] = hist_data.threatened[BLACK];
+    threatened[WHITE] = hist_data.threatened_by[WHITE];
+    threatened[BLACK] = hist_data.threatened_by[BLACK];
     pinned            = hist_data.pinned;
     zobrist_hash      = hist_data.zobrist_hash;
 
@@ -653,6 +652,8 @@ void Board::setSpecials() {
 }
 
 void Board::setThreatened() {
+    threatened[WHITE] = BitBoard(0);
+    threatened[BLACK] = BitBoard(0);
     threatened[WHITE] |= shiftPawnAttacks(piece_bb[WHITE_PAWN], WHITE);
     threatened[BLACK] |= shiftPawnAttacks(piece_bb[BLACK_PAWN], BLACK);
     for (int white_index = WHITE_PAWN + 1, black_index = BLACK_PAWN + 1; white_index <= WHITE_KING; white_index++, black_index++) {
