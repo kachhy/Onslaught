@@ -220,8 +220,8 @@ void Board::clear() {
     memset(occ, 0, sizeof(occ));
     history.clear();
 
-    threatened[WHITE] = 0ULL;
-    threatened[BLACK] = 0ULL;
+    threatened_by[WHITE] = 0ULL;
+    threatened_by[BLACK] = 0ULL;
 
     // Turns
     stm  = WHITE;
@@ -377,7 +377,7 @@ void Board::makeMove(Move move) {
     Piece piece      = MovePiece(move);
     Piece captured   = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
 
-    history.emplace_back(castling, ep_square, null_move_number, fmr, captured, threatened[WHITE], threatened[BLACK], checkers, pinned, zobrist_hash);
+    history.emplace_back(castling, ep_square, null_move_number, fmr, captured, checkers, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash);
 
     fmr++;
     null_move_number++;
@@ -518,8 +518,8 @@ void Board::undoMove(Move move) {
     null_move_number  = hist_data.null_move_number;
     fmr               = hist_data.fmr;
     checkers          = hist_data.checkers;
-    threatened[WHITE] = hist_data.threatened_by[WHITE];
-    threatened[BLACK] = hist_data.threatened_by[BLACK];
+    threatened_by[WHITE] = hist_data.threatened_by[WHITE];
+    threatened_by[BLACK] = hist_data.threatened_by[BLACK];
     pinned            = hist_data.pinned;
     zobrist_hash      = hist_data.zobrist_hash;
 
@@ -652,20 +652,20 @@ void Board::setSpecials() {
 }
 
 void Board::setThreatened() {
-    threatened[WHITE] = BitBoard(0);
-    threatened[BLACK] = BitBoard(0);
-    threatened[WHITE] |= shiftPawnAttacks(piece_bb[WHITE_PAWN], WHITE);
-    threatened[BLACK] |= shiftPawnAttacks(piece_bb[BLACK_PAWN], BLACK);
+    threatened_by[WHITE] = BitBoard(0);
+    threatened_by[BLACK] = BitBoard(0);
+    threatened_by[WHITE] |= shiftPawnAttacks(piece_bb[WHITE_PAWN], WHITE);
+    threatened_by[BLACK] |= shiftPawnAttacks(piece_bb[BLACK_PAWN], BLACK);
     for (int white_index = WHITE_PAWN + 1, black_index = BLACK_PAWN + 1; white_index <= WHITE_KING; white_index++, black_index++) {
         BitBoard cur_piece_bb = piece_bb[white_index];
         while(cur_piece_bb > 0) {
             Square cur_square = static_cast<Square>(popLSB(cur_piece_bb));
-            threatened[WHITE] |= getPieceAttacks(static_cast<Piece>(white_index), cur_square, occ[BOTH]);
+            threatened_by[WHITE] |= getPieceAttacks(static_cast<Piece>(white_index), cur_square, occ[BOTH]);
         }
         cur_piece_bb = piece_bb[black_index];
         while(cur_piece_bb > 0) {
             Square cur_square = static_cast<Square>(popLSB(cur_piece_bb));
-            threatened[BLACK] |= getPieceAttacks(static_cast<Piece>(black_index), cur_square, occ[BOTH]);
+            threatened_by[BLACK] |= getPieceAttacks(static_cast<Piece>(black_index), cur_square, occ[BOTH]);
         }
     }
 }

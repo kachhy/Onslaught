@@ -33,8 +33,7 @@ MoveList getPseudoLegalMoves(const Board &board) {
 
 MoveList getLegalMoves(const Board& board) {
     MoveList out;
-    int num_checkers = bitCount(board.getCheckersMask());
-    if (num_checkers > 1) {
+    if (bitCount(board.getCheckersMask()) > 1) {
         addLegalKingMoves(out, board);
         return out;
     }
@@ -91,11 +90,10 @@ void addPseudoLegalMovesPawn(MoveList& moves, const Board& board, Piece piece, M
 void addPieceLegalMoves(MoveList& moves, const Board& board, Piece piece, MoveFlag move_flag) {
     BitBoard checkers = board.getCheckersMask();
     BitBoard legal_mask = 0;
-
+    Square king_sq = board.getKingSquare();
     if (checkers == 0) {
         legal_mask = ~BitBoard(0);
     } else { // checkers == 1
-        Square king_sq = board.getKingSquare();
         Square checker_sq = static_cast<Square>(getLSB(checkers));
         legal_mask = checkers;
         Piece checker_piece = board.pieceAt(static_cast<uint8_t>(checker_sq));
@@ -108,6 +106,12 @@ void addPieceLegalMoves(MoveList& moves, const Board& board, Piece piece, MoveFl
     BitBoard occ_both = board.getOcc(BOTH);
     while (cur_piece_bb > 0) {
         Square cur_from_square = static_cast<Square>(popLSB(cur_piece_bb));
+        BitBoard pin_mask;
+        if (board.getPinMask() & (BitBoard(1) << cur_from_square)) {
+            pin_mask |= between_squares[king_sq][cur_from_square];
+        } else {
+            pin_mask = ~BitBoard(0);
+        }
         if (move_flag & QUIET_MOVE_MOVEGEN) {
             BitBoard cur_piece_attacks = getPieceAttacks(piece, cur_from_square, occ_both) & ~occ_both & legal_mask;
             while (cur_piece_attacks > 0) {
@@ -148,16 +152,16 @@ void addLegalKingMoves(MoveList& moves, const Board& board) {
     BitBoard occ = board.getOcc(BOTH);
     BitBoard white_threat_occ = board.getThreatenedBy(WHITE) | occ;
     BitBoard black_threat_occ = board.getThreatenedBy(BLACK) | occ;
-    if (castling_rights & 0b1000 && !(black_threat_occ & WHITE_KINGSIDE_CASTLE_MASK)) {
+    if (castling_rights & WHITE_KS && !(black_threat_occ & WHITE_KINGSIDE_CASTLE_MASK)) {
         moves.emplace_back(GenerateMove(E1, G1, WHITE_KING, CASTLE_FLAG));
     }
-    if (castling_rights & 0b0100 && !(black_threat_occ & WHITE_QUEENSIDE_CASTLE_MASK)) {
+    if (castling_rights & WHITE_QS && !(black_threat_occ & WHITE_QUEENSIDE_CASTLE_MASK)) {
         moves.emplace_back(GenerateMove(E1, C1, WHITE_KING, CASTLE_FLAG));
     }
-    if (castling_rights & 0b0010 && !(white_threat_occ & BLACK_KINGSIDE_CASTLE_MASK)) {
+    if (castling_rights & BLACK_KS && !(white_threat_occ & BLACK_KINGSIDE_CASTLE_MASK)) {
         moves.emplace_back(GenerateMove(E8, G8, BLACK_KING, CASTLE_FLAG));
     }
-    if (castling_rights & 0b0001 && !(white_threat_occ & BLACK_QUEENSIDE_CASTLE_MASK)) {
+    if (castling_rights & BLACK_QS && !(white_threat_occ & BLACK_QUEENSIDE_CASTLE_MASK)) {
         moves.emplace_back(GenerateMove(E8, C8, BLACK_KING, CASTLE_FLAG));
     }
 }

@@ -86,6 +86,7 @@ void searchTests() {
 
 void initAttacks() {
     populateBetweenSquares();
+    populateRaySquares();
 
     populateBishopMasks();
     populateRookMasks();
