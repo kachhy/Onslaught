@@ -377,7 +377,7 @@ void Board::makeMove(Move move) {
     Piece piece      = MovePiece(move);
     Piece captured   = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
 
-    history.emplace_back(castling, ep_square, null_move_number, fmr, captured, checkers, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash);
+    history.emplace_back(castling, ep_square, null_move_number, fmr, captured, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash);
 
     fmr++;
     null_move_number++;
@@ -513,15 +513,16 @@ void Board::undoMove(Move move) {
     Piece piece      = MovePiece(move);
 
     BoardHistory& hist_data = history.back();
-    castling          = hist_data.castling;
-    ep_square         = hist_data.ep_square;
-    null_move_number  = hist_data.null_move_number;
-    fmr               = hist_data.fmr;
-    checkers          = hist_data.checkers;
+    castling             = hist_data.castling;
+    ep_square            = hist_data.ep_square;
+    null_move_number     = hist_data.null_move_number;
+    fmr                  = hist_data.fmr;
+    checkers             = hist_data.checkers;
+    legal_mask           = hist_data.legal_mask;
     threatened_by[WHITE] = hist_data.threatened_by[WHITE];
     threatened_by[BLACK] = hist_data.threatened_by[BLACK];
-    pinned            = hist_data.pinned;
-    zobrist_hash      = hist_data.zobrist_hash;
+    pinned               = hist_data.pinned;
+    zobrist_hash         = hist_data.zobrist_hash;
 
 
     move_number -= (stm == BLACK);
@@ -646,6 +647,17 @@ void Board::setSpecials() {
         }
         else if (bitCount(blockers) == 1) {
             pinned |= blockers & occ[stm];
+        }
+    }
+    if (checkers == 0) {
+        legal_mask = ~BitBoard(0);
+    } else { // num checkers == 1 only can be changed later if needed
+        Square checker_sq = static_cast<Square>(getLSB(checkers));
+        legal_mask = checkers;
+        Piece checker_piece = pieceAt(static_cast<uint8_t>(checker_sq));
+        DefaultPiece checker_type = makeDefaultPiece(checker_piece);
+        if (checker_type == BISHOP || checker_type == ROOK || checker_type == QUEEN) {
+            legal_mask |= between_squares[king_square][checker_sq];
         }
     }
     setThreatened();

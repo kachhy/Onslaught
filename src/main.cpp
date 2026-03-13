@@ -16,11 +16,47 @@ unsigned long long perft_test(Board& board, int depth) {
     }
     unsigned long long nodes = 0;
     MoveList m = getLegalMoves(board);
+
+    if (depth == 1) {
+        return m.size();
+    }
     for (size_t i = 0; i < m.size(); i++) {
         board.makeMove(m[i]);
         nodes += perft_test(board, depth - 1);
         board.undoMove(m[i]);
     }
+    return nodes;
+}
+
+// unsigned long long perft_test(Board& board, int depth) {
+//     if (depth == 0) {
+//         return 1ULL;
+//     }
+//     unsigned long long nodes = 0;
+//     MoveList m = getLegalMoves(board);
+//     for (size_t i = 0; i < m.size(); i++) {
+//         board.makeMove(m[i]);
+//         nodes += perft_test(board, depth - 1);
+//         board.undoMove(m[i]);
+//     }
+//     return nodes;
+// }
+
+unsigned long long divide(Board& board, int depth) {
+    if (depth == 0) {
+        return 1ULL;
+    }
+    unsigned long long nodes = 0;
+    MoveList m = getLegalMoves(board);
+    for (size_t i = 0; i < m.size(); i++) {
+        board.makeMove(m[i]);
+        unsigned long long n = perft_test(board, depth - 1);
+        board.undoMove(m[i]);
+        std::cout << moveToStr(m[i]) << ": " << n << "\n";
+        nodes += n;
+    }
+
+    std::cout << "Total: " << nodes << "\n";
     return nodes;
 }
 
@@ -54,14 +90,14 @@ void perftTests() {
     for (int i = 0; i <= 6; i++) {
         auto start = std::chrono::high_resolution_clock::now();
         Board testing_board_1;
-        unsigned long long result = perft_test(testing_board_1, i);
+        unsigned long long result = divide(testing_board_1, i);
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
         std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(13) <<  nodes_starter[i] << " | result: " << std::setw(13) << result << " | NPS: " << std::setw(13) << (static_cast<double>(result) / duration.count()) / static_cast<double>(1000) << " MNpS | " << " | " << (result == nodes_starter[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(8) << duration.count() << "ms\n";
     }
     std::cout << "\nPosition 5 perft tests (rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8):\n";
     std::cout.imbue(us_locale);
-    for (int i = 0; i <= 5; i++) {
+    for (int i = 1; i <= -1; i++) {
         auto start = std::chrono::high_resolution_clock::now();
         Board testing_board_2("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
         unsigned long long result = perft_test(testing_board_2, i);

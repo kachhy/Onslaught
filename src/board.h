@@ -78,6 +78,7 @@ public:
     BitBoard getThreatenedBy(Side side) const { return threatened_by[side]; }
     BitBoard getThreatenedBySTM() const { return threatened_by[stm]; }
     BitBoard getThreatenedByXSTM() const { return threatened_by[xstm]; }
+    BitBoard getLegalMask() const { return legal_mask; }
     Side getSTM() const { return stm; }
     Side getXSTM() const { return xstm; }
     BitBoard getPieceBB(Piece p) const { return piece_bb[p]; }
@@ -101,13 +102,14 @@ private:
         uint8_t fmr;
         Piece captured_piece;
         BitBoard checkers;
+        BitBoard legal_mask;
         BitBoard threatened_by[2];
         BitBoard pinned;
         uint64_t zobrist_hash;
 
-        BoardHistory(CastlingRights castling, Square ep_square, uint32_t null_move_number, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard white_threats, BitBoard black_threats, BitBoard pinned, uint64_t zobrist_hash)
+        BoardHistory(CastlingRights castling, Square ep_square, uint32_t null_move_number, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard legal_mask, BitBoard white_threats, BitBoard black_threats, BitBoard pinned, uint64_t zobrist_hash)
                     : castling(castling), ep_square(ep_square), null_move_number(null_move_number), fmr(fmr), 
-                      captured_piece(captured_piece), checkers(checkers), pinned(pinned), zobrist_hash(zobrist_hash) {
+                      captured_piece(captured_piece), checkers(checkers), legal_mask(legal_mask), pinned(pinned), zobrist_hash(zobrist_hash) {
                         threatened_by[WHITE] = white_threats;
                         threatened_by[BLACK] = black_threats;
                     }
@@ -129,6 +131,7 @@ private:
     Piece piece_board[64];
     int castling_rights[64];
     BitBoard checkers;
+    BitBoard legal_mask;
     BitBoard threatened_by[2];
     BitBoard pinned;
     CastlingRights castling; // castling mask (i.e. 1111 = KQkq)
