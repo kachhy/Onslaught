@@ -14,7 +14,7 @@ std::string moveToStr(Move move) {
         int s = static_cast<int>(sq);
         std::string result;
         result += static_cast<char>('a' + (s % 8));
-        result += static_cast<char>('1' + (s / 8));
+        result += static_cast<char>('0' + (8 - (s / 8)));
         return result;
     };
 

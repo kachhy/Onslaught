@@ -2,6 +2,7 @@
 #include "bitboard.h"
 #include "board.h"
 #include "movegen.h"
+#include "types.h"
 #include "zobrist.h"
 #include "transposition.h"
 #include "search.h"
@@ -27,20 +28,6 @@ unsigned long long perft_test(Board& board, int depth) {
     }
     return nodes;
 }
-
-// unsigned long long perft_test(Board& board, int depth) {
-//     if (depth == 0) {
-//         return 1ULL;
-//     }
-//     unsigned long long nodes = 0;
-//     MoveList m = getLegalMoves(board);
-//     for (size_t i = 0; i < m.size(); i++) {
-//         board.makeMove(m[i]);
-//         nodes += perft_test(board, depth - 1);
-//         board.undoMove(m[i]);
-//     }
-//     return nodes;
-// }
 
 unsigned long long divide(Board& board, int depth) {
     if (depth == 0) {
@@ -87,10 +74,10 @@ void perftTests() {
     std::cout << "\nStandard board start perft tests:\n";
     std::locale us_locale("en_US.UTF-8");
     std::cout.imbue(us_locale);
-    for (int i = 0; i <= 6; i++) {
+    for (int i = 0; i <= -1; i++) {
         auto start = std::chrono::high_resolution_clock::now();
         Board testing_board_1;
-        unsigned long long result = divide(testing_board_1, i);
+        unsigned long long result = perft_test(testing_board_1, i);
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
         std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(13) <<  nodes_starter[i] << " | result: " << std::setw(13) << result << " | NPS: " << std::setw(13) << (static_cast<double>(result) / duration.count()) / static_cast<double>(1000) << " MNpS | " << " | " << (result == nodes_starter[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(8) << duration.count() << "ms\n";
@@ -105,6 +92,17 @@ void perftTests() {
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
         std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(13) <<  nodes_position_5[i] << " | result: " << std::setw(13) << result << " | NPS: " << std::setw(13) << (static_cast<double>(result) / duration.count()) / static_cast<double>(1000) << " MNpS | " << (result == nodes_position_5[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(8) << duration.count() << "ms\n";
     }
+}
+
+void divideTests() {
+    Board testing_board_1;
+    testing_board_1.makeMove(GenerateMove(F2, F3, WHITE_PAWN, QUIET_FLAG));
+    testing_board_1.makeMove(GenerateMove(E7, E6, BLACK_PAWN, QUIET_FLAG));
+    testing_board_1.makeMove(GenerateMove(E1, F2, WHITE_KING, QUIET_FLAG));
+    testing_board_1.makeMove(GenerateMove(D8, H4, BLACK_QUEEN, QUIET_FLAG));
+    int depth = 1;
+    std:: cout << "divide tests (depth: " << depth << "):\n";
+    divide(testing_board_1, depth);
 }
 
 void searchTests() {
@@ -250,8 +248,9 @@ int main() {
 
     
     // Run tests
-    tests();
+    // tests();
     perftTests();
+    divideTests();
     searchTests();
 
     return 0;

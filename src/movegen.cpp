@@ -50,8 +50,9 @@ void addLegalPawnMoves(MoveList& moves, const Board& board, Piece piece, MoveFla
     Square king_sq = board.getKingSquare();
     if (move_flag & QUIET_MOVE_MOVEGEN) {
         BitBoard empty_squares = ~board.getOcc(BOTH);
-        BitBoard single_pushes = shiftPawnPushes(cur_pawn_bb, cur_side) & empty_squares & legal_mask;
+        BitBoard single_pushes = shiftPawnPushes(cur_pawn_bb, cur_side) & empty_squares;
         BitBoard double_pushes = shiftPawnPushes(single_pushes, cur_side) & getDoublePushRank(cur_side) & empty_squares & legal_mask;
+        single_pushes &= legal_mask;
         while (single_pushes > 0) {
             Square cur_to_square = static_cast<Square>(popLSB(single_pushes));
             Square cur_from_square = cur_side == WHITE ? static_cast<Square>(cur_to_square + 8) : static_cast<Square>(cur_to_square - 8);
