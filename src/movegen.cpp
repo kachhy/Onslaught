@@ -97,7 +97,7 @@ void addLegalPawnMoves(MoveList& moves, const Board& board, Piece piece, MoveFla
                 pin_mask = ~BitBoard(0);
             }
             BitBoard cur_pawn_attacks = (getPieceAttacks(piece, cur_from_square, board.getOcc(BOTH)) & (board.getOcc(static_cast<Side>(getPieceSide(piece) ^ 1)))) & legal_mask & pin_mask;
-            while(cur_pawn_attacks) {
+            while (cur_pawn_attacks) {
                 Square cur_to_square = static_cast<Square>(popLSB(cur_pawn_attacks));
                 if ((BitBoard(1) << cur_to_square) & (RANK_1 | RANK_8)) {
                     moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, piece, KNIGHT_PROMO_FLAG | CAPTURE_FLAG));
