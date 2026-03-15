@@ -67,6 +67,7 @@ constexpr BitBoard shiftPawnCapturesWest(const BitBoard pawns, int side) { retur
 constexpr BitBoard shiftPawnCapturesEast(const BitBoard pawns, int side) { return (side == WHITE) ? shiftNorthEast(pawns) : shiftSouthEast(pawns); }
 
 constexpr inline bool multipleActiveBits(BitBoard bitboard) { return bitboard & (bitboard - 1); }
+constexpr inline int flipRank(int sq) { return sq ^ 56; }
 
 void printBitboard(const BitBoard bitboard);
 
