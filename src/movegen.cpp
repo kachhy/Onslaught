@@ -114,12 +114,16 @@ void addLegalPawnMoves(MoveList& moves, const Board& board, Piece piece, MoveFla
 
 void addEPLegalMoves(MoveList& moves, const Board& board) {
     Square ep_square = board.getEPSquare();
+    
+    if (ep_square == NO_SQUARE) {
+        return;
+    }
     BitBoard ep_square_bb = BitBoard(1) << ep_square;
-    if (ep_square == NO_SQUARE || !(board.getLegalMask() & ep_square_bb)) {
+    if (!(board.getLegalMask() & ep_square_bb)) {
         return;
     }
     Side stm = board.getSTM();
-    BitBoard movers = shiftPawnAttacks(ep_square_bb, board.getXSTM()) & board.getOcc(board.getSTM());
+    BitBoard movers = shiftPawnAttacks(ep_square_bb, board.getXSTM()) & board.getPieceBB(makePiece(PAWN, stm));
     while (movers > 0) {
         Square cur_from_square = static_cast<Square>(popLSB(movers));
         BitBoard pin_mask = 0;
@@ -210,7 +214,7 @@ void addLegalKingMoves(MoveList& moves, const Board& board) {
         if (castling_rights & BLACK_KS && !((xstm_threats | occ) & BLACK_KINGSIDE_CASTLE_MASK)) {
             moves.emplace_back(GenerateMove(E8, G8, BLACK_KING, CASTLE_FLAG));
         }
-        if (castling_rights & BLACK_QS && !((xstm_threats & BLACK_QUEENSIDE_CASTLE_THREAT_MASK) | (occ & BLACK_QUEENSIDE_CASTLE_THREAT_MASK))) {
+        if (castling_rights & BLACK_QS && !((xstm_threats & BLACK_QUEENSIDE_CASTLE_THREAT_MASK) | (occ & BLACK_QUEENSIDE_CASTLE_OCC_MASK))) {
             moves.emplace_back(GenerateMove(E8, C8, BLACK_KING, CASTLE_FLAG));
         }
     }

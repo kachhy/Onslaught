@@ -66,6 +66,20 @@ unsigned long long perft_test(Board& board, int depth) {
     return nodes;
 }
 
+unsigned long long perft_test_slow(Board& board, int depth) {
+    if (depth == 0) {
+        return 1ULL;
+    }
+    unsigned long long nodes = 0;
+    MoveList m = getLegalMoves(board);
+    for (size_t i = 0; i < m.size(); i++) {
+        board.makeMove(m[i]);
+        nodes += perft_test_slow(board, depth - 1);
+        board.undoMove(m[i]);
+    }
+    return nodes;
+}
+
 unsigned long long divide(Board& board, int depth) {
     if (depth == 0) {
         return 1ULL;
@@ -110,6 +124,7 @@ void perftTests() {
 void divideTests() {
     // rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8
     Board testing_board_1("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
+    // testing_board_1.makeMove(GenerateMove(A2, A3, WHITE_PAWN, QUIET_FLAG));
     int depth = 3;
     std:: cout << "divide tests (depth: " << depth << "):\n";
     divide(testing_board_1, depth);

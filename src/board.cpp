@@ -404,7 +404,8 @@ void Board::makeMove(Move move) {
                 flipBit(occ[BOTH], H1);
                 flipBit(occ[stm], F1);
                 flipBit(occ[BOTH], F1);
-
+                piece_board[H1] = NO_PIECE;
+                piece_board[F1] = WHITE_ROOK;
                 zobrist_hash ^= piece_keys[WHITE_ROOK][H1];
                 zobrist_hash ^= piece_keys[WHITE_ROOK][F1];
                 break;
@@ -417,7 +418,8 @@ void Board::makeMove(Move move) {
                 flipBit(occ[BOTH], A1);
                 flipBit(occ[stm], D1);
                 flipBit(occ[BOTH], D1);
-
+                piece_board[A1] = NO_PIECE;
+                piece_board[D1] = WHITE_ROOK;
                 zobrist_hash ^= piece_keys[WHITE_ROOK][A1];
                 zobrist_hash ^= piece_keys[WHITE_ROOK][D1];
                 break;
@@ -429,7 +431,8 @@ void Board::makeMove(Move move) {
                 flipBit(occ[BOTH], H8);
                 flipBit(occ[stm], F8);
                 flipBit(occ[BOTH], F8);
-
+                piece_board[H8] = NO_PIECE;
+                piece_board[F8] = BLACK_ROOK;
                 zobrist_hash ^= piece_keys[BLACK_ROOK][H8];
                 zobrist_hash ^= piece_keys[BLACK_ROOK][F8];
                 break;
@@ -441,7 +444,8 @@ void Board::makeMove(Move move) {
                 flipBit(occ[BOTH], A8);
                 flipBit(occ[stm], D8);
                 flipBit(occ[BOTH], D8);
-
+                piece_board[A8] = NO_PIECE;
+                piece_board[D8] = BLACK_ROOK;
                 zobrist_hash ^= piece_keys[BLACK_ROOK][A8];
                 zobrist_hash ^= piece_keys[BLACK_ROOK][D8];
                 break;
@@ -557,6 +561,8 @@ void Board::undoMove(Move move) {
                 flipBit(occ[BOTH], F1);
                 flipBit(occ[stm], H1);
                 flipBit(occ[BOTH], H1);
+                piece_board[F1] = NO_PIECE;
+                piece_board[H1] = WHITE_ROOK;
                 break;
 
             // White Queenside (Q) - Rook was on D1, move back to A1
@@ -567,6 +573,8 @@ void Board::undoMove(Move move) {
                 flipBit(occ[BOTH], D1);
                 flipBit(occ[stm], A1);
                 flipBit(occ[BOTH], A1);
+                piece_board[D1] = NO_PIECE;
+                piece_board[A1] = WHITE_ROOK;
                 break;
 
             // Black Kingside (k) - Rook was on F8, move back to H8
@@ -577,6 +585,8 @@ void Board::undoMove(Move move) {
                 flipBit(occ[BOTH], F8);
                 flipBit(occ[stm], H8);
                 flipBit(occ[BOTH], H8);
+                piece_board[F8] = NO_PIECE;
+                piece_board[H8] = BLACK_ROOK;
                 break;
 
             // Black Queenside (q) - Rook was on D8, move back to A8
@@ -587,6 +597,8 @@ void Board::undoMove(Move move) {
                 flipBit(occ[BOTH], D8);
                 flipBit(occ[stm], A8);
                 flipBit(occ[BOTH], A8);
+                piece_board[D8] = NO_PIECE;
+                piece_board[A8] = BLACK_ROOK;
                 break;
         }
     }
