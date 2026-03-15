@@ -683,12 +683,12 @@ void Board::setThreatened() {
     threatened_by[BLACK] |= shiftPawnAttacks(piece_bb[BLACK_PAWN], BLACK);
     for (int white_index = WHITE_PAWN + 1, black_index = BLACK_PAWN + 1; white_index <= WHITE_KING; white_index++, black_index++) {
         BitBoard cur_piece_bb = piece_bb[white_index];
-        while(cur_piece_bb > 0) {
+        while(cur_piece_bb) {
             Square cur_square = static_cast<Square>(popLSB(cur_piece_bb));
             threatened_by[WHITE] |= getPieceAttacks(static_cast<Piece>(white_index), cur_square, occ[BOTH]);
         }
         cur_piece_bb = piece_bb[black_index];
-        while(cur_piece_bb > 0) {
+        while(cur_piece_bb) {
             Square cur_square = static_cast<Square>(popLSB(cur_piece_bb));
             threatened_by[BLACK] |= getPieceAttacks(static_cast<Piece>(black_index), cur_square, occ[BOTH]);
         }
