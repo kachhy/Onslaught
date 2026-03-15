@@ -25,7 +25,7 @@ constexpr unsigned long long nodes_position_1[] = {
     2439530234167ULL, // 2 trillion
     69352859712417ULL,
     2097651003696806ULL,
-    62854969236701747ULL
+    62854969236701747ULL,
 };
 
 constexpr unsigned long long nodes_position_2[] = {
@@ -49,7 +49,8 @@ constexpr unsigned long long nodes_position_3[] = {
     11030083ULL,
     178633661ULL,
     3009794393ULL, // 3 billion
-    50086749815ULL // 50 billion
+    50086749815ULL, // 50 billion
+    860322602309ULL, // 860 bullion
 };
 
 constexpr unsigned long long nodes_position_4[] = {
@@ -60,7 +61,8 @@ constexpr unsigned long long nodes_position_4[] = {
     422333ULL,
     15833292ULL,
     706045033ULL, // 700 million
-    27209691363ULL // 27 billion
+    27209691363ULL, // 27 billion
+    1209257875296ULL, // 1.2 tril - not stockfish tested
 };
 
 constexpr unsigned long long nodes_position_5[] = {
@@ -70,7 +72,8 @@ constexpr unsigned long long nodes_position_5[] = {
     62379ULL,
     2103487ULL,
     89941194ULL,
-    3048196529ULL // 3 billion
+    3048196529ULL, // 3 billion
+    131724123591ULL, // 131 bil - not stockfish tested
 };
 
 constexpr unsigned long long nodes_position_6[] = {
@@ -83,7 +86,7 @@ constexpr unsigned long long nodes_position_6[] = {
     6923051137ULL, // 6 billion
     287188994746ULL, // 287 billion
     11923589843526ULL,
-    490154852788714ULL
+    490154852788714ULL,
 };
 
 struct PerftKey {
@@ -177,18 +180,16 @@ void runTimePerftTest(int depth, const unsigned long long expected[], std::strin
         unsigned long long result = perft_test(testing_board_1, i, cache);
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-        std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(17) <<  expected[i] << " | result: " << std::setw(17) << result << " | NPS: " << std::setw(10) << std::setprecision(3) << std::fixed << (static_cast<double>(result) / duration.count()) / static_cast<double>(1000) << " MNpS | " << (result == expected[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(9) << duration.count() << "ms\n";
+        std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(18) <<  expected[i] << " | result: " << std::setw(18) << result << " | logical NPS: " << std::setw(10) << std::setprecision(3) << std::fixed << (static_cast<double>(result) / duration.count()) / static_cast<double>(1000) << " MNpS | computed NPS: " << std::setw(10) << std::setprecision(3) << std::fixed << (static_cast<double>(cache.size()) / duration.count()) / static_cast<double>(1000) << " MNpS | " << (result == expected[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(10) << duration.count() << "ms\n";
     }
 }
 
 void perftTests() {
     std::vector<int> depths = {5, 3, 6, 4, 3 ,3};
-    int length = 0; // 0 = instant, 1 = 2s, 2 = 20s, 3=300s, 4=idk 1hr+
+    int length = 2; // 0 = instant, 1 = 2s, 2 = 20s, 3=300s, 4=idk 1hr+
     for (size_t i = 0; i < depths.size(); i++) {
         depths[i] += length;
     }
-    // std::vector<int> depths = {8, 6, 8, 6, 5 ,6};
-    // std::vector<int> depths = {9, 7, 9, 7, 6 ,7};
     runTimePerftTest(depths[0], nodes_position_1);
     runTimePerftTest(depths[1], nodes_position_2, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
     runTimePerftTest(depths[2], nodes_position_3, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1");
