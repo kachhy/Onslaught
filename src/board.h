@@ -30,6 +30,13 @@ constexpr uint8_t WHITE_QS = 0x4;
 constexpr uint8_t BLACK_KS = 0x2;
 constexpr uint8_t BLACK_QS = 0x1;
 
+constexpr BitBoard WHITE_KINGSIDE_CASTLE_MASK         = 0x6000000000000000;
+constexpr BitBoard WHITE_QUEENSIDE_CASTLE_OCC_MASK    = 0x0E00000000000000;
+constexpr BitBoard WHITE_QUEENSIDE_CASTLE_THREAT_MASK = 0x0C00000000000000;
+constexpr BitBoard BLACK_KINGSIDE_CASTLE_MASK         = 0x0000000000000060;
+constexpr BitBoard BLACK_QUEENSIDE_CASTLE_OCC_MASK    = 0x000000000000000E;
+constexpr BitBoard BLACK_QUEENSIDE_CASTLE_THREAT_MASK = 0x000000000000000C;
+
 // Engine constants
 constexpr uint16_t MAX_PLY = 256;
 
@@ -70,9 +77,10 @@ public:
     CastlingRights getCastlingRights() const { return castling; }
     Square getEPSquare() const { return ep_square; }
     Square getKingSquare() const { return static_cast<Square>(getLSB(piece_bb[makePiece(KING, stm)])); }
-    BitBoard getThreatened(Side side) const { return threatened[side]; }
-    BitBoard getThreatenedBySTM() const { return threatened[xstm]; }
-    BitBoard getThreatenedByXSTM() const { return threatened[stm]; }
+    BitBoard getThreatenedBy(Side side) const { return threatened_by[side]; }
+    BitBoard getThreatenedBySTM() const { return threatened_by[stm]; }
+    BitBoard getThreatenedByXSTM() const { return threatened_by[xstm]; }
+    BitBoard getLegalMask() const { return legal_mask; }
     Side getSTM() const { return stm; }
     Side getXSTM() const { return xstm; }
     BitBoard getPieceBB(Piece p) const { return piece_bb[p]; }
@@ -96,15 +104,16 @@ private:
         uint8_t fmr;
         Piece captured_piece;
         BitBoard checkers;
-        BitBoard threatened[2];
+        BitBoard legal_mask;
+        BitBoard threatened_by[2];
         BitBoard pinned;
         uint64_t zobrist_hash;
 
-        BoardHistory(CastlingRights castling, Square ep_square, uint32_t null_move_number, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard threatened_white, BitBoard threatened_black, BitBoard pinned, uint64_t zobrist_hash)
+        BoardHistory(CastlingRights castling, Square ep_square, uint32_t null_move_number, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard legal_mask, BitBoard white_threats, BitBoard black_threats, BitBoard pinned, uint64_t zobrist_hash)
                     : castling(castling), ep_square(ep_square), null_move_number(null_move_number), fmr(fmr), 
-                      captured_piece(captured_piece), checkers(checkers), pinned(pinned), zobrist_hash(zobrist_hash) {
-                        threatened[WHITE] = threatened_white;
-                        threatened[BLACK] = threatened_black;
+                      captured_piece(captured_piece), checkers(checkers), legal_mask(legal_mask), pinned(pinned), zobrist_hash(zobrist_hash) {
+                        threatened_by[WHITE] = white_threats;
+                        threatened_by[BLACK] = black_threats;
                     }
     };
 
@@ -124,7 +133,8 @@ private:
     Piece piece_board[64];
     int castling_rights[64];
     BitBoard checkers;
-    BitBoard threatened[2];
+    BitBoard legal_mask;
+    BitBoard threatened_by[2];
     BitBoard pinned;
     CastlingRights castling; // castling mask (i.e. 1111 = KQkq)
     Square ep_square;

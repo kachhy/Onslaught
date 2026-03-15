@@ -1,5 +1,8 @@
+#include "attacks.h"
+#include "bitboard.h"
 #include "board.h"
 #include "movegen.h"
+#include "types.h"
 #include "zobrist.h"
 #include "transposition.h"
 #include "search.h"
@@ -8,12 +11,87 @@
 #include <cstddef>
 #include <iomanip>
 
+constexpr unsigned long long nodes_position_1[] = {
+    1ULL,
+    20ULL,
+    400ULL,
+    8902ULL,
+    197281ULL,
+    4865609ULL,
+    119060324ULL,
+    3195901860ULL, // 3 billion
+    84998978956ULL,
+    2439530234167ULL,
+    69352859712417ULL,
+    2097651003696806ULL,
+    62854969236701747ULL
+};
+
+constexpr unsigned long long nodes_position_2[] = {
+    1ULL,
+    48ULL,
+    2039ULL,
+    97862ULL,
+    4085603ULL,
+    193690690ULL,
+    8031647685ULL // 8 billion
+};
+
+constexpr unsigned long long nodes_position_3[] = {
+    1ULL,
+    14ULL,
+    191ULL,
+    2812ULL,
+    43238ULL,
+    674624ULL,
+    11030083ULL,
+    178633661ULL,
+    3009794393ULL // 3 billion
+};
+
+constexpr unsigned long long nodes_position_4[] = {
+    1ULL,
+    6ULL,
+    264ULL,
+    9467ULL,
+    422333ULL,
+    15833292ULL,
+    706045033ULL // 7 billion
+};
+
+constexpr unsigned long long nodes_position_5[] = {
+    1ULL,
+    44ULL,
+    1486ULL,
+    62379ULL,
+    2103487ULL,
+    89941194ULL,
+    3048196529ULL // 3 billion
+};
+
+constexpr unsigned long long nodes_position_6[] = {
+    1ULL,
+    46ULL,
+    2079ULL,
+    89890ULL,
+    3894594ULL,
+    164075551ULL,
+    6923051137ULL, // 6 billion
+    287188994746ULL,
+    11923589843526ULL,
+    490154852788714ULL
+};
+
 unsigned long long perft_test(Board& board, int depth) {
     if (depth == 0) {
         return 1ULL;
     }
     unsigned long long nodes = 0;
     MoveList m = getLegalMoves(board);
+
+    if (depth == 1) {
+        return m.size();
+    }
     for (size_t i = 0; i < m.size(); i++) {
         board.makeMove(m[i]);
         nodes += perft_test(board, depth - 1);
@@ -22,51 +100,76 @@ unsigned long long perft_test(Board& board, int depth) {
     return nodes;
 }
 
-void perftTests() {
-    std::vector<unsigned long long> nodes_starter = {
-        1ULL,
-        20ULL,
-        400ULL,
-        8902ULL,
-        197281ULL,
-        4865609ULL,
-        119060324ULL,
-        3195901860ULL,
-        84998978956ULL,
-        2439530234167ULL,
-        69352859712417ULL,
-        2097651003696806ULL,
-        62854969236701747ULL
-    };
-    std::vector<unsigned long long> nodes_position_5 = {
-        1ULL,
-        44ULL,
-        1486ULL,
-        62379ULL,
-        2103487ULL,
-        89941194ULL
-    };
-    std::cout << "\nStandard board start perft tests:\n";
+unsigned long long perft_test_slow(Board& board, int depth) {
+    if (depth == 0) {
+        return 1ULL;
+    }
+    unsigned long long nodes = 0;
+    MoveList m = getLegalMoves(board);
+    for (size_t i = 0; i < m.size(); i++) {
+        board.makeMove(m[i]);
+        nodes += perft_test_slow(board, depth - 1);
+        board.undoMove(m[i]);
+    }
+    return nodes;
+}
+
+unsigned long long divide(Board& board, int depth) {
+    if (depth == 0) {
+        return 1ULL;
+    }
+    unsigned long long nodes = 0;
+    MoveList m = getLegalMoves(board);
+    for (size_t i = 0; i < m.size(); i++) {
+        board.makeMove(m[i]);
+        unsigned long long n = perft_test(board, depth - 1);
+        board.undoMove(m[i]);
+        std::cout << moveToStr(m[i]) << ": " << n << "\n";
+        nodes += n;
+    }
+
+    std::cout << "Total: " << nodes << "\n";
+    return nodes;
+}
+
+void runTimePerftTest(int depth, const unsigned long long expected[], std::string fen = "") {
+    if (fen == "") {
+        std::cout << "\nPerft test with standard board:\n";
+    } else {
+        std::cout << "\nPerft test with board (" << fen << "):\n";
+    }
     std::locale us_locale("en_US.UTF-8");
     std::cout.imbue(us_locale);
-    for (int i = 0; i <= 6; i++) {
+    for (int i = 0; i <= depth; i++) {
         auto start = std::chrono::high_resolution_clock::now();
         Board testing_board_1;
+        if (fen != "") {
+            testing_board_1.loadFEN(fen);
+        }
         unsigned long long result = perft_test(testing_board_1, i);
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-        std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(13) <<  nodes_starter[i] << " | result: " << std::setw(13) << result << " | NPS: " << std::setw(13) << (static_cast<double>(result) / duration.count()) / static_cast<double>(1000) << " MNpS | " << " | " << (result == nodes_starter[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(8) << duration.count() << "ms\n";
+        std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(13) <<  expected[i] << " | result: " << std::setw(13) << result << " | NPS: " << std::setw(13) << (static_cast<double>(result) / duration.count()) / static_cast<double>(1000) << " MNpS | " << (result == expected[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(8) << duration.count() << "ms\n";
     }
-    std::cout << "\nPosition 5 perft tests (rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8):\n";
-    std::cout.imbue(us_locale);
-    for (int i = 0; i <= 5; i++) {
-        auto start = std::chrono::high_resolution_clock::now();
-        Board testing_board_2("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
-        unsigned long long result = perft_test(testing_board_2, i);
-        auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-        std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(13) <<  nodes_position_5[i] << " | result: " << std::setw(13) << result << " | NPS: " << std::setw(13) << (static_cast<double>(result) / duration.count()) / static_cast<double>(1000) << " MNpS | " << (result == nodes_position_5[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(8) << duration.count() << "ms\n";
-    }
+}
+
+void perftTests() {
+    std::vector<int> depths = {5, 4, 6, 4, 4 ,4};
+    // std::vector<int> depths = {6, 5, 7, 5, 5 ,5};
+    // std::vector<int> depths = {7, 6, 8, 6, 6 ,6};
+    runTimePerftTest(depths[0], nodes_position_1);
+    runTimePerftTest(depths[1], nodes_position_2, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+    runTimePerftTest(depths[2], nodes_position_3, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1");
+    runTimePerftTest(depths[3], nodes_position_4, "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1");
+    runTimePerftTest(depths[4], nodes_position_5, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
+    runTimePerftTest(depths[5], nodes_position_6, "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10");
+}
+
+void divideTests() {
+    Board testing_board_1("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+    int depth = 1;
+    std:: cout << "divide tests (depth: " << depth << "):\n";
+    divide(testing_board_1, depth);
 }
 
 void searchTests() {
@@ -84,6 +187,7 @@ void searchTests() {
 
 void initAttacks() {
     populateBetweenSquares();
+    populateLineSquares();
 
     populateBishopMasks();
     populateRookMasks();
@@ -209,9 +313,11 @@ int main() {
     // Populate zobrist keys
     initZobrist();
 
+    
     // Run tests
     tests();
     perftTests();
+    // divideTests();
     searchTests();
 
     return 0;

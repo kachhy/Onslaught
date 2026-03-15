@@ -1,7 +1,6 @@
 #include "board.h"
 #include "attacks.h"
 #include "bitboard.h"
-#include "movegen.h"
 #include "types.h"
 #include <sstream>
 #include <cctype>
@@ -15,7 +14,7 @@ std::string moveToStr(Move move) {
         int s = static_cast<int>(sq);
         std::string result;
         result += static_cast<char>('a' + (s % 8));
-        result += static_cast<char>('1' + (s / 8));
+        result += static_cast<char>('0' + (8 - (s / 8)));
         return result;
     };
 
@@ -30,16 +29,17 @@ std::string moveToStr(Move move) {
 }
 
 DefaultPiece promPiece(Move move) {
-    if (Flags(move) & QUEEN_PROMO_FLAG) {
-        return KNIGHT;
+    uint32_t flags = Flags(move);
+    if ((flags & QUEEN_PROMO_FLAG) == QUEEN_PROMO_FLAG) {
+        return QUEEN;
     }
-    if (Flags(move) & KNIGHT_PROMO_FLAG) {
-        return KNIGHT;
-    }
-    if (Flags(move) & ROOK_PROMO_FLAG) {
+    if ((flags & ROOK_PROMO_FLAG) == ROOK_PROMO_FLAG) {
         return ROOK;
     }
-    return BISHOP;
+    if ((flags & BISHOP_PROMO_FLAG) == BISHOP_PROMO_FLAG) {
+        return BISHOP;
+    }
+    return KNIGHT;
 }
 
 Board::Board() {
@@ -221,8 +221,8 @@ void Board::clear() {
     memset(occ, 0, sizeof(occ));
     history.clear();
 
-    threatened[WHITE] = 0ULL;
-    threatened[BLACK] = 0ULL;
+    threatened_by[WHITE] = 0ULL;
+    threatened_by[BLACK] = 0ULL;
 
     // Turns
     stm  = WHITE;
@@ -321,10 +321,10 @@ bool Board::loadFEN(const std::string &fen) {
     if (castling_str != "-") {
         for (char ch : castling_str) {
             switch (ch) {
-            case 'K': castling |= 1; break;
-            case 'Q': castling |= 2; break;
-            case 'k': castling |= 4; break;
-            case 'q': castling |= 8; break;
+            case 'K': castling |= WHITE_KS; break;
+            case 'Q': castling |= WHITE_QS; break;
+            case 'k': castling |= BLACK_KS; break;
+            case 'q': castling |= BLACK_QS; break;
             default: break;
             }
         }
@@ -378,7 +378,7 @@ void Board::makeMove(Move move) {
     Piece piece      = MovePiece(move);
     Piece captured   = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
 
-    history.emplace_back(castling, ep_square, null_move_number, fmr, captured, threatened[WHITE], threatened[BLACK], checkers, pinned, zobrist_hash);
+    history.emplace_back(castling, ep_square, null_move_number, fmr, captured, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash);
 
     fmr++;
     null_move_number++;
@@ -404,7 +404,8 @@ void Board::makeMove(Move move) {
                 flipBit(occ[BOTH], H1);
                 flipBit(occ[stm], F1);
                 flipBit(occ[BOTH], F1);
-
+                piece_board[H1] = NO_PIECE;
+                piece_board[F1] = WHITE_ROOK;
                 zobrist_hash ^= piece_keys[WHITE_ROOK][H1];
                 zobrist_hash ^= piece_keys[WHITE_ROOK][F1];
                 break;
@@ -417,7 +418,8 @@ void Board::makeMove(Move move) {
                 flipBit(occ[BOTH], A1);
                 flipBit(occ[stm], D1);
                 flipBit(occ[BOTH], D1);
-
+                piece_board[A1] = NO_PIECE;
+                piece_board[D1] = WHITE_ROOK;
                 zobrist_hash ^= piece_keys[WHITE_ROOK][A1];
                 zobrist_hash ^= piece_keys[WHITE_ROOK][D1];
                 break;
@@ -429,7 +431,8 @@ void Board::makeMove(Move move) {
                 flipBit(occ[BOTH], H8);
                 flipBit(occ[stm], F8);
                 flipBit(occ[BOTH], F8);
-
+                piece_board[H8] = NO_PIECE;
+                piece_board[F8] = BLACK_ROOK;
                 zobrist_hash ^= piece_keys[BLACK_ROOK][H8];
                 zobrist_hash ^= piece_keys[BLACK_ROOK][F8];
                 break;
@@ -441,7 +444,8 @@ void Board::makeMove(Move move) {
                 flipBit(occ[BOTH], A8);
                 flipBit(occ[stm], D8);
                 flipBit(occ[BOTH], D8);
-
+                piece_board[A8] = NO_PIECE;
+                piece_board[D8] = BLACK_ROOK;
                 zobrist_hash ^= piece_keys[BLACK_ROOK][A8];
                 zobrist_hash ^= piece_keys[BLACK_ROOK][D8];
                 break;
@@ -514,15 +518,16 @@ void Board::undoMove(Move move) {
     Piece piece      = MovePiece(move);
 
     BoardHistory& hist_data = history.back();
-    castling          = hist_data.castling;
-    ep_square         = hist_data.ep_square;
-    null_move_number  = hist_data.null_move_number;
-    fmr               = hist_data.fmr;
-    checkers          = hist_data.checkers;
-    threatened[WHITE] = hist_data.threatened[WHITE];
-    threatened[BLACK] = hist_data.threatened[BLACK];
-    pinned            = hist_data.pinned;
-    zobrist_hash      = hist_data.zobrist_hash;
+    castling             = hist_data.castling;
+    ep_square            = hist_data.ep_square;
+    null_move_number     = hist_data.null_move_number;
+    fmr                  = hist_data.fmr;
+    checkers             = hist_data.checkers;
+    legal_mask           = hist_data.legal_mask;
+    threatened_by[WHITE] = hist_data.threatened_by[WHITE];
+    threatened_by[BLACK] = hist_data.threatened_by[BLACK];
+    pinned               = hist_data.pinned;
+    zobrist_hash         = hist_data.zobrist_hash;
 
 
     move_number -= (stm == BLACK);
@@ -556,6 +561,8 @@ void Board::undoMove(Move move) {
                 flipBit(occ[BOTH], F1);
                 flipBit(occ[stm], H1);
                 flipBit(occ[BOTH], H1);
+                piece_board[F1] = NO_PIECE;
+                piece_board[H1] = WHITE_ROOK;
                 break;
 
             // White Queenside (Q) - Rook was on D1, move back to A1
@@ -566,6 +573,8 @@ void Board::undoMove(Move move) {
                 flipBit(occ[BOTH], D1);
                 flipBit(occ[stm], A1);
                 flipBit(occ[BOTH], A1);
+                piece_board[D1] = NO_PIECE;
+                piece_board[A1] = WHITE_ROOK;
                 break;
 
             // Black Kingside (k) - Rook was on F8, move back to H8
@@ -576,6 +585,8 @@ void Board::undoMove(Move move) {
                 flipBit(occ[BOTH], F8);
                 flipBit(occ[stm], H8);
                 flipBit(occ[BOTH], H8);
+                piece_board[F8] = NO_PIECE;
+                piece_board[H8] = BLACK_ROOK;
                 break;
 
             // Black Queenside (q) - Rook was on D8, move back to A8
@@ -586,6 +597,8 @@ void Board::undoMove(Move move) {
                 flipBit(occ[BOTH], D8);
                 flipBit(occ[stm], A8);
                 flipBit(occ[BOTH], A8);
+                piece_board[D8] = NO_PIECE;
+                piece_board[A8] = BLACK_ROOK;
                 break;
         }
     }
@@ -649,22 +662,35 @@ void Board::setSpecials() {
             pinned |= blockers & occ[stm];
         }
     }
+    if (checkers == 0) {
+        legal_mask = ~BitBoard(0);
+    } else { // num checkers == 1 only can be changed later if needed
+        Square checker_sq = static_cast<Square>(getLSB(checkers));
+        legal_mask = checkers;
+        Piece checker_piece = pieceAt(static_cast<uint8_t>(checker_sq));
+        DefaultPiece checker_type = makeDefaultPiece(checker_piece);
+        if (checker_type == BISHOP || checker_type == ROOK || checker_type == QUEEN) {
+            legal_mask |= between_squares[king_square][checker_sq];
+        }
+    }
     setThreatened();
 }
 
 void Board::setThreatened() {
-    threatened[WHITE] |= shiftPawnAttacks(piece_bb[WHITE_PAWN], WHITE);
-    threatened[BLACK] |= shiftPawnAttacks(piece_bb[BLACK_PAWN], BLACK);
+    threatened_by[WHITE] = BitBoard(0);
+    threatened_by[BLACK] = BitBoard(0);
+    threatened_by[WHITE] |= shiftPawnAttacks(piece_bb[WHITE_PAWN], WHITE);
+    threatened_by[BLACK] |= shiftPawnAttacks(piece_bb[BLACK_PAWN], BLACK);
     for (int white_index = WHITE_PAWN + 1, black_index = BLACK_PAWN + 1; white_index <= WHITE_KING; white_index++, black_index++) {
         BitBoard cur_piece_bb = piece_bb[white_index];
-        while(cur_piece_bb > 0) {
+        while(cur_piece_bb) {
             Square cur_square = static_cast<Square>(popLSB(cur_piece_bb));
-            threatened[WHITE] |= getPieceAttacks(static_cast<Piece>(white_index), cur_square, occ[BOTH]);
+            threatened_by[WHITE] |= getPieceAttacks(static_cast<Piece>(white_index), cur_square, occ[BOTH]);
         }
         cur_piece_bb = piece_bb[black_index];
-        while(cur_piece_bb > 0) {
+        while(cur_piece_bb) {
             Square cur_square = static_cast<Square>(popLSB(cur_piece_bb));
-            threatened[BLACK] |= getPieceAttacks(static_cast<Piece>(black_index), cur_square, occ[BOTH]);
+            threatened_by[BLACK] |= getPieceAttacks(static_cast<Piece>(black_index), cur_square, occ[BOTH]);
         }
     }
 }

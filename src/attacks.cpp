@@ -10,6 +10,7 @@ BitBoard rook_attacks[64][4096];
 BitBoard king_attacks[64];
 
 BitBoard between_squares[64][64];
+BitBoard line_squares[64][64];
 
 const int bishop_relevant_bits[64] = {6, 5, 5, 5, 5, 5, 5, 6,
                                       5, 5, 5, 5, 5, 5, 5, 5,
@@ -355,6 +356,65 @@ void populateBetweenSquares() {
     for (uint8_t from = 0; from < 64; from++) {
         for (uint8_t to = 0; to < from; to++) {
             between_squares[from][to] = between_squares[to][from];
+        }
+    }
+}
+
+void populateLineSquares() {
+    int8_t step;
+    uint8_t index;
+
+    for (uint8_t from = 0; from < 64; from++) {
+        for (uint8_t to = from + 1; to < 64; to++) {
+            line_squares[from][to] = 0ULL;
+            step = 0;
+            if (getRank(from) == getRank(to)) {
+                step = EAST;
+            } else if (getFile(from) == getFile(to)) {
+                step = SOUTH;
+            } else if (((to - from) % 9 == 0) && (getFile(to) > getFile(from))) {
+                step = SOUTHEAST;
+            } else if (((to - from) % 7 == 0) && (getFile(to) < getFile(from))) {
+                step = SOUTHWEST;
+            }
+            if (step == 0) {
+                continue;
+            }
+            index = from;
+            while (index < 64) {
+                setBit(line_squares[from][to], index);
+                if ((step == EAST || step == SOUTHEAST) && getFile(index) == 7) {
+                    break;
+                }
+                if ((step == WEST || step == SOUTHWEST) && getFile(index) == 0) {
+                    break;
+                }
+                if ((step == SOUTH || step == SOUTHEAST || step == SOUTHWEST) && getRank(index) == 7) {
+                    break;
+                }
+                index += step;
+            }
+
+            index = from;
+            while (index < 64) {
+                if ((step == EAST || step == SOUTHEAST) && getFile(index) == 0) {
+                    break;
+                }
+                if ((step == WEST || step == SOUTHWEST) && getFile(index) == 7) {
+                    break;
+                }
+                if ((step == SOUTH || step == SOUTHEAST || step == SOUTHWEST) && getRank(index) == 0) {
+                    break;
+                }
+
+                index -= step;
+                setBit(line_squares[from][to], index);
+            }
+        }
+    }
+    for (uint8_t from = 0; from < 64; from++) {
+        for (uint8_t to = 0; to < from; to++) {
+            line_squares[from][to] = line_squares[to][from];
         }
     }
 }

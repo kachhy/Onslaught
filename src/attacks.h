@@ -13,6 +13,7 @@ extern BitBoard rook_attacks[64][4096];
 extern BitBoard king_attacks[64];
 
 extern BitBoard between_squares[64][64];
+extern BitBoard line_squares[64][64];
 
 // OTF attack generation
 BitBoard generateKingAttacks(Square sq);
@@ -41,6 +42,7 @@ void populateRookAttacks();
 
 // For between squares
 void populateBetweenSquares();
+void populateLineSquares();
 
 // Magic numbers
 constexpr BitBoard rook_magics[64] = {
