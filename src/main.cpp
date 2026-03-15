@@ -11,6 +11,43 @@
 #include <cstddef>
 #include <iomanip>
 
+constexpr unsigned long long nodes_position_1[] = {
+    1ULL,
+    20ULL,
+    400ULL,
+    8902ULL,
+    197281ULL,
+    4865609ULL,
+    119060324ULL,
+    3195901860ULL,
+    84998978956ULL,
+    2439530234167ULL,
+    69352859712417ULL,
+    2097651003696806ULL,
+    62854969236701747ULL
+};
+
+constexpr unsigned long long nodes_position_3[] = {
+    1ULL,
+    14ULL,
+    191ULL,
+    2812ULL,
+    43238ULL,
+    674624ULL,
+    11030083ULL,
+    178633661ULL,
+    3009794393ULL
+};
+
+constexpr unsigned long long nodes_position_5[] = {
+    1ULL,
+    44ULL,
+    1486ULL,
+    62379ULL,
+    2103487ULL,
+    89941194ULL
+};
+
 unsigned long long perft_test(Board& board, int depth) {
     if (depth == 0) {
         return 1ULL;
@@ -47,57 +84,33 @@ unsigned long long divide(Board& board, int depth) {
     return nodes;
 }
 
-void perftTests() {
-    std::vector<unsigned long long> nodes_starter = {
-        1ULL,
-        20ULL,
-        400ULL,
-        8902ULL,
-        197281ULL,
-        4865609ULL,
-        119060324ULL,
-        3195901860ULL,
-        84998978956ULL,
-        2439530234167ULL,
-        69352859712417ULL,
-        2097651003696806ULL,
-        62854969236701747ULL
-    };
-    std::vector<unsigned long long> nodes_position_5 = {
-        1ULL,
-        44ULL,
-        1486ULL,
-        62379ULL,
-        2103487ULL,
-        89941194ULL
-    };
-    std::cout << "\nStandard board start perft tests:\n";
+void runTimePerftTest(int depth, const unsigned long long expected[], std::string fen = "") {
+    std::cout << "\nPerft test with board (" << fen << "):\n";
     std::locale us_locale("en_US.UTF-8");
     std::cout.imbue(us_locale);
-    for (int i = 0; i <= 7; i++) {
+    for (int i = 0; i <= depth; i++) {
         auto start = std::chrono::high_resolution_clock::now();
         Board testing_board_1;
+        if (fen != "") {
+            testing_board_1.loadFEN(fen);
+        }
         unsigned long long result = perft_test(testing_board_1, i);
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-        std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(13) <<  nodes_starter[i] << " | result: " << std::setw(13) << result << " | NPS: " << std::setw(13) << (static_cast<double>(result) / duration.count()) / static_cast<double>(1000) << " MNpS | " << (result == nodes_starter[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(8) << duration.count() << "ms\n";
+        std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(13) <<  expected[i] << " | result: " << std::setw(13) << result << " | NPS: " << std::setw(13) << (static_cast<double>(result) / duration.count()) / static_cast<double>(1000) << " MNpS | " << (result == expected[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(8) << duration.count() << "ms\n";
     }
-    std::cout << "\nPosition 5 perft tests (rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8):\n";
-    std::cout.imbue(us_locale);
-    for (int i = 1; i <= 5; i++) {
-        auto start = std::chrono::high_resolution_clock::now();
-        Board testing_board_2("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
-        unsigned long long result = perft_test(testing_board_2, i);
-        auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-        std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(13) <<  nodes_position_5[i] << " | result: " << std::setw(13) << result << " | NPS: " << std::setw(13) << (static_cast<double>(result) / duration.count()) / static_cast<double>(1000) << " MNpS | " << (result == nodes_position_5[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(8) << duration.count() << "ms\n";
-    }
+}
+
+void perftTests() {
+    runTimePerftTest(5, nodes_position_1);
+    runTimePerftTest(5, nodes_position_3, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1");
+    runTimePerftTest(5, nodes_position_5, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
 }
 
 void divideTests() {
     // rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8
     Board testing_board_1("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
-    int depth = 0;
+    int depth = 3;
     std:: cout << "divide tests (depth: " << depth << "):\n";
     divide(testing_board_1, depth);
 }

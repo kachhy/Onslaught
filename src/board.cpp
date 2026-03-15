@@ -29,13 +29,14 @@ std::string moveToStr(Move move) {
 }
 
 DefaultPiece promPiece(Move move) {
-    if ((Flags(move) & QUEEN_PROMO_FLAG) == QUEEN_PROMO_FLAG) {
+    uint32_t flags = Flags(move);
+    if ((flags & QUEEN_PROMO_FLAG) == QUEEN_PROMO_FLAG) {
         return QUEEN;
     }
-    if ((Flags(move) & ROOK_PROMO_FLAG) == ROOK_PROMO_FLAG) {
+    if ((flags & ROOK_PROMO_FLAG) == ROOK_PROMO_FLAG) {
         return ROOK;
     }
-    if ((Flags(move) & BISHOP_PROMO_FLAG) == BISHOP_PROMO_FLAG) {
+    if ((flags & BISHOP_PROMO_FLAG) == BISHOP_PROMO_FLAG) {
         return BISHOP;
     }
     return KNIGHT;
