@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="377.953"
+   height="377.95276"
+   viewBox="0 0 100.00007 100"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   sodipodi:docname="icon.svg"
+   inkscape:export-filename="icon_mini.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="2.448064"
+     inkscape:cx="182.59327"
+     inkscape:cy="207.30667"
+     inkscape:window-width="2560"
+     inkscape:window-height="1369"
+     inkscape:window-x="-8"
+     inkscape:window-y="359"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1"
+     showguides="true"
+     inkscape:export-bgcolor="#ffffffff">
+    <sodipodi:guide
+       position="-40.205242,50.175765"
+       orientation="0,-1"
+       id="guide1"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1">
+    <filter
+       id="mask-powermask-path-effect9_inverse"
+       inkscape:label="filtermask-powermask-path-effect9"
+       style="color-interpolation-filters:sRGB"
+       height="100"
+       width="100"
+       x="-50"
+       y="-50">
+      <feColorMatrix
+         id="mask-powermask-path-effect9_primitive1"
+         values="1"
+         type="saturate"
+         result="fbSourceGraphic" />
+      <feColorMatrix
+         id="mask-powermask-path-effect9_primitive2"
+         values="-1 0 0 0 1 0 -1 0 0 1 0 0 -1 0 1 0 0 0 1 0 "
+         in="fbSourceGraphic" />
+    </filter>
+    <filter
+       id="mask-powermask-path-effect10_inverse"
+       inkscape:label="filtermask-powermask-path-effect10"
+       style="color-interpolation-filters:sRGB"
+       height="100"
+       width="100"
+       x="-50"
+       y="-50">
+      <feColorMatrix
+         id="mask-powermask-path-effect10_primitive1"
+         values="1"
+         type="saturate"
+         result="fbSourceGraphic" />
+      <feColorMatrix
+         id="mask-powermask-path-effect10_primitive2"
+         values="-1 0 0 0 1 0 -1 0 0 1 0 0 -1 0 1 0 0 0 1 0 "
+         in="fbSourceGraphic" />
+    </filter>
+    <mask
+       maskUnits="userSpaceOnUse"
+       id="mask16">
+      <rect
+         style="fill:#ffffff;fill-opacity:1;stroke-width:0.264583;paint-order:markers fill stroke"
+         id="rect16"
+         width="100"
+         height="100"
+         x="0"
+         y="0"
+         rx="16"
+         ry="16" />
+    </mask>
+    <mask
+       maskUnits="userSpaceOnUse"
+       id="mask17">
+      <rect
+         style="fill:#ffffff;fill-opacity:1;stroke-width:0.264583;paint-order:markers fill stroke"
+         id="rect17"
+         width="100"
+         height="100"
+         x="0"
+         y="0"
+         rx="16"
+         ry="16" />
+    </mask>
+    <mask
+       maskUnits="userSpaceOnUse"
+       id="mask18">
+      <rect
+         style="fill:#ffffff;fill-opacity:1;stroke-width:0.264583;paint-order:markers fill stroke"
+         id="rect18"
+         width="100"
+         height="100"
+         x="0"
+         y="0"
+         rx="16"
+         ry="16" />
+    </mask>
+    <mask
+       maskUnits="userSpaceOnUse"
+       id="mask19">
+      <rect
+         style="fill:#ffffff;fill-opacity:1;stroke-width:0.264583;paint-order:markers fill stroke"
+         id="rect19"
+         width="100"
+         height="100"
+         x="0"
+         y="0"
+         rx="16"
+         ry="16" />
+    </mask>
+    <mask
+       maskUnits="userSpaceOnUse"
+       id="mask20">
+      <rect
+         style="fill:#ffffff;fill-opacity:1;stroke-width:0.264583;paint-order:markers fill stroke"
+         id="rect20"
+         width="100"
+         height="100"
+         x="0"
+         y="0"
+         rx="16"
+         ry="16" />
+    </mask>
+  </defs>
+  <rect
+     style="fill:#c3cedc;fill-opacity:1;stroke-width:0.554975"
+     id="rect1-3"
+     width="50"
+     height="50"
+     x="50"
+     y="50"
+     mask="url(#mask20)" />
+  <rect
+     style="fill:#c3cedc;stroke-width:0.554975;fill-opacity:1;paint-order:stroke markers fill"
+     id="rect1"
+     width="50"
+     height="50"
+     x="0"
+     y="0"
+     mask="url(#mask19)" />
+  <rect
+     style="fill:#ffffff;fill-opacity:1;stroke-width:0.554975;paint-order:stroke markers fill"
+     id="rect1-8"
+     width="50"
+     height="50"
+     x="50"
+     y="4.4408921e-16"
+     mask="url(#mask18)" />
+  <rect
+     style="fill:#ffffff;fill-opacity:1;stroke-width:0.554975;paint-order:stroke markers fill"
+     id="rect1-8-5"
+     width="50"
+     height="50"
+     x="0"
+     y="50"
+     mask="url(#mask17)" />
+  <text
+     xml:space="preserve"
+     style="font-size:70.5556px;writing-mode:lr-tb;direction:ltr;fill:#000000;stroke-width:0.264583"
+     x="0.44878435"
+     y="66.918877"
+     id="text1"
+     mask="url(#mask16)"><tspan
+       id="tspan1"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:70.5556px;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';stroke-width:0.264583"
+       x="0.44878435"
+       y="66.918877"
+       sodipodi:role="line">Ax.</tspan></text>
+</svg>
