@@ -74,17 +74,17 @@ void perftTests() {
     std::cout << "\nStandard board start perft tests:\n";
     std::locale us_locale("en_US.UTF-8");
     std::cout.imbue(us_locale);
-    for (int i = 0; i <= -1; i++) {
+    for (int i = 0; i <= 7; i++) {
         auto start = std::chrono::high_resolution_clock::now();
         Board testing_board_1;
         unsigned long long result = perft_test(testing_board_1, i);
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-        std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(13) <<  nodes_starter[i] << " | result: " << std::setw(13) << result << " | NPS: " << std::setw(13) << (static_cast<double>(result) / duration.count()) / static_cast<double>(1000) << " MNpS | " << " | " << (result == nodes_starter[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(8) << duration.count() << "ms\n";
+        std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(13) <<  nodes_starter[i] << " | result: " << std::setw(13) << result << " | NPS: " << std::setw(13) << (static_cast<double>(result) / duration.count()) / static_cast<double>(1000) << " MNpS | " << (result == nodes_starter[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(8) << duration.count() << "ms\n";
     }
     std::cout << "\nPosition 5 perft tests (rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8):\n";
     std::cout.imbue(us_locale);
-    for (int i = 1; i <= -1; i++) {
+    for (int i = 1; i <= 5; i++) {
         auto start = std::chrono::high_resolution_clock::now();
         Board testing_board_2("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
         unsigned long long result = perft_test(testing_board_2, i);
@@ -95,12 +95,9 @@ void perftTests() {
 }
 
 void divideTests() {
-    Board testing_board_1;
-    testing_board_1.makeMove(GenerateMove(F2, F3, WHITE_PAWN, QUIET_FLAG));
-    testing_board_1.makeMove(GenerateMove(E7, E6, BLACK_PAWN, QUIET_FLAG));
-    testing_board_1.makeMove(GenerateMove(E1, F2, WHITE_KING, QUIET_FLAG));
-    testing_board_1.makeMove(GenerateMove(D8, H4, BLACK_QUEEN, QUIET_FLAG));
-    int depth = 1;
+    // rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8
+    Board testing_board_1("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
+    int depth = 0;
     std:: cout << "divide tests (depth: " << depth << "):\n";
     divide(testing_board_1, depth);
 }
@@ -120,7 +117,7 @@ void searchTests() {
 
 void initAttacks() {
     populateBetweenSquares();
-    populateRaySquares();
+    populateLineSquares();
 
     populateBishopMasks();
     populateRookMasks();
@@ -251,7 +248,7 @@ int main() {
     // tests();
     perftTests();
     divideTests();
-    searchTests();
+    // searchTests();
 
     return 0;
 }

@@ -58,7 +58,7 @@ void addLegalPawnMoves(MoveList& moves, const Board& board, Piece piece, MoveFla
             Square cur_from_square = cur_side == WHITE ? static_cast<Square>(cur_to_square + 8) : static_cast<Square>(cur_to_square - 8);
             BitBoard pin_mask = 0;
             if (board.getPinMask() & (BitBoard(1) << cur_from_square)) {
-                pin_mask |= ray_squares[king_sq][cur_from_square];
+                pin_mask |= line_squares[king_sq][cur_from_square];
             } else {
                 pin_mask = ~BitBoard(0);
             }
@@ -77,7 +77,7 @@ void addLegalPawnMoves(MoveList& moves, const Board& board, Piece piece, MoveFla
             Square cur_from_square = cur_side == WHITE ? static_cast<Square>(cur_to_square + 16) : static_cast<Square>(cur_to_square - 16);
             BitBoard pin_mask = 0;
             if (board.getPinMask() & (BitBoard(1) << cur_from_square)) {
-                pin_mask |= ray_squares[king_sq][cur_from_square];
+                pin_mask |= line_squares[king_sq][cur_from_square];
             } else {
                 pin_mask = ~BitBoard(0);
             }
@@ -92,7 +92,7 @@ void addLegalPawnMoves(MoveList& moves, const Board& board, Piece piece, MoveFla
             Square cur_from_square = static_cast<Square>(popLSB(cur_pawn_bb));
             BitBoard pin_mask = 0;
             if (board.getPinMask() & (BitBoard(1) << cur_from_square)) {
-                pin_mask |= ray_squares[king_sq][cur_from_square];
+                pin_mask |= line_squares[king_sq][cur_from_square];
             } else {
                 pin_mask = ~BitBoard(0);
             }
@@ -119,12 +119,12 @@ void addEPLegalMoves(MoveList& moves, const Board& board) {
         return;
     }
     Side stm = board.getSTM();
-    BitBoard movers = shiftPawnAttacks(ep_square_bb, board.getXSTM());
+    BitBoard movers = shiftPawnAttacks(ep_square_bb, board.getXSTM()) & board.getOcc(board.getSTM());
     while (movers > 0) {
         Square cur_from_square = static_cast<Square>(popLSB(movers));
         BitBoard pin_mask = 0;
         if (board.getPinMask() & (BitBoard(1) << cur_from_square)) {
-            pin_mask |= ray_squares[board.getKingSquare()][cur_from_square];
+            pin_mask |= line_squares[board.getKingSquare()][cur_from_square];
         } else {
             pin_mask = ~BitBoard(0);
         }
@@ -144,7 +144,7 @@ void addPieceLegalMoves(MoveList& moves, const Board& board, Piece piece, MoveFl
         Square cur_from_square = static_cast<Square>(popLSB(cur_piece_bb));
         BitBoard pin_mask = 0;
         if (board.getPinMask() & (BitBoard(1) << cur_from_square)) {
-            pin_mask |= ray_squares[king_sq][cur_from_square];
+            pin_mask |= line_squares[king_sq][cur_from_square];
         } else {
             pin_mask = ~BitBoard(0);
         }
@@ -166,9 +166,21 @@ void addPieceLegalMoves(MoveList& moves, const Board& board, Piece piece, MoveFl
 void addLegalKingMoves(MoveList& moves, const Board& board) {
     Side stm = board.getSTM();
     Side xstm = board.getXSTM();
-    Piece cur_piece = makePiece(KING, board.getSTM());
+    Piece cur_piece = makePiece(KING, stm);
     Square cur_from_square = static_cast<Square>(getLSB(board.getPieceBB(cur_piece)));
-    BitBoard king_moves = getKingAttacks(cur_from_square) & ~board.getThreatenedByXSTM() & ~board.getOcc(stm);
+    BitBoard checkers = board.getCheckersMask();
+    BitBoard checker_rays = 0;
+    while (checkers > 0) {
+        int checker_square = popLSB(checkers);
+        DefaultPiece checker_piece = makeDefaultPiece(board.pieceAt(checker_square));
+        if (checker_piece == PAWN || checker_piece == KNIGHT) {
+            continue;
+        }
+        BitBoard cur_line = line_squares[cur_from_square][checker_square];
+        popBit(cur_line, checker_square);
+        checker_rays |= cur_line;
+    }
+    BitBoard king_moves = getKingAttacks(cur_from_square) & ~board.getThreatenedByXSTM() & ~board.getOcc(stm) & ~checker_rays;
     BitBoard quiet_king_moves = king_moves & ~board.getOcc(xstm);
     king_moves &= board.getOcc(xstm);
     while (king_moves > 0) {
@@ -186,18 +198,20 @@ void addLegalKingMoves(MoveList& moves, const Board& board) {
     // 1111 = KQkq
     CastlingRights castling_rights = board.getCastlingRights();
     BitBoard occ = board.getOcc(BOTH);
-    BitBoard white_threat_occ = board.getThreatenedBy(WHITE) | occ;
-    BitBoard black_threat_occ = board.getThreatenedBy(BLACK) | occ;
-    if (castling_rights & WHITE_KS && !(black_threat_occ & WHITE_KINGSIDE_CASTLE_MASK)) {
-        moves.emplace_back(GenerateMove(E1, G1, WHITE_KING, CASTLE_FLAG));
-    }
-    if (castling_rights & WHITE_QS && !(black_threat_occ & WHITE_QUEENSIDE_CASTLE_MASK)) {
-        moves.emplace_back(GenerateMove(E1, C1, WHITE_KING, CASTLE_FLAG));
-    }
-    if (castling_rights & BLACK_KS && !(white_threat_occ & BLACK_KINGSIDE_CASTLE_MASK)) {
-        moves.emplace_back(GenerateMove(E8, G8, BLACK_KING, CASTLE_FLAG));
-    }
-    if (castling_rights & BLACK_QS && !(white_threat_occ & BLACK_QUEENSIDE_CASTLE_MASK)) {
-        moves.emplace_back(GenerateMove(E8, C8, BLACK_KING, CASTLE_FLAG));
+    BitBoard xstm_threats = board.getThreatenedByXSTM();
+    if (stm == WHITE) {
+        if (castling_rights & WHITE_KS && !((xstm_threats | occ) & WHITE_KINGSIDE_CASTLE_MASK)) {
+            moves.emplace_back(GenerateMove(E1, G1, WHITE_KING, CASTLE_FLAG));
+        }
+        if (castling_rights & WHITE_QS && !((xstm_threats & WHITE_QUEENSIDE_CASTLE_THREAT_MASK) | (occ & WHITE_QUEENSIDE_CASTLE_OCC_MASK))) {
+            moves.emplace_back(GenerateMove(E1, C1, WHITE_KING, CASTLE_FLAG));
+        }
+    } else {
+        if (castling_rights & BLACK_KS && !((xstm_threats | occ) & BLACK_KINGSIDE_CASTLE_MASK)) {
+            moves.emplace_back(GenerateMove(E8, G8, BLACK_KING, CASTLE_FLAG));
+        }
+        if (castling_rights & BLACK_QS && !((xstm_threats & BLACK_QUEENSIDE_CASTLE_THREAT_MASK) | (occ & BLACK_QUEENSIDE_CASTLE_THREAT_MASK))) {
+            moves.emplace_back(GenerateMove(E8, C8, BLACK_KING, CASTLE_FLAG));
+        }
     }
 }

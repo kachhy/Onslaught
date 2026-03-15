@@ -10,7 +10,7 @@ BitBoard rook_attacks[64][4096];
 BitBoard king_attacks[64];
 
 BitBoard between_squares[64][64];
-BitBoard ray_squares[64][64];
+BitBoard line_squares[64][64];
 
 const int bishop_relevant_bits[64] = {6, 5, 5, 5, 5, 5, 5, 6,
                                       5, 5, 5, 5, 5, 5, 5, 5,
@@ -360,13 +360,13 @@ void populateBetweenSquares() {
     }
 }
 
-void populateRaySquares() {
+void populateLineSquares() {
     int8_t step;
     uint8_t index;
 
     for (uint8_t from = 0; from < 64; from++) {
         for (uint8_t to = from + 1; to < 64; to++) {
-            ray_squares[from][to] = 0ULL;
+            line_squares[from][to] = 0ULL;
             step = 0;
             if (getRank(from) == getRank(to)) {
                 step = EAST;
@@ -382,7 +382,7 @@ void populateRaySquares() {
             }
             index = from;
             while (index < 64) {
-                setBit(ray_squares[from][to], index);
+                setBit(line_squares[from][to], index);
                 if ((step == EAST || step == SOUTHEAST) && getFile(index) == 7) {
                     break;
                 }
@@ -408,13 +408,13 @@ void populateRaySquares() {
                 }
 
                 index -= step;
-                setBit(ray_squares[from][to], index);
+                setBit(line_squares[from][to], index);
             }
         }
     }
     for (uint8_t from = 0; from < 64; from++) {
         for (uint8_t to = 0; to < from; to++) {
-            ray_squares[from][to] = ray_squares[to][from];
+            line_squares[from][to] = line_squares[to][from];
         }
     }
 }
