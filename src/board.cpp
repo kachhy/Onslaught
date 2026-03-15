@@ -504,7 +504,7 @@ void Board::makeMove(Move move) {
     }
 
     zobrist_hash ^= piece_keys[piece][to];
-
+    zobrist_hash ^= side_key;
     move_number += (stm == BLACK);
     xstm = stm;
     stm = xstm == WHITE ? BLACK : WHITE; // optimizable

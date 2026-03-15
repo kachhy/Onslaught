@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstddef>
 #include <iomanip>
+#include <ios>
 
 constexpr unsigned long long nodes_position_1[] = {
     1ULL,
@@ -20,8 +21,8 @@ constexpr unsigned long long nodes_position_1[] = {
     4865609ULL,
     119060324ULL,
     3195901860ULL, // 3 billion
-    84998978956ULL,
-    2439530234167ULL,
+    84998978956ULL, // 85 billion
+    2439530234167ULL, // 2 trillion
     69352859712417ULL,
     2097651003696806ULL,
     62854969236701747ULL
@@ -34,7 +35,8 @@ constexpr unsigned long long nodes_position_2[] = {
     97862ULL,
     4085603ULL,
     193690690ULL,
-    8031647685ULL // 8 billion
+    8031647685ULL, // 8 billion
+    374190009323ULL // 374 billion
 };
 
 constexpr unsigned long long nodes_position_3[] = {
@@ -46,7 +48,8 @@ constexpr unsigned long long nodes_position_3[] = {
     674624ULL,
     11030083ULL,
     178633661ULL,
-    3009794393ULL // 3 billion
+    3009794393ULL, // 3 billion
+    50086749815ULL // 50 billion
 };
 
 constexpr unsigned long long nodes_position_4[] = {
@@ -56,7 +59,8 @@ constexpr unsigned long long nodes_position_4[] = {
     9467ULL,
     422333ULL,
     15833292ULL,
-    706045033ULL // 7 billion
+    706045033ULL, // 700 million
+    27209691363ULL // 27 billion
 };
 
 constexpr unsigned long long nodes_position_5[] = {
@@ -77,12 +81,29 @@ constexpr unsigned long long nodes_position_6[] = {
     3894594ULL,
     164075551ULL,
     6923051137ULL, // 6 billion
-    287188994746ULL,
+    287188994746ULL, // 287 billion
     11923589843526ULL,
     490154852788714ULL
 };
 
-unsigned long long perft_test(Board& board, int depth) {
+struct PerftKey {
+    uint64_t hash;
+    uint8_t depth;
+
+    bool operator==(const PerftKey& other) const {
+        return hash == other.hash && depth == other.depth;
+    }
+};
+
+struct PerftKeyHasher {
+    size_t operator()(const PerftKey& key) const {
+        return std::hash<uint64_t>{}(key.hash ^ (static_cast<uint64_t>(key.depth) << 56));
+    }
+};
+
+using PerftCache = std::unordered_map<PerftKey, unsigned long long, PerftKeyHasher>;
+
+unsigned long long perft_test(Board& board, int depth, PerftCache& cache) {
     if (depth == 0) {
         return 1ULL;
     }
@@ -90,13 +111,19 @@ unsigned long long perft_test(Board& board, int depth) {
     MoveList m = getLegalMoves(board);
 
     if (depth == 1) {
-        return m.size();
+        return static_cast<unsigned long long>(m.size());
+    }
+    PerftKey key{board.hash(), static_cast<uint8_t>(depth)};
+    auto it = cache.find(key);
+    if (it != cache.end()) {
+        return it->second;
     }
     for (size_t i = 0; i < m.size(); i++) {
         board.makeMove(m[i]);
-        nodes += perft_test(board, depth - 1);
+        nodes += perft_test(board, depth - 1, cache);
         board.undoMove(m[i]);
     }
+    cache.emplace(key, nodes);
     return nodes;
 }
 
@@ -114,7 +141,7 @@ unsigned long long perft_test_slow(Board& board, int depth) {
     return nodes;
 }
 
-unsigned long long divide(Board& board, int depth) {
+unsigned long long divide(Board& board, int depth, PerftCache& cache) {
     if (depth == 0) {
         return 1ULL;
     }
@@ -122,7 +149,7 @@ unsigned long long divide(Board& board, int depth) {
     MoveList m = getLegalMoves(board);
     for (size_t i = 0; i < m.size(); i++) {
         board.makeMove(m[i]);
-        unsigned long long n = perft_test(board, depth - 1);
+        unsigned long long n = perft_test(board, depth - 1, cache);
         board.undoMove(m[i]);
         std::cout << moveToStr(m[i]) << ": " << n << "\n";
         nodes += n;
@@ -146,17 +173,22 @@ void runTimePerftTest(int depth, const unsigned long long expected[], std::strin
         if (fen != "") {
             testing_board_1.loadFEN(fen);
         }
-        unsigned long long result = perft_test(testing_board_1, i);
+        PerftCache cache;
+        unsigned long long result = perft_test(testing_board_1, i, cache);
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-        std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(13) <<  expected[i] << " | result: " << std::setw(13) << result << " | NPS: " << std::setw(13) << (static_cast<double>(result) / duration.count()) / static_cast<double>(1000) << " MNpS | " << (result == expected[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(8) << duration.count() << "ms\n";
+        std::cout << "depth: " << std::setw(2) << i << " | expected: " << std::setw(17) <<  expected[i] << " | result: " << std::setw(17) << result << " | NPS: " << std::setw(10) << std::setprecision(3) << std::fixed << (static_cast<double>(result) / duration.count()) / static_cast<double>(1000) << " MNpS | " << (result == expected[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(9) << duration.count() << "ms\n";
     }
 }
 
 void perftTests() {
-    std::vector<int> depths = {5, 4, 6, 4, 4 ,4};
-    // std::vector<int> depths = {6, 5, 7, 5, 5 ,5};
-    // std::vector<int> depths = {7, 6, 8, 6, 6 ,6};
+    std::vector<int> depths = {5, 3, 6, 4, 3 ,3};
+    int length = 0; // 0 = instant, 1 = 2s, 2 = 20s, 3=300s, 4=idk 1hr+
+    for (size_t i = 0; i < depths.size(); i++) {
+        depths[i] += length;
+    }
+    // std::vector<int> depths = {8, 6, 8, 6, 5 ,6};
+    // std::vector<int> depths = {9, 7, 9, 7, 6 ,7};
     runTimePerftTest(depths[0], nodes_position_1);
     runTimePerftTest(depths[1], nodes_position_2, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
     runTimePerftTest(depths[2], nodes_position_3, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1");
@@ -169,7 +201,8 @@ void divideTests() {
     Board testing_board_1("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
     int depth = 1;
     std:: cout << "divide tests (depth: " << depth << "):\n";
-    divide(testing_board_1, depth);
+    PerftCache cache;
+    divide(testing_board_1, depth, cache);
 }
 
 void searchTests() {
