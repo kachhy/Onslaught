@@ -6,6 +6,7 @@
 #include "zobrist.h"
 #include "transposition.h"
 #include "search.h"
+#include <unordered_map>
 #include <cassert>
 #include <chrono>
 #include <cstddef>
