@@ -52,6 +52,63 @@ static inline Score evaluatePawns(const Board& board) {
     if (probePawns(board, score)) {
         return score;
     }
+    
+    BitBoard wp = board.getPieceBB(WHITE_PAWN);
+    BitBoard bp = board.getPieceBB(BLACK_PAWN);
+
+    score += PAWN_PHALANX * bitCount(shiftWest(wp) & wp);
+    score -= PAWN_PHALANX * bitCount(shiftWest(bp) & bp);
+
+    score += DOUBLED_PAWNS * std::max(bitCount(A_FILE & wp) - 1, 0);
+    score += DOUBLED_PAWNS * std::max(bitCount(B_FILE & wp) - 1, 0);
+    score += DOUBLED_PAWNS * std::max(bitCount(C_FILE & wp) - 1, 0);
+    score += DOUBLED_PAWNS * std::max(bitCount(D_FILE & wp) - 1, 0);
+    score += DOUBLED_PAWNS * std::max(bitCount(E_FILE & wp) - 1, 0);
+    score += DOUBLED_PAWNS * std::max(bitCount(F_FILE & wp) - 1, 0);
+    score += DOUBLED_PAWNS * std::max(bitCount(G_FILE & wp) - 1, 0);
+    score += DOUBLED_PAWNS * std::max(bitCount(H_FILE & wp) - 1, 0);
+
+    score -= DOUBLED_PAWNS * std::max(bitCount(A_FILE & bp) - 1, 0);
+    score -= DOUBLED_PAWNS * std::max(bitCount(B_FILE & bp) - 1, 0);
+    score -= DOUBLED_PAWNS * std::max(bitCount(C_FILE & bp) - 1, 0);
+    score -= DOUBLED_PAWNS * std::max(bitCount(D_FILE & bp) - 1, 0);
+    score -= DOUBLED_PAWNS * std::max(bitCount(E_FILE & bp) - 1, 0);
+    score -= DOUBLED_PAWNS * std::max(bitCount(F_FILE & bp) - 1, 0);
+    score -= DOUBLED_PAWNS * std::max(bitCount(G_FILE & bp) - 1, 0);
+    score -= DOUBLED_PAWNS * std::max(bitCount(H_FILE & bp) - 1, 0);
+
+    BitBoard wp_protected = shiftNorthWest(wp & ~A_FILE) | shiftNorthEast(wp & ~H_FILE);
+    BitBoard bp_protected = shiftSouthWest(bp & ~A_FILE) | shiftSouthEast(bp & ~H_FILE);
+
+    for (uint8_t piece = PAWN; piece <= KING; piece++) {
+        score += PAWN_PROTECTION[piece] * bitCount(board.getPieceBB(makePiece(static_cast<DefaultPiece>(piece), WHITE)) & wp_protected);
+        score -= PAWN_PROTECTION[piece] * bitCount(board.getPieceBB(makePiece(static_cast<DefaultPiece>(piece), BLACK)) & bp_protected);
+    }
+
+    // Passed pawns
+    BitBoard temp_wp = wp; 
+    while (temp_wp) {
+        Square sq = static_cast<Square>(popLSB(temp_wp));
+        int rank = sq / 8;
+        if (rank > 2) { 
+            uint64_t forward_ray = 0x0101010101010101ULL << sq;
+            if (!(forward_ray & (bp | bp_protected))) {
+                score += PASSED_PAWNS[rank - 3];
+            }
+        }
+    }
+    BitBoard temp_bp = bp;
+    while (temp_bp) {
+        Square sq = static_cast<Square>(popLSB(temp_bp));
+        int rank = sq / 8;
+        if (rank < 5) {
+            uint64_t forward_ray = 0x8080808080808080ULL >> (63 - sq);
+            if (!(forward_ray & (wp | wp_protected))) {
+                score -= PASSED_PAWNS[4 - rank]; 
+            }
+        }
+    }
+
     storePawnEval(board, score);
     return score;
 }
