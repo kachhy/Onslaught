@@ -1,6 +1,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <cstddef>
 #include <cstdint>
 
 constexpr size_t MEGABYTE = 1024 * 1024;
