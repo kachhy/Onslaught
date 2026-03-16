@@ -19,25 +19,25 @@ static inline Score probePawns(const Board& board) {
     if (pawn_evals[index].hash == board.pawnHash()) {
         return pawn_evals[index].eval;
     }
-    return EVAL_UNKNOWN;
+    return S(EVAL_UNKNOWN, EVAL_UNKNOWN);
 }
 
 static inline void storePawnEval(const Board& board, const Score score) {
     const uint64_t index = board.pawnHash() & PAWN_TABLE_MASK;
     pawn_evals[index].hash = board.pawnHash();
     pawn_evals[index].eval = score;
-}
+} 
 
-static inline int evaluatePawns(const Board& board) {
-    Score score = 0;
-    if ((score = probePawns(board)) != EVAL_UNKNOWN) {
-        return T(score, board.phase());
+static inline Score evaluatePawns(const Board& board) {
+    Score score = S(0, 0);
+    if ((score = probePawns(board)) != S(EVAL_UNKNOWN, EVAL_UNKNOWN)) {
+        return score;
     }
     else {
-        score = 0;
+        score = S(0, 0);
     }
     storePawnEval(board, score);
-    return T(score, board.phase());
+    return score;
 }
 
 static inline int applyPST(const Board& board, const DefaultPiece piece) {
@@ -63,62 +63,59 @@ static inline int applyAllPST(const Board& board) {
     return score;
 }
 
-static inline int applyMaterial(const Board& board) {
-    const int p = board.phase();
-    int score = T(material_values[PAWN], p) * bitCount(board.getPieceBB(WHITE_PAWN));
-    score += T(material_values[KNIGHT], p) * bitCount(board.getPieceBB(WHITE_KNIGHT));
-    score += T(material_values[BISHOP], p) * bitCount(board.getPieceBB(WHITE_BISHOP));
-    score += T(material_values[ROOK], p) * bitCount(board.getPieceBB(WHITE_ROOK));
-    score += T(material_values[QUEEN], p) * bitCount(board.getPieceBB(WHITE_QUEEN));
+static inline Score applyMaterial(const Board& board) {
+    Score score = material_values[PAWN] * bitCount(board.getPieceBB(WHITE_PAWN));
+    score += material_values[KNIGHT] * bitCount(board.getPieceBB(WHITE_KNIGHT));
+    score += material_values[BISHOP] * bitCount(board.getPieceBB(WHITE_BISHOP));
+    score += material_values[ROOK] * bitCount(board.getPieceBB(WHITE_ROOK));
+    score += material_values[QUEEN] * bitCount(board.getPieceBB(WHITE_QUEEN));
 
-    score += T(material_values[PAWN], p) * -1 * bitCount(board.getPieceBB(BLACK_PAWN));
-    score += T(material_values[KNIGHT], p) * -1 * bitCount(board.getPieceBB(BLACK_KNIGHT));
-    score += T(material_values[BISHOP], p) * -1 * bitCount(board.getPieceBB(BLACK_BISHOP));
-    score += T(material_values[ROOK], p) * -1 * bitCount(board.getPieceBB(BLACK_ROOK));
-    score += T(material_values[QUEEN], p) * -1 * bitCount(board.getPieceBB(BLACK_QUEEN));
+    score += material_values[PAWN] * -1 * bitCount(board.getPieceBB(BLACK_PAWN));
+    score += material_values[KNIGHT] * -1 * bitCount(board.getPieceBB(BLACK_KNIGHT));
+    score += material_values[BISHOP] * -1 * bitCount(board.getPieceBB(BLACK_BISHOP));
+    score += material_values[ROOK] * -1 * bitCount(board.getPieceBB(BLACK_ROOK));
+    score += material_values[QUEEN] * -1 * bitCount(board.getPieceBB(BLACK_QUEEN));
     
     return score;
 }
 
-static inline int evaluateBishopPair(const Board& board) {
-    const int p = board.phase();
-    int score = 0;
+static inline Score evaluateBishopPair(const Board& board) {
+    Score score = S(0, 0);
     if (bitCount(board.getPieceBB(WHITE_BISHOP)) >= 2) {
-        score += T(BISHOP_PAIR, p);
+        score += BISHOP_PAIR;
     }
     if (bitCount(board.getPieceBB(BLACK_BISHOP)) >= 2) {
-        score -= T(BISHOP_PAIR, p);
+        score -= BISHOP_PAIR;
     }
     return score;
 }
 
-static inline int evaluatePawnAdjustments(const Board& board) {
-    const int p = board.phase();
-    int score = 0;
+static inline Score evaluatePawnAdjustments(const Board& board) {
+    Score score = S(0, 0);
     const int wp = bitCount(board.getPieceBB(WHITE_PAWN));
     const int bp = bitCount(board.getPieceBB(BLACK_PAWN));
     const int wn = bitCount(board.getPieceBB(WHITE_KNIGHT));
     const int bn = bitCount(board.getPieceBB(BLACK_KNIGHT));
     const int wr = bitCount(board.getPieceBB(WHITE_ROOK));
     const int br = bitCount(board.getPieceBB(BLACK_ROOK));
-    score += T(KNIGHT_PAWN_ADJ[wp], p) * wn;
-    score -= T(KNIGHT_PAWN_ADJ[bp], p) * bn;
-    score -= T(ROOK_PAWN_ADJ[wp], p) * wr;
-    score -= T(ROOK_PAWN_ADJ[bp], p) * br;
+    score += KNIGHT_PAWN_ADJ[wp] * wn;
+    score -= KNIGHT_PAWN_ADJ[bp] * bn;
+    score += ROOK_PAWN_ADJ[wp] * wr;
+    score -= ROOK_PAWN_ADJ[bp] * br;
     return score;
 }
 
 int eval(const Board& board) {
-    int score = applyMaterial(board);
-    score += applyAllPST(board);
+    Score score = applyMaterial(board);
+    // score += applyAllPST(board);
     score += evaluateBishopPair(board);
     score += evaluatePawnAdjustments(board);
     score += evaluatePawns(board);
 
-    int p = board.phase();
-
     // Tempo bonus
-    score += (board.getSTM() == WHITE) ? T(TEMPO, p) : -T(TEMPO, p);
+    score += (board.getSTM() == WHITE) ? TEMPO : -TEMPO;
 
-    return board.getSTM() == WHITE ? score : -score;
+    int r_score = T(score, board.phase());
+
+    return board.getSTM() == WHITE ? r_score : -r_score;
 }
