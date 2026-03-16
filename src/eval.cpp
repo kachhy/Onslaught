@@ -7,14 +7,14 @@ constexpr size_t TARGET_BYTES = TABLE_SIZE_MB * MEGABYTE;
 
 struct PawnEntry {
     uint64_t hash = 0;
-    int16_t eval;
+    Score eval;
 };
 
 constexpr size_t PAWN_TABLE_SIZE = TARGET_BYTES / sizeof(PawnEntry); // 4 MB
 constexpr size_t PAWN_TABLE_MASK = PAWN_TABLE_SIZE - 1; // 262144 - 1 for 4 MB
 PawnEntry pawn_evals[PAWN_TABLE_SIZE]; // Pawn hash table: 262144 entries, which is 2 ^ 18
 
-static inline int probePawns(const Board& board) {
+static inline Score probePawns(const Board& board) {
     const uint64_t index = board.pawnHash() & PAWN_TABLE_MASK;
     if (pawn_evals[index].hash == board.pawnHash()) {
         return pawn_evals[index].eval;
@@ -22,22 +22,22 @@ static inline int probePawns(const Board& board) {
     return EVAL_UNKNOWN;
 }
 
-static inline void storePawnEval(const Board& board, const int score) {
+static inline void storePawnEval(const Board& board, const Score score) {
     const uint64_t index = board.pawnHash() & PAWN_TABLE_MASK;
     pawn_evals[index].hash = board.pawnHash();
     pawn_evals[index].eval = score;
 }
 
 static inline int evaluatePawns(const Board& board) {
-    int score = 0;
+    Score score = 0;
     if ((score = probePawns(board)) != EVAL_UNKNOWN) {
-        return score;
+        return T(score, board.phase());
     }
     else {
         score = 0;
     }
     storePawnEval(board, score);
-    return score;
+    return T(score, board.phase());
 }
 
 static inline int applyPST(const Board& board, const DefaultPiece piece) {
