@@ -1,7 +1,6 @@
 #include "eval.h"
 #include "terms.h"
 
-constexpr int16_t EVAL_UNKNOWN = 32001;
 constexpr size_t TABLE_SIZE_MB = 4;
 constexpr size_t TARGET_BYTES = TABLE_SIZE_MB * MEGABYTE;
 
@@ -33,12 +32,13 @@ static inline PieceCounts getPieceCounts(const Board& board) {
     };
 }
 
-static inline Score probePawns(const Board& board) {
+static inline bool probePawns(const Board& board, Score& score) {
     const uint64_t index = board.pawnHash() & PAWN_TABLE_MASK;
     if (pawn_evals[index].hash == board.pawnHash()) {
-        return pawn_evals[index].eval;
+        score = pawn_evals[index].eval;
+        return true;
     }
-    return S(EVAL_UNKNOWN, EVAL_UNKNOWN);
+    return false;
 }
 
 static inline void storePawnEval(const Board& board, const Score score) {
@@ -49,11 +49,8 @@ static inline void storePawnEval(const Board& board, const Score score) {
 
 static inline Score evaluatePawns(const Board& board) {
     Score score{};
-    if ((score = probePawns(board)) != S(EVAL_UNKNOWN, EVAL_UNKNOWN)) {
+    if (probePawns(board, score)) {
         return score;
-    }
-    else {
-        score = S(0, 0);
     }
     storePawnEval(board, score);
     return score;
