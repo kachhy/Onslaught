@@ -55,6 +55,9 @@ enum TTBound {
 
 extern const char* board_coords[];
 
+extern const int phase_weights[];
+constexpr int MAX_PHASE = 24;
+
 // Type helper functions
 Piece makePiece(DefaultPiece piece, Side color);
 DefaultPiece makeDefaultPiece(Piece piece);
