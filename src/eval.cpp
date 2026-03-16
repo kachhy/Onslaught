@@ -7,6 +7,8 @@ constexpr int16_t MG(const Score score) { return static_cast<int16_t>(score >> 1
 constexpr int16_t EG(const Score score) { return static_cast<int16_t>(score); }
 constexpr Score T(const Score score, const int phase) { return (MG(score) * phase + EG(score) * (MAX_PHASE - phase)) / MAX_PHASE; } // taper
 
+// Evaluation constants
+
 Score material_values[6] = {
     S(82, 94), // PAWN
     S(337, 281), // KNIGHT
@@ -17,6 +19,7 @@ Score material_values[6] = {
 };
 
 constexpr Score TEMPO = S(26, 0);
+constexpr Score BISHOP_PAIR = S(23, 62);
 
 constexpr int pst[7][64] = {
     // pawn
@@ -138,12 +141,33 @@ static int applyMaterial(const Board& board) {
     return score;
 }
 
+static int evaluateBishopPair(const Board& board) {
+    int score = 0;
+    int p = board.phase();
+    if (bitCount(board.getPieceBB(WHITE_BISHOP)) >= 2) {
+        BitBoard wb = board.getPieceBB(WHITE_BISHOP);
+        int color_1 = popLSB(wb) & 2;
+        int color_2 = popLSB(wb) & 2;
+        score += T(BISHOP_PAIR, p) * (color_1 == color_2);
+    }
+    if (bitCount(board.getPieceBB(BLACK_BISHOP)) >= 2) {
+        BitBoard bb = board.getPieceBB(BLACK_BISHOP);
+        int color_1 = popLSB(bb) & 2;
+        int color_2 = popLSB(bb) & 2;
+        score -= T(BISHOP_PAIR, p) * (color_1 == color_2);
+    }
+    return score;
+}
+
 int eval(const Board& board) {
     int score = applyMaterial(board);
     score += applyAllPST(board);
+    score += evaluateBishopPair(board);
+
+    int p = board.phase();
 
     // Tempo bonus
-    score += (board.getSTM() == WHITE) ? T(TEMPO, board.phase()) : -T(TEMPO, board.phase());
+    score += (board.getSTM() == WHITE) ? T(TEMPO, p) : -T(TEMPO, p);
 
     return board.getSTM() == WHITE ? score : -score;
 }
