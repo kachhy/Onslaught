@@ -89,6 +89,7 @@ public:
     uint64_t hash() const { return zobrist_hash; }
     bool inCheck() const { return static_cast<bool>(checkers); }
     uint8_t getFMR() const { return fmr; }
+    int phase() const { return phase_score; }
 
     // Make and undo move
     void makeMove(Move move);
@@ -122,6 +123,7 @@ private:
     void setThreatened();
     void setPieceBoard();
     void setOcc();
+    void setPhase();
 
     // Draw detection functions
     bool isMaterialDraw() const;
@@ -140,6 +142,7 @@ private:
     Square ep_square;
     Side stm; // Side to move
     Side xstm; // Not side to move
+    int phase_score;
 
     // Move counting
     uint32_t move_number;

@@ -213,6 +213,7 @@ void Board::printBoard() const {
               << "\nEP Square: " << board_coords[ep_square] 
               << "\nCastling: " << getCastlingString()
               << "\nZobrist: " << zobrist_hash
+              << "\nPhase: " << phase_score
               << "\n" << std::endl;
 }
 
@@ -362,6 +363,7 @@ bool Board::loadFEN(const std::string &fen) {
     setOcc();
     setPieceBoard();
     setSpecials();
+    setPhase();
     refreshZobrist();
 
     return true;
@@ -463,6 +465,7 @@ void Board::makeMove(Move move) {
         flipBit(occ[BOTH], sq);
 
         zobrist_hash ^= piece_keys[captured][sq];
+        phase_score -= phase_weights[makeDefaultPiece(captured)];
 
         fmr = 0;
     }
@@ -498,6 +501,7 @@ void Board::makeMove(Move move) {
 
             piece_board[to] = static_cast<Piece>(prom_piece);
             zobrist_hash ^= piece_keys[prom_piece][to] ^ piece_keys[piece][to];
+            phase_score += phase_weights[makeDefaultPiece(prom_piece)];
         }
 
         fmr = 0;
@@ -541,6 +545,7 @@ void Board::undoMove(Move move) {
         flipBit(piece_bb[prom_piece], to);
 
         piece_board[to] = piece;
+        phase_score -= phase_weights[makeDefaultPiece(prom_piece)];
     }
 
     flipBits(piece_bb[piece], to, from);
@@ -611,6 +616,7 @@ void Board::undoMove(Move move) {
         flipBit(occ[BOTH], sq);
 
         piece_board[sq] = captured;
+        phase_score += phase_weights[makeDefaultPiece(captured)];
     }
 
     history.pop_back();
@@ -674,6 +680,15 @@ void Board::setSpecials() {
         }
     }
     setThreatened();
+}
+
+void Board::setPhase() {
+    phase_score = 0;
+    phase_score += phase_weights[PAWN] * bitCount(piece_bb[WHITE_PAWN] | piece_bb[BLACK_PAWN]);
+    phase_score += phase_weights[KNIGHT] * bitCount(piece_bb[WHITE_KNIGHT] | piece_bb[BLACK_KNIGHT]);
+    phase_score += phase_weights[BISHOP] * bitCount(piece_bb[WHITE_BISHOP] | piece_bb[BLACK_BISHOP]);
+    phase_score += phase_weights[ROOK] * bitCount(piece_bb[WHITE_ROOK] | piece_bb[BLACK_ROOK]);
+    phase_score += phase_weights[QUEEN] * bitCount(piece_bb[WHITE_QUEEN] | piece_bb[BLACK_QUEEN]);
 }
 
 void Board::setThreatened() {
