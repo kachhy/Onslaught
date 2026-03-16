@@ -19,7 +19,29 @@ Score material_values[6] = {
 };
 
 constexpr Score TEMPO = S(26, 0);
-constexpr Score BISHOP_PAIR = S(23, 62);
+constexpr Score BISHOP_PAIR = S(29, 84);
+const Score KNIGHT_PAWN_ADJ[9] = {
+    S(-20, -20), // 0 pawns
+    S(-16, -16),
+    S(-12, -12),
+    S( -4,  -4),
+    S(  0,   0), // 4 pawns 
+    S(  4,   4),
+    S(  8,   8),
+    S( 12,  12),
+    S( 16,  16), // 8 pawns
+};
+const Score ROOK_PAWN_ADJ[9] = {
+    S( 20,  30),
+    S( 15,  22),
+    S( 10,  15),
+    S(  5,   8),
+    S(  0,   0),
+    S( -5,  -8),
+    S(-10, -15),
+    S(-15, -22),
+    S(-20, -30),
+};
 
 constexpr int pst[7][64] = {
     // pawn
@@ -57,14 +79,14 @@ constexpr int pst[7][64] = {
     },
     // rook
     {
-            0,  0,  0,  5,  5,  0,  0,  0,
+        0,  0,  0,  5,  5,  0,  0,  0,
         -5,  0,  0,  0,  0,  0,  0, -5,
         -5,  0,  0,  0,  0,  0,  0, -5,
         -5,  0,  0,  0,  0,  0,  0, -5,
         -5,  0,  0,  0,  0,  0,  0, -5,
         -5,  0,  0,  0,  0,  0,  0, -5,
-            5, 10, 10, 10, 10, 10, 10,  5,
-            0,  0,  0,  0,  0,  0,  0,  0
+        5, 10, 10, 10, 10, 10, 10,  5,
+        0,  0,  0,  0,  0,  0,  0,  0
     },
     // queen
     {
@@ -142,8 +164,8 @@ static int applyMaterial(const Board& board) {
 }
 
 static int evaluateBishopPair(const Board& board) {
+    const int p = board.phase();
     int score = 0;
-    int p = board.phase();
     if (bitCount(board.getPieceBB(WHITE_BISHOP)) >= 2) {
         score += T(BISHOP_PAIR, p);
     }
@@ -153,10 +175,27 @@ static int evaluateBishopPair(const Board& board) {
     return score;
 }
 
+static int evaluatePawnAdjustments(const Board& board) {
+    const int p = board.phase();
+    int score = 0;
+    const int wp = bitCount(board.getPieceBB(WHITE_PAWN));
+    const int bp = bitCount(board.getPieceBB(BLACK_PAWN));
+    const int wn = bitCount(board.getPieceBB(WHITE_KNIGHT));
+    const int bn = bitCount(board.getPieceBB(BLACK_KNIGHT));
+    const int wr = bitCount(board.getPieceBB(WHITE_ROOK));
+    const int br = bitCount(board.getPieceBB(BLACK_ROOK));
+    score += T(KNIGHT_PAWN_ADJ[wp], p) * wn;
+    score -= T(KNIGHT_PAWN_ADJ[bp], p) * bn;
+    score -= T(ROOK_PAWN_ADJ[wp], p) * wr;
+    score -= T(ROOK_PAWN_ADJ[bp], p) * br;
+    return score;
+}
+
 int eval(const Board& board) {
     int score = applyMaterial(board);
     score += applyAllPST(board);
     score += evaluateBishopPair(board);
+    score += evaluatePawnAdjustments(board);
 
     int p = board.phase();
 
