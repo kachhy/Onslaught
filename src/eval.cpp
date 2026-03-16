@@ -145,16 +145,10 @@ static int evaluateBishopPair(const Board& board) {
     int score = 0;
     int p = board.phase();
     if (bitCount(board.getPieceBB(WHITE_BISHOP)) >= 2) {
-        BitBoard wb = board.getPieceBB(WHITE_BISHOP);
-        int color_1 = popLSB(wb) & 2;
-        int color_2 = popLSB(wb) & 2;
-        score += T(BISHOP_PAIR, p) * (color_1 == color_2);
+        score += T(BISHOP_PAIR, p);
     }
     if (bitCount(board.getPieceBB(BLACK_BISHOP)) >= 2) {
-        BitBoard bb = board.getPieceBB(BLACK_BISHOP);
-        int color_1 = popLSB(bb) & 2;
-        int color_2 = popLSB(bb) & 2;
-        score -= T(BISHOP_PAIR, p) * (color_1 == color_2);
+        score -= T(BISHOP_PAIR, p);
     }
     return score;
 }
