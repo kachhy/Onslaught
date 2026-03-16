@@ -12,6 +12,15 @@ const char* board_coords[] = {
     "NS"
 };
 
+const int phase_weights[6] = {
+    0,  // pawn
+    1,  // knight
+    1,  // bishop
+    2,  // rook
+    4,  // queen
+    0,  // king
+};
+
 Piece makePiece(DefaultPiece piece, Side color) {
     if (color == WHITE) {
         return static_cast<Piece>(piece);

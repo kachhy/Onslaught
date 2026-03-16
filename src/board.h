@@ -89,6 +89,8 @@ public:
     uint64_t hash() const { return zobrist_hash; }
     bool inCheck() const { return static_cast<bool>(checkers); }
     uint8_t getFMR() const { return fmr; }
+    int phase() const { return phase_score; }
+    uint64_t pawnHash() const { return pawn_hash; }
 
     // Make and undo move
     void makeMove(Move move);
@@ -108,10 +110,11 @@ private:
         BitBoard threatened_by[2];
         BitBoard pinned;
         uint64_t zobrist_hash;
+        uint64_t pawn_hash;
 
-        BoardHistory(CastlingRights castling, Square ep_square, uint32_t null_move_number, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard legal_mask, BitBoard white_threats, BitBoard black_threats, BitBoard pinned, uint64_t zobrist_hash)
+        BoardHistory(CastlingRights castling, Square ep_square, uint32_t null_move_number, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard legal_mask, BitBoard white_threats, BitBoard black_threats, BitBoard pinned, uint64_t zobrist_hash, uint64_t pawn_hash)
                     : castling(castling), ep_square(ep_square), null_move_number(null_move_number), fmr(fmr), 
-                      captured_piece(captured_piece), checkers(checkers), legal_mask(legal_mask), pinned(pinned), zobrist_hash(zobrist_hash) {
+                      captured_piece(captured_piece), checkers(checkers), legal_mask(legal_mask), pinned(pinned), zobrist_hash(zobrist_hash), pawn_hash(pawn_hash) {
                         threatened_by[WHITE] = white_threats;
                         threatened_by[BLACK] = black_threats;
                     }
@@ -122,6 +125,7 @@ private:
     void setThreatened();
     void setPieceBoard();
     void setOcc();
+    void setPhase();
 
     // Draw detection functions
     bool isMaterialDraw() const;
@@ -140,6 +144,7 @@ private:
     Square ep_square;
     Side stm; // Side to move
     Side xstm; // Not side to move
+    int phase_score;
 
     // Move counting
     uint32_t move_number;
@@ -151,6 +156,7 @@ private:
 
     // Hashing
     uint64_t zobrist_hash;
+    uint64_t pawn_hash;
 };
 
 #include "movegen.h"
