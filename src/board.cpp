@@ -213,6 +213,8 @@ void Board::printBoard() const {
               << "\nEP Square: " << board_coords[ep_square] 
               << "\nCastling: " << getCastlingString()
               << "\nZobrist: " << zobrist_hash
+              << "\nPHW: " << pawn_hash[WHITE]
+              << "\nPHB: " << pawn_hash[BLACK]
               << "\nPhase: " << phase_score
               << "\n" << std::endl;
 }
@@ -380,7 +382,8 @@ void Board::makeMove(Move move) {
     Piece piece      = MovePiece(move);
     Piece captured   = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
 
-    history.emplace_back(castling, ep_square, null_move_number, fmr, captured, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash);
+    history.emplace_back(castling, ep_square, null_move_number, fmr, captured, checkers, legal_mask,
+                        threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash);
 
     fmr++;
     null_move_number++;
@@ -467,6 +470,10 @@ void Board::makeMove(Move move) {
         zobrist_hash ^= piece_keys[captured][sq];
         phase_score -= phase_weights[makeDefaultPiece(captured)];
 
+        if (captured == makePiece(PAWN, xstm)) {
+            pawn_hash[xstm] ^= piece_keys[makePiece(PAWN, xstm)][sq]; // Remove captured pawn
+        }
+
         fmr = 0;
     }
 
@@ -484,6 +491,9 @@ void Board::makeMove(Move move) {
 
     // Special pawn rules
     if (piece == makePiece(PAWN, stm)) {
+        // Update STM pawn hash
+        pawn_hash[stm] ^= piece_keys[piece][from];
+        pawn_hash[stm] ^= piece_keys[piece][to];
         // Establish EP square if necessary
         if ((from ^ to) == 16) {
             Square new_ep_square = static_cast<Square>(to - (stm == WHITE ? NORTH : SOUTH));
@@ -502,6 +512,8 @@ void Board::makeMove(Move move) {
             piece_board[to] = static_cast<Piece>(prom_piece);
             zobrist_hash ^= piece_keys[prom_piece][to] ^ piece_keys[piece][to];
             phase_score += phase_weights[makeDefaultPiece(prom_piece)];
+            
+            pawn_hash[stm] ^= piece_keys[piece][to]; // Undo to hash- pawn no longer exists
         }
 
         fmr = 0;
@@ -532,7 +544,8 @@ void Board::undoMove(Move move) {
     threatened_by[BLACK] = hist_data.threatened_by[BLACK];
     pinned               = hist_data.pinned;
     zobrist_hash         = hist_data.zobrist_hash;
-
+    pawn_hash[WHITE]     = hist_data.pawn_hash[WHITE];
+    pawn_hash[BLACK]     = hist_data.pawn_hash[BLACK];
 
     move_number -= (stm == BLACK);
     stm          = xstm;
@@ -624,6 +637,8 @@ void Board::undoMove(Move move) {
 
 void Board::refreshZobrist() {
     zobrist_hash = 0ULL;
+    pawn_hash[WHITE] = 0ULL;
+    pawn_hash[BLACK] = 0ULL;
     BitBoard bb;
 
     for (uint8_t pc = static_cast<uint8_t>(WHITE_PAWN); pc <= static_cast<uint8_t>(BLACK_KING); pc++)
@@ -633,6 +648,9 @@ void Board::refreshZobrist() {
         {
             uint8_t sq = popLSB(bb);
             zobrist_hash ^= piece_keys[pc][sq];
+            if (makeDefaultPiece(static_cast<Piece>(pc)) == PAWN) {
+                pawn_hash[extractColor(static_cast<Piece>(pc))] ^= piece_keys[pc][sq];
+            }
         }
     }
 

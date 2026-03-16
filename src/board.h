@@ -90,6 +90,7 @@ public:
     bool inCheck() const { return static_cast<bool>(checkers); }
     uint8_t getFMR() const { return fmr; }
     int phase() const { return phase_score; }
+    uint64_t pawnHash(const Side side) const { return pawn_hash[side]; }
 
     // Make and undo move
     void makeMove(Move move);
@@ -109,12 +110,15 @@ private:
         BitBoard threatened_by[2];
         BitBoard pinned;
         uint64_t zobrist_hash;
+        uint64_t pawn_hash[2];
 
-        BoardHistory(CastlingRights castling, Square ep_square, uint32_t null_move_number, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard legal_mask, BitBoard white_threats, BitBoard black_threats, BitBoard pinned, uint64_t zobrist_hash)
+        BoardHistory(CastlingRights castling, Square ep_square, uint32_t null_move_number, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard legal_mask, BitBoard white_threats, BitBoard black_threats, BitBoard pinned, uint64_t zobrist_hash, uint64_t pawn_hash[])
                     : castling(castling), ep_square(ep_square), null_move_number(null_move_number), fmr(fmr), 
                       captured_piece(captured_piece), checkers(checkers), legal_mask(legal_mask), pinned(pinned), zobrist_hash(zobrist_hash) {
                         threatened_by[WHITE] = white_threats;
                         threatened_by[BLACK] = black_threats;
+                        this->pawn_hash[WHITE] = pawn_hash[WHITE];
+                        this->pawn_hash[BLACK] = pawn_hash[BLACK];
                     }
     };
 
@@ -154,6 +158,7 @@ private:
 
     // Hashing
     uint64_t zobrist_hash;
+    uint64_t pawn_hash[2];
 };
 
 #include "movegen.h"

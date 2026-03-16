@@ -1,6 +1,8 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <cstdint>
+
 enum Square {
     A8 = 0, B8, C8, D8, E8, F8, G8, H8,
     A7, B7, C7, D7, E7, F7, G7, H7,
@@ -61,5 +63,6 @@ constexpr int MAX_PHASE = 24;
 // Type helper functions
 Piece makePiece(DefaultPiece piece, Side color);
 DefaultPiece makeDefaultPiece(Piece piece);
+constexpr inline Side extractColor(Piece piece) { return static_cast<Side>(static_cast<uint8_t>(piece) / static_cast<uint8_t>(WHITE_KING)); };
 
 #endif // TYPES_H
