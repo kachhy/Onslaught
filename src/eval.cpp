@@ -22,6 +22,24 @@ static inline int probePawns(const Board& board) {
     return EVAL_UNKNOWN;
 }
 
+static inline void storePawnEval(const Board& board, const int score) {
+    const uint64_t index = board.pawnHash() & PAWN_TABLE_MASK;
+    pawn_evals[index].hash = board.pawnHash();
+    pawn_evals[index].eval = score;
+}
+
+static inline int evaluatePawns(const Board& board) {
+    int score = 0;
+    if ((score = probePawns(board)) != EVAL_UNKNOWN) {
+        return score;
+    }
+    else {
+        score = 0;
+    }
+    storePawnEval(board, score);
+    return score;
+}
+
 static inline int applyPST(const Board& board, const DefaultPiece piece) {
     int score = 0;
     BitBoard white_piece_bb = board.getPieceBB(makePiece(piece, WHITE));
@@ -95,6 +113,7 @@ int eval(const Board& board) {
     score += applyAllPST(board);
     score += evaluateBishopPair(board);
     score += evaluatePawnAdjustments(board);
+    score += evaluatePawns(board);
 
     int p = board.phase();
 
