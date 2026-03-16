@@ -40,8 +40,8 @@ static inline Score evaluatePawns(const Board& board) {
     return score;
 }
 
-static inline int applyPST(const Board& board, const DefaultPiece piece) {
-    int score = 0;
+static inline Score applyPST(const Board& board, const DefaultPiece piece) {
+    Score score = S(0, 0);
     BitBoard white_piece_bb = board.getPieceBB(makePiece(piece, WHITE));
     BitBoard black_piece_bb = board.getPieceBB(makePiece(piece, BLACK));
     while (white_piece_bb) {
@@ -53,8 +53,8 @@ static inline int applyPST(const Board& board, const DefaultPiece piece) {
     return score;
 }
 
-static inline int applyAllPST(const Board& board) {
-    int score = applyPST(board, PAWN);
+static inline Score applyAllPST(const Board& board) {
+    Score score = applyPST(board, PAWN);
     score += applyPST(board, KNIGHT);
     score += applyPST(board, BISHOP);
     score += applyPST(board, ROOK);
@@ -107,7 +107,7 @@ static inline Score evaluatePawnAdjustments(const Board& board) {
 
 int eval(const Board& board) {
     Score score = applyMaterial(board);
-    // score += applyAllPST(board);
+    score += applyAllPST(board);
     score += evaluateBishopPair(board);
     score += evaluatePawnAdjustments(board);
     score += evaluatePawns(board);

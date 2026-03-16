@@ -39,7 +39,7 @@ constexpr Score TEMPO = S(26, 0);
 constexpr Score BISHOP_PAIR = S(29, 84);
 extern const Score KNIGHT_PAWN_ADJ[9];
 extern const Score ROOK_PAWN_ADJ[9];
-extern const int pst[7][64];
+extern const Score pst[6][64];
 
 
 #endif // TERMS_H
