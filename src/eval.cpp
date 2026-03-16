@@ -16,6 +16,8 @@ Score material_values[6] = {
     S(0, 0), // KING (shouldn't hit this case ever)
 };
 
+constexpr Score TEMPO = S(26, 0);
+
 constexpr int pst[7][64] = {
     // pawn
     {
@@ -139,6 +141,9 @@ static int applyMaterial(const Board& board) {
 int eval(const Board& board) {
     int score = applyMaterial(board);
     score += applyAllPST(board);
+
+    // Tempo bonus
+    score += (board.getSTM() == WHITE) ? T(TEMPO, board.phase()) : -T(TEMPO, board.phase());
 
     return board.getSTM() == WHITE ? score : -score;
 }
