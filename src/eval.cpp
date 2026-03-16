@@ -1,12 +1,19 @@
 #include "eval.h"
 
-int material_values[6] = {
-    100, // PAWN
-    300, // KNIGHT
-    300, // BISHOP
-    500, // ROOK
-    900, // QUEEN
-    0, // KING (shouldn't hit this case ever)
+using Score = int32_t;
+
+constexpr Score S(const int16_t mg, const int16_t eg) { return (static_cast<Score>(mg) << 16) + static_cast<Score>(eg); }
+constexpr int16_t MG(const Score score) { return static_cast<int16_t>(score >> 16); }
+constexpr int16_t EG(const Score score) { return static_cast<int16_t>(score); }
+constexpr Score T(const Score score, const int phase) { return (MG(score) * phase + EG(score) * (MAX_PHASE - phase)) / MAX_PHASE; } // taper
+
+Score material_values[6] = {
+    S(82, 94), // PAWN
+    S(337, 281), // KNIGHT
+    S(365, 297), // BISHOP
+    S(477, 512), // ROOK
+    S(1025, 936), // QUEEN
+    S(0, 0), // KING (shouldn't hit this case ever)
 };
 
 constexpr int pst[7][64] = {
@@ -112,19 +119,25 @@ static int applyAllPST(const Board& board) {
     return score;
 }
 
+static int applyMaterial(const Board& board) {
+    const int p = board.phase();
+    int score = T(material_values[PAWN], p) * bitCount(board.getPieceBB(WHITE_PAWN));
+    score += T(material_values[KNIGHT], p) * bitCount(board.getPieceBB(WHITE_KNIGHT));
+    score += T(material_values[BISHOP], p) * bitCount(board.getPieceBB(WHITE_BISHOP));
+    score += T(material_values[ROOK], p) * bitCount(board.getPieceBB(WHITE_ROOK));
+    score += T(material_values[QUEEN], p) * bitCount(board.getPieceBB(WHITE_QUEEN));
+
+    score += T(material_values[PAWN], p) * -1 * bitCount(board.getPieceBB(BLACK_PAWN));
+    score += T(material_values[KNIGHT], p) * -1 * bitCount(board.getPieceBB(BLACK_KNIGHT));
+    score += T(material_values[BISHOP], p) * -1 * bitCount(board.getPieceBB(BLACK_BISHOP));
+    score += T(material_values[ROOK], p) * -1 * bitCount(board.getPieceBB(BLACK_ROOK));
+    score += T(material_values[QUEEN], p) * -1 * bitCount(board.getPieceBB(BLACK_QUEEN));
+    
+    return score;
+}
+
 int eval(const Board& board) {
-    int score = material_values[PAWN] * bitCount(board.getPieceBB(WHITE_PAWN));
-    score += material_values[KNIGHT] * bitCount(board.getPieceBB(WHITE_KNIGHT));
-    score += material_values[BISHOP] * bitCount(board.getPieceBB(WHITE_BISHOP));
-    score += material_values[ROOK] * bitCount(board.getPieceBB(WHITE_ROOK));
-    score += material_values[QUEEN] * bitCount(board.getPieceBB(WHITE_QUEEN));
-
-    score += material_values[PAWN] * -1 * bitCount(board.getPieceBB(BLACK_PAWN));
-    score += material_values[KNIGHT] * -1 * bitCount(board.getPieceBB(BLACK_KNIGHT));
-    score += material_values[BISHOP] * -1 * bitCount(board.getPieceBB(BLACK_BISHOP));
-    score += material_values[ROOK] * -1 * bitCount(board.getPieceBB(BLACK_ROOK));
-    score += material_values[QUEEN] * -1 * bitCount(board.getPieceBB(BLACK_QUEEN));
-
+    int score = applyMaterial(board);
     score += applyAllPST(board);
 
     return board.getSTM() == WHITE ? score : -score;
