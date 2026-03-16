@@ -1,7 +1,7 @@
 #include "eval.h"
 #include "terms.h"
 
-static int applyPST(const Board& board, const DefaultPiece piece) {
+static inline int applyPST(const Board& board, const DefaultPiece piece) {
     int score = 0;
     BitBoard white_piece_bb = board.getPieceBB(makePiece(piece, WHITE));
     BitBoard black_piece_bb = board.getPieceBB(makePiece(piece, BLACK));
@@ -14,7 +14,7 @@ static int applyPST(const Board& board, const DefaultPiece piece) {
     return score;
 }
 
-static int applyAllPST(const Board& board) {
+static inline int applyAllPST(const Board& board) {
     int score = applyPST(board, PAWN);
     score += applyPST(board, KNIGHT);
     score += applyPST(board, BISHOP);
@@ -24,7 +24,7 @@ static int applyAllPST(const Board& board) {
     return score;
 }
 
-static int applyMaterial(const Board& board) {
+static inline int applyMaterial(const Board& board) {
     const int p = board.phase();
     int score = T(material_values[PAWN], p) * bitCount(board.getPieceBB(WHITE_PAWN));
     score += T(material_values[KNIGHT], p) * bitCount(board.getPieceBB(WHITE_KNIGHT));
@@ -41,7 +41,7 @@ static int applyMaterial(const Board& board) {
     return score;
 }
 
-static int evaluateBishopPair(const Board& board) {
+static inline int evaluateBishopPair(const Board& board) {
     const int p = board.phase();
     int score = 0;
     if (bitCount(board.getPieceBB(WHITE_BISHOP)) >= 2) {
@@ -53,7 +53,7 @@ static int evaluateBishopPair(const Board& board) {
     return score;
 }
 
-static int evaluatePawnAdjustments(const Board& board) {
+static inline int evaluatePawnAdjustments(const Board& board) {
     const int p = board.phase();
     int score = 0;
     const int wp = bitCount(board.getPieceBB(WHITE_PAWN));
