@@ -92,29 +92,23 @@ static inline Score applyMaterial(const PieceCounts& pc) {
     return score;
 }
 
-static inline Score evaluateBishopPair(const Board& board) {
+static inline Score evaluateBishopPair(const PieceCounts& pc) {
     Score score = S(0, 0);
-    if (bitCount(board.getPieceBB(WHITE_BISHOP)) >= 2) {
+    if (pc.wb >= 2) {
         score += BISHOP_PAIR;
     }
-    if (bitCount(board.getPieceBB(BLACK_BISHOP)) >= 2) {
+    if (pc.bb >= 2) {
         score -= BISHOP_PAIR;
     }
     return score;
 }
 
-static inline Score evaluatePawnAdjustments(const Board& board) {
+static inline Score evaluatePawnAdjustments(const PieceCounts& pc) {
     Score score = S(0, 0);
-    const int wp = bitCount(board.getPieceBB(WHITE_PAWN));
-    const int bp = bitCount(board.getPieceBB(BLACK_PAWN));
-    const int wn = bitCount(board.getPieceBB(WHITE_KNIGHT));
-    const int bn = bitCount(board.getPieceBB(BLACK_KNIGHT));
-    const int wr = bitCount(board.getPieceBB(WHITE_ROOK));
-    const int br = bitCount(board.getPieceBB(BLACK_ROOK));
-    score += KNIGHT_PAWN_ADJ[wp] * wn;
-    score -= KNIGHT_PAWN_ADJ[bp] * bn;
-    score += ROOK_PAWN_ADJ[wp] * wr;
-    score -= ROOK_PAWN_ADJ[bp] * br;
+    score += KNIGHT_PAWN_ADJ[pc.wp] * pc.wn;
+    score -= KNIGHT_PAWN_ADJ[pc.bp] * pc.bn;
+    score += ROOK_PAWN_ADJ[pc.wp] * pc.wr;
+    score -= ROOK_PAWN_ADJ[pc.bp] * pc.br;
     return score;
 }
 
@@ -122,8 +116,8 @@ int eval(const Board& board) {
     PieceCounts pc = getPieceCounts(board);
     Score score = applyMaterial(pc);
     score += applyAllPST(board);
-    score += evaluateBishopPair(board);
-    score += evaluatePawnAdjustments(board);
+    score += evaluateBishopPair(pc);
+    score += evaluatePawnAdjustments(pc);
     score += evaluatePawns(board);
 
     // Tempo bonus
