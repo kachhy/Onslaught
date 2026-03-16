@@ -25,7 +25,7 @@ struct Score {
 };
 
 // Construction and extraction
-constexpr Score S(const int16_t mg, const int16_t eg) { return static_cast<Score>((static_cast<int32_t>(mg) << 16) + static_cast<uint16_t>(eg));}
+constexpr Score S(const int16_t mg, const int16_t eg) { return static_cast<Score>((static_cast<uint32_t>(mg) << 16) | static_cast<uint16_t>(eg));}
 constexpr int16_t MG(const Score s) { return static_cast<int16_t>(s.value >> 16); }
 constexpr int16_t EG(const Score s) { return static_cast<int16_t>(s.value); }
 constexpr int16_t T(const Score score, const int phase) { return (MG(score) * phase + EG(score) * (MAX_PHASE - phase)) / MAX_PHASE; } // taper
@@ -37,6 +37,8 @@ constexpr Score operator*(int n, Score s) { return S(MG(s) * n, EG(s) * n); }
 extern const Score material_values[6];
 constexpr Score TEMPO = S(26, 0);
 constexpr Score BISHOP_PAIR = S(29, 84);
+constexpr Score PAWN_PHALANX = S(10, 15);
+constexpr Score DOUBLED_PAWNS = S(-10, -40);
 extern const Score KNIGHT_PAWN_ADJ[9];
 extern const Score ROOK_PAWN_ADJ[9];
 extern const Score pst[6][64];
