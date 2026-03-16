@@ -14,6 +14,25 @@ constexpr size_t PAWN_TABLE_SIZE = TARGET_BYTES / sizeof(PawnEntry); // 4 MB
 constexpr size_t PAWN_TABLE_MASK = PAWN_TABLE_SIZE - 1; // 262144 - 1 for 4 MB
 alignas(64) PawnEntry pawn_evals[PAWN_TABLE_SIZE]; // Pawn hash table: 262144 entries, which is 2 ^ 18
 
+struct PieceCounts {
+    int wp, bp, wn, bn, wb, bb, wr, br, wq, bq;
+};
+
+static inline PieceCounts getPieceCounts(const Board& board) {
+    return {
+        bitCount(board.getPieceBB(WHITE_PAWN)),
+        bitCount(board.getPieceBB(BLACK_PAWN)),
+        bitCount(board.getPieceBB(WHITE_KNIGHT)),
+        bitCount(board.getPieceBB(BLACK_KNIGHT)),
+        bitCount(board.getPieceBB(WHITE_BISHOP)),
+        bitCount(board.getPieceBB(BLACK_BISHOP)),
+        bitCount(board.getPieceBB(WHITE_ROOK)),
+        bitCount(board.getPieceBB(BLACK_ROOK)),
+        bitCount(board.getPieceBB(WHITE_QUEEN)),
+        bitCount(board.getPieceBB(BLACK_QUEEN)),
+    };
+}
+
 static inline Score probePawns(const Board& board) {
     const uint64_t index = board.pawnHash() & PAWN_TABLE_MASK;
     if (pawn_evals[index].hash == board.pawnHash()) {
@@ -63,19 +82,13 @@ static inline Score applyAllPST(const Board& board) {
     return score;
 }
 
-static inline Score applyMaterial(const Board& board) {
-    Score score = material_values[PAWN] * bitCount(board.getPieceBB(WHITE_PAWN));
-    score += material_values[KNIGHT] * bitCount(board.getPieceBB(WHITE_KNIGHT));
-    score += material_values[BISHOP] * bitCount(board.getPieceBB(WHITE_BISHOP));
-    score += material_values[ROOK] * bitCount(board.getPieceBB(WHITE_ROOK));
-    score += material_values[QUEEN] * bitCount(board.getPieceBB(WHITE_QUEEN));
-
-    score += material_values[PAWN] * -1 * bitCount(board.getPieceBB(BLACK_PAWN));
-    score += material_values[KNIGHT] * -1 * bitCount(board.getPieceBB(BLACK_KNIGHT));
-    score += material_values[BISHOP] * -1 * bitCount(board.getPieceBB(BLACK_BISHOP));
-    score += material_values[ROOK] * -1 * bitCount(board.getPieceBB(BLACK_ROOK));
-    score += material_values[QUEEN] * -1 * bitCount(board.getPieceBB(BLACK_QUEEN));
-    
+static inline Score applyMaterial(const PieceCounts& pc) {
+    Score score = S(0, 0);
+    score += material_values[PAWN] * (pc.wp - pc.bp);
+    score += material_values[KNIGHT] * (pc.wn - pc.bn);
+    score += material_values[BISHOP] * (pc.wb - pc.bb);
+    score += material_values[ROOK] * (pc.wr - pc.br);
+    score += material_values[QUEEN] * (pc.wq - pc.bq);
     return score;
 }
 
@@ -106,7 +119,8 @@ static inline Score evaluatePawnAdjustments(const Board& board) {
 }
 
 int eval(const Board& board) {
-    Score score = applyMaterial(board);
+    PieceCounts pc = getPieceCounts(board);
+    Score score = applyMaterial(pc);
     score += applyAllPST(board);
     score += evaluateBishopPair(board);
     score += evaluatePawnAdjustments(board);
