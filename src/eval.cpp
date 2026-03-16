@@ -48,7 +48,7 @@ static inline void storePawnEval(const Board& board, const Score score) {
 } 
 
 static inline Score evaluatePawns(const Board& board) {
-    Score score = S(0, 0);
+    Score score{};
     if ((score = probePawns(board)) != S(EVAL_UNKNOWN, EVAL_UNKNOWN)) {
         return score;
     }
@@ -60,7 +60,7 @@ static inline Score evaluatePawns(const Board& board) {
 }
 
 static inline Score applyPST(const Board& board, const DefaultPiece piece) {
-    Score score = S(0, 0);
+    Score score{};
     BitBoard white_piece_bb = board.getPieceBB(makePiece(piece, WHITE));
     BitBoard black_piece_bb = board.getPieceBB(makePiece(piece, BLACK));
     while (white_piece_bb) {
@@ -83,7 +83,7 @@ static inline Score applyAllPST(const Board& board) {
 }
 
 static inline Score applyMaterial(const PieceCounts& pc) {
-    Score score = S(0, 0);
+    Score score{};
     score += material_values[PAWN] * (pc.wp - pc.bp);
     score += material_values[KNIGHT] * (pc.wn - pc.bn);
     score += material_values[BISHOP] * (pc.wb - pc.bb);
@@ -93,7 +93,7 @@ static inline Score applyMaterial(const PieceCounts& pc) {
 }
 
 static inline Score evaluateBishopPair(const PieceCounts& pc) {
-    Score score = S(0, 0);
+    Score score{};
     if (pc.wb >= 2) {
         score += BISHOP_PAIR;
     }
@@ -104,7 +104,7 @@ static inline Score evaluateBishopPair(const PieceCounts& pc) {
 }
 
 static inline Score evaluatePawnAdjustments(const PieceCounts& pc) {
-    Score score = S(0, 0);
+    Score score{};
     score += KNIGHT_PAWN_ADJ[pc.wp] * pc.wn;
     score -= KNIGHT_PAWN_ADJ[pc.bp] * pc.bn;
     score += ROOK_PAWN_ADJ[pc.wp] * pc.wr;
