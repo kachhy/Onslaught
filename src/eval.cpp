@@ -113,6 +113,32 @@ static inline Score evaluatePawns(const Board& board) {
     return score;
 }
 
+static inline Score applyMobility(const Board& board) {
+    Score score{};
+    const BitBoard occ = board.getOcc(BOTH);
+    const BitBoard white_pieces = board.getOcc(WHITE);
+    const BitBoard black_pieces = board.getOcc(BLACK);
+    for (uint8_t piece = KNIGHT; piece <= QUEEN; piece++) {
+        const Piece wpc = makePiece(static_cast<DefaultPiece>(piece), WHITE);
+        const Piece bpc = makePiece(static_cast<DefaultPiece>(piece), BLACK);
+        BitBoard temp = board.getPieceBB(makePiece(static_cast<DefaultPiece>(piece), WHITE));
+        while (temp) {
+            Square sq = static_cast<Square>(popLSB(temp));
+            BitBoard attacks = getPieceAttacks(wpc, sq, occ);
+            attacks &= ~white_pieces; 
+            score += MOBILITY[piece] * bitCount(attacks); 
+        }
+        temp = board.getPieceBB(makePiece(static_cast<DefaultPiece>(piece), BLACK));
+        while (temp) {
+            Square sq = static_cast<Square>(popLSB(temp));
+            BitBoard attacks = getPieceAttacks(bpc, sq, occ);
+            attacks &= ~black_pieces;
+            score -= MOBILITY[piece] * bitCount(attacks);
+        }
+    }
+    return score;
+}
+
 static inline Score applyPST(const Board& board, const DefaultPiece piece) {
     Score score{};
     BitBoard white_piece_bb = board.getPieceBB(makePiece(piece, WHITE));
@@ -173,6 +199,7 @@ int eval(const Board& board) {
     score += evaluateBishopPair(pc);
     score += evaluatePawnAdjustments(pc);
     score += evaluatePawns(board);
+    score += applyMobility(board);
 
     // Tempo bonus
     score += (board.getSTM() == WHITE) ? TEMPO : -TEMPO;
