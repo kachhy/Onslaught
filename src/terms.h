@@ -36,15 +36,22 @@ constexpr Score operator*(int n, Score s) { return S(MG(s) * n, EG(s) * n); }
 // Eval parameters
 extern const Score material_values[6];
 constexpr Score TEMPO = S(26, 0);
-constexpr Score BISHOP_PAIR = S(29, 84);
+constexpr Score MOBILITY[] = {S(7, 6), S(6, 7), S(3, 5), S(4, 2), S(-5, -4)};
+
 constexpr Score PAWN_PHALANX = S(10, 15);
 constexpr Score DOUBLED_PAWNS = S(-10, -40);
-constexpr Score PAWN_PROTECTION[] = {S(24, 17), S(5, 20), S(7, 22), S(9, 10), S(-4, 20), S(-30, 25)};
 constexpr Score PAWN_CONTROL = S(10, 5);
+constexpr Score PAWN_PROTECTION[] = {S(24, 17), S(5, 20), S(7, 22), S(9, 10), S(-4, 20), S(-30, 25)};
+constexpr Score PASSED_PAWNS[] = {S(0, 0), S(0, 0), S(0, 0), S(10, 12), S(50, 48), S(100, 115), S(285, 205), S(0, 0)};
+
+constexpr Score BISHOP_PAIR = S(29, 84);
 constexpr Score BISHOP_CONTROL_PENALTY = S(-2, -2);
 constexpr Score BAD_BISHOP = S(-10, -15);
-constexpr Score PASSED_PAWNS[] = {S(0, 0), S(0, 0), S(0, 0), S(10, 12), S(50, 48), S(100, 115), S(285, 205), S(0, 0)};
-constexpr Score MOBILITY[] = {S(7, 6), S(6, 7), S(3, 5), S(4, 2), S(-5, -4)};
+
+constexpr Score ROOK_ON_SEVENTH_FILE = S(0, 50);
+constexpr Score ROOK_ON_SEMI_OPEN_FILE = S(10, 5);
+constexpr Score ROOK_ON_OPEN_FILE = S(30, 10);
+
 extern const Score KNIGHT_PAWN_ADJ[9];
 extern const Score ROOK_PAWN_ADJ[9];
 extern const Score pst[6][64];

@@ -209,6 +209,29 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board) {
     return score;
 }
 
+static inline Score evaluateRooks(const Board& board) {
+    Score score{};
+    const BitBoard wp = board.getPieceBB(WHITE_PAWN);
+    const BitBoard bp = board.getPieceBB(BLACK_PAWN);
+    score += bitCount(board.getPieceBB(WHITE_ROOK) & RANK_7) * ROOK_ON_SEVENTH_FILE;
+    score -= bitCount(board.getPieceBB(BLACK_ROOK) & RANK_2) * ROOK_ON_SEVENTH_FILE;
+    BitBoard wr = board.getPieceBB(WHITE_ROOK);
+    while (wr) {
+        const BitBoard file_mask = A_FILE << getFile(popLSB(wr));
+        if (!(wp & file_mask)) {
+            score += !(bp & file_mask) ? ROOK_ON_OPEN_FILE : ROOK_ON_SEMI_OPEN_FILE;
+        }
+    }
+    BitBoard br = board.getPieceBB(WHITE_ROOK);
+    while (br) {
+        const BitBoard file_mask = A_FILE << getFile(popLSB(br));
+        if (!(bp & file_mask)) {
+            score -= !(wp & file_mask) ? ROOK_ON_OPEN_FILE : ROOK_ON_SEMI_OPEN_FILE;
+        }
+    }
+    return score;
+}
+
 static inline Score evaluatePawnAdjustments(const PieceCounts& pc) {
     Score score{};
     score += KNIGHT_PAWN_ADJ[pc.wp] * pc.wn;
