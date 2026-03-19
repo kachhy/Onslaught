@@ -17,6 +17,8 @@ struct PieceCounts {
     int wp, bp, wn, bn, wb, bb, wr, br, wq, bq;
 };
 
+BitBoard knight_outpost_table[2][64];
+
 static inline PieceCounts getPieceCounts(const Board& board) {
     return {
         bitCount(board.getPieceBB(WHITE_PAWN)),
@@ -89,9 +91,9 @@ static inline Score evaluatePawns(const Board& board) {
     BitBoard temp_wp = wp; 
     while (temp_wp) {
         Square sq = static_cast<Square>(popLSB(temp_wp));
-        int rank = sq / 8;
+        int rank = getRank(sq);
         if (rank > 2) { 
-            uint64_t forward_ray = 0x0101010101010101ULL << sq;
+            BitBoard forward_ray = 0x8080808080808080ULL >> (63 - sq);
             if (!(forward_ray & (bp | bp_protected))) {
                 score += PASSED_PAWNS[rank - 3];
             }
@@ -100,9 +102,9 @@ static inline Score evaluatePawns(const Board& board) {
     BitBoard temp_bp = bp;
     while (temp_bp) {
         Square sq = static_cast<Square>(popLSB(temp_bp));
-        int rank = sq / 8;
+        int rank = getRank(sq);
         if (rank < 5) {
-            uint64_t forward_ray = 0x8080808080808080ULL >> (63 - sq);
+            BitBoard forward_ray = 0x0101010101010101ULL << sq;
             if (!(forward_ray & (wp | wp_protected))) {
                 score -= PASSED_PAWNS[4 - rank]; 
             }
@@ -174,6 +176,18 @@ static inline Score applyMaterial(const PieceCounts& pc) {
 
 static inline Score evaluateKnights(const Board& board) {
     Score score{};
+    BitBoard wn_candidates = board.getPieceBB(WHITE_KNIGHT) & WHITE_OUTPOST_RANKS;
+    while (wn_candidates) {
+        BitBoard potential_attackers = knight_outpost_table[WHITE][popLSB(wn_candidates)];
+        score += (!potential_attackers) * KNIGHT_OUTPOST;
+    }
+    BitBoard bn_candidates = board.getPieceBB(BLACK_KNIGHT) & BLACK_OUTPOST_RANKS;
+    while (bn_candidates) {
+        BitBoard potential_attackers = knight_outpost_table[BLACK][popLSB(bn_candidates)];
+        score -= (!potential_attackers) * KNIGHT_OUTPOST;
+    }
+    score += bitCount(shiftNorth(board.getPieceBB(WHITE_KNIGHT)) & board.getPieceBB(WHITE_PAWN)) * KNIGHT_BEHIND_PAWN;
+    score -= bitCount(shiftSouth(board.getPieceBB(BLACK_KNIGHT)) & board.getPieceBB(BLACK_PAWN)) * KNIGHT_BEHIND_PAWN;
     return score;
 }
 
@@ -263,4 +277,22 @@ int eval(const Board& board) {
     int r_score = T(score, board.phase());
 
     return board.getSTM() == WHITE ? r_score : -r_score;
+}
+
+void initEval() {
+    for (uint8_t sq = 0; sq < 64; ++sq) {
+        const int file = getFile(sq);
+        const int rank = getRank(sq);
+        BitBoard above = rank < 7 ? (1ULL << ((7 - rank) * 8)) - 1 : 0ULL;
+        BitBoard below = rank > 0 ? (~0ULL << ((8 - rank) * 8)) : 0ULL;
+        BitBoard adj_files = 0ULL;
+        if (file > 0) {
+            adj_files |= (0x0101010101010101ULL << (file - 1));
+        }
+        if (file < 7) {
+            adj_files |= (0x0101010101010101ULL << (file + 1));
+        }
+        knight_outpost_table[WHITE][sq] = above & adj_files;
+        knight_outpost_table[BLACK][sq] = below & adj_files;
+    }
 }

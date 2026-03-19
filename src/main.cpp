@@ -6,6 +6,7 @@
 #include "zobrist.h"
 #include "transposition.h"
 #include "search.h"
+#include "eval.h"
 #include <unordered_map>
 #include <cassert>
 #include <chrono>
@@ -348,6 +349,8 @@ int main() {
     // Populate zobrist keys
     initZobrist();
 
+    // Populate eval data
+    initEval();
     
     // Run tests
     tests();

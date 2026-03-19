@@ -2,6 +2,7 @@
 #define TERMS_H
 
 #include <cstdint>
+#include "bitboard.h"
 #include "types.h"
 
 // Score type
@@ -33,6 +34,10 @@ constexpr int16_t T(const Score score, const int phase) { return (MG(score) * ph
 constexpr Score operator*(Score s, int n) { return S(MG(s) * n, EG(s) * n); }
 constexpr Score operator*(int n, Score s) { return S(MG(s) * n, EG(s) * n); }
 
+// Eval masks
+constexpr BitBoard WHITE_OUTPOST_RANKS = RANK_4 | RANK_5 | RANK_6;
+constexpr BitBoard BLACK_OUTPOST_RANKS = RANK_3 | RANK_4 | RANK_5;
+
 // Eval parameters
 extern const Score material_values[6];
 constexpr Score TEMPO = S(26, 0);
@@ -43,6 +48,9 @@ constexpr Score DOUBLED_PAWNS = S(-10, -40);
 constexpr Score PAWN_CONTROL = S(10, 5);
 constexpr Score PAWN_PROTECTION[] = {S(24, 17), S(5, 20), S(7, 22), S(9, 10), S(-4, 20), S(-30, 25)};
 constexpr Score PASSED_PAWNS[] = {S(0, 0), S(0, 0), S(0, 0), S(10, 12), S(50, 48), S(100, 115), S(285, 205), S(0, 0)};
+
+constexpr Score KNIGHT_OUTPOST = S(15, -24);
+constexpr Score KNIGHT_BEHIND_PAWN = S(2, 32);
 
 constexpr Score BISHOP_PAIR = S(29, 84);
 constexpr Score BISHOP_CONTROL_PENALTY = S(-2, -2);
