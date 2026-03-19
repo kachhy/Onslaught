@@ -172,13 +172,39 @@ static inline Score applyMaterial(const PieceCounts& pc) {
     return score;
 }
 
-static inline Score evaluateBishopPair(const PieceCounts& pc) {
+static inline Score evaluateBishops(const PieceCounts& pc, const Board& board) {
     Score score{};
     if (pc.wb >= 2) {
         score += BISHOP_PAIR;
     }
     if (pc.bb >= 2) {
         score -= BISHOP_PAIR;
+    }
+    if ((board.getPieceBB(WHITE_BISHOP) & LIGHT_SQUARES) && !(board.getPieceBB(WHITE_BISHOP) & DARK_SQUARES)) {
+        const int pawns_same_color = bitCount(board.getPieceBB(WHITE_PAWN) & LIGHT_SQUARES);
+        score += pawns_same_color * BISHOP_CONTROL_PENALTY;
+    }
+    else if ((board.getPieceBB(WHITE_BISHOP) & DARK_SQUARES) && !(board.getPieceBB(WHITE_BISHOP) & LIGHT_SQUARES)) {
+        const int pawns_same_color = bitCount(board.getPieceBB(WHITE_PAWN) & DARK_SQUARES);
+        score += pawns_same_color * BISHOP_CONTROL_PENALTY;
+    }
+    if ((board.getPieceBB(BLACK_BISHOP) & LIGHT_SQUARES) && !(board.getPieceBB(BLACK_BISHOP) & DARK_SQUARES)) {
+        const int pawns_same_color = bitCount(board.getPieceBB(BLACK_PAWN) & LIGHT_SQUARES);
+        score -= pawns_same_color * BISHOP_CONTROL_PENALTY;
+    }
+    else if ((board.getPieceBB(BLACK_BISHOP) & DARK_SQUARES) && !(board.getPieceBB(BLACK_BISHOP) & LIGHT_SQUARES)) {
+        const int pawns_same_color = bitCount(board.getPieceBB(BLACK_PAWN) & DARK_SQUARES);
+        score -= pawns_same_color * BISHOP_CONTROL_PENALTY;
+    }
+    BitBoard wb = board.getPieceBB(WHITE_BISHOP);
+    while (wb) {
+        const int attacks = bitCount(getPieceAttacks(WHITE_BISHOP, static_cast<Square>(popLSB(wb)), board.getOcc(BOTH)));
+        score += static_cast<int>(!attacks) * BAD_BISHOP;
+    }
+    BitBoard bb = board.getPieceBB(BLACK_BISHOP);
+    while (bb) {
+        const int attacks = bitCount(getPieceAttacks(BLACK_BISHOP, static_cast<Square>(popLSB(bb)), board.getOcc(BOTH)));
+        score -= static_cast<int>(!attacks) * BAD_BISHOP;
     }
     return score;
 }
@@ -196,7 +222,7 @@ int eval(const Board& board) {
     PieceCounts pc = getPieceCounts(board);
     Score score = applyMaterial(pc);
     score += applyAllPST(board);
-    score += evaluateBishopPair(pc);
+    score += evaluateBishops(pc, board);
     score += evaluatePawnAdjustments(pc);
     score += evaluatePawns(board);
     score += applyMobility(board);
