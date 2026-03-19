@@ -172,6 +172,11 @@ static inline Score applyMaterial(const PieceCounts& pc) {
     return score;
 }
 
+static inline Score evaluateKnights(const Board& board) {
+    Score score{};
+    return score;
+}
+
 static inline Score evaluateBishops(const PieceCounts& pc, const Board& board) {
     Score score{};
     if (pc.wb >= 2) {
@@ -245,7 +250,9 @@ int eval(const Board& board) {
     PieceCounts pc = getPieceCounts(board);
     Score score = applyMaterial(pc);
     score += applyAllPST(board);
+    score += evaluateKnights(board);
     score += evaluateBishops(pc, board);
+    score += evaluateRooks(board);
     score += evaluatePawnAdjustments(pc);
     score += evaluatePawns(board);
     score += applyMobility(board);
