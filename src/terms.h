@@ -38,6 +38,11 @@ constexpr Score operator*(int n, Score s) { return S(MG(s) * n, EG(s) * n); }
 constexpr BitBoard WHITE_OUTPOST_RANKS = RANK_4 | RANK_5 | RANK_6;
 constexpr BitBoard BLACK_OUTPOST_RANKS = RANK_3 | RANK_4 | RANK_5;
 
+constexpr BitBoard G1_H1 = (1ULL << G1) | (1ULL << H1);
+constexpr BitBoard A1_B1_C1 = (1ULL << A1) | (1ULL << B1) | (1ULL << C1);
+constexpr BitBoard G8_H8 = (1ULL << G8) | (1ULL << H8);
+constexpr BitBoard A8_B8_C8 = (1ULL << A8) | (1ULL << B8) | (1ULL << C8);
+
 // Eval parameters
 extern const Score material_values[6];
 constexpr Score TEMPO = S(26, 0);
@@ -59,6 +64,19 @@ constexpr Score BAD_BISHOP = S(-10, -15);
 constexpr Score ROOK_ON_SEVENTH_FILE = S(0, 50);
 constexpr Score ROOK_ON_SEMI_OPEN_FILE = S(10, 5);
 constexpr Score ROOK_ON_OPEN_FILE = S(30, 10);
+
+constexpr Score NO_OPPONENT_QUEENS = S(128, 196);
+constexpr Score PAWN_SHIELD[4] = {
+    S(-36, 0), // missing pawn on this file
+    S( 18, 0), // pawn on original rank
+    S( 12, 0), // pawn one rank advanced
+    S(  5, 0), // pawn two ranks advanced
+};
+const Score PAWN_STORM[3] = {
+    S(-5, 0), // pawn far away
+    S(-8, 0), // pawn getting close
+    S(-14,0), // pawn on 5th rank or closer
+};
 
 extern const Score KNIGHT_PAWN_ADJ[9];
 extern const Score ROOK_PAWN_ADJ[9];

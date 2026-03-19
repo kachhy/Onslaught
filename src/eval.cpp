@@ -18,6 +18,7 @@ struct PieceCounts {
 };
 
 BitBoard knight_outpost_table[2][64];
+BitBoard king_critical_files[8];
 
 static inline PieceCounts getPieceCounts(const Board& board) {
     return {
@@ -260,16 +261,121 @@ static inline Score evaluatePawnAdjustments(const PieceCounts& pc) {
     return score;
 }
 
+static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
+    Score score{};
+    const int w_king_sq = getLSB(board.getPieceBB(WHITE_KING));
+    const int b_king_sq = getLSB(board.getPieceBB(WHITE_KING));
+    const int w_king_rank = getRank(w_king_sq);
+    const int b_king_rank = getRank(b_king_sq);
+    const BitBoard wp = board.getPieceBB(WHITE_PAWN);
+    const BitBoard bp = board.getPieceBB(BLACK_PAWN);
+    score += NO_OPPONENT_QUEENS * !(pc.bq);
+    score -= NO_OPPONENT_QUEENS * !(pc.wq);
+    if (getBit(G1_H1, w_king_sq)) {
+        for (const uint8_t sq : {F2, G2, H2}) {
+            if (getBit(wp, sq)) {
+                score += PAWN_SHIELD[1];
+            }
+            else if (getBit(wp, sq - 8)) {
+                score += PAWN_SHIELD[2];
+            }
+            else if (getBit(wp, sq - 16)) {
+                score += PAWN_SHIELD[3];
+            }
+            else {
+                score += PAWN_SHIELD[0];
+            }
+        }
+    }
+    else if (getBit(A1_B1_C1, w_king_sq)) {
+        for (const uint8_t sq : {A2, B2, C2, D2}) {
+            if (getBit(wp, sq)) {
+                score += PAWN_SHIELD[1];
+            }
+            else if (getBit(wp, sq - 8)) {
+                score += PAWN_SHIELD[2];
+            }
+            else if (getBit(wp, sq - 16)) {
+                score += PAWN_SHIELD[3];
+            }
+            else {
+                score += PAWN_SHIELD[0];
+            }
+        }
+    }
+    if (getBit(G8_H8, b_king_sq)) {
+        for (const uint8_t sq : {F7, G7, H7}) {
+            if (getBit(wp, sq)) {
+                score -= PAWN_SHIELD[1];
+            }
+            else if (getBit(wp, sq + 8)) {
+                score -= PAWN_SHIELD[2];
+            }
+            else if (getBit(wp, sq + 16)) {
+                score -= PAWN_SHIELD[3];
+            }
+            else {
+                score -= PAWN_SHIELD[0];
+            }
+        }
+    }
+    else if (getBit(A8_B8_C8, b_king_sq)) {
+        for (const uint8_t sq : {A7, B7, C7, D7}) {
+            if (getBit(wp, sq)) {
+                score -= PAWN_SHIELD[1];
+            }
+            else if (getBit(wp, sq + 8)) {
+                score -= PAWN_SHIELD[2];
+            }
+            else if (getBit(wp, sq + 16)) {
+                score -= PAWN_SHIELD[3];
+            }
+            else {
+                score -= PAWN_SHIELD[0];
+            }
+        }
+    }
+    BitBoard bp_storm = bp & king_critical_files[getFile(w_king_sq)];
+    while (bp_storm) {
+        const int dist = getRank(popLSB(bp_storm)) - w_king_rank;
+        if (dist < 5) {
+            score += PAWN_STORM[0];
+        }
+        else if (dist < 6) {
+            score += PAWN_STORM[1];
+        }
+        else {
+            score += PAWN_STORM[2];
+        }
+    }
+
+    BitBoard wp_storm = wp & king_critical_files[getFile(b_king_sq)];
+    while (wp_storm) {
+        const int dist = b_king_rank - getRank(popLSB(wp_storm));
+        if (dist < 5) {
+            score -= PAWN_STORM[0];
+        }
+        else if (dist < 6) {
+            score -= PAWN_STORM[1];
+        }
+        else {
+            score -= PAWN_STORM[2];
+        }
+    }
+    return score;
+}
+
 int eval(const Board& board) {
     PieceCounts pc = getPieceCounts(board);
     Score score = applyMaterial(pc);
     score += applyAllPST(board);
+    score += applyMobility(board);
     score += evaluateKnights(board);
     score += evaluateBishops(pc, board);
     score += evaluateRooks(board);
     score += evaluatePawnAdjustments(pc);
     score += evaluatePawns(board);
-    score += applyMobility(board);
+    score += kingSafety(pc, board);
 
     // Tempo bonus
     score += (board.getSTM() == WHITE) ? TEMPO : -TEMPO;
@@ -294,5 +400,10 @@ void initEval() {
         }
         knight_outpost_table[WHITE][sq] = above & adj_files;
         knight_outpost_table[BLACK][sq] = below & adj_files;
+
+        if (sq < 8) {
+            adj_files |= (0x0101010101010101ULL << file);
+            king_critical_files[sq] = adj_files;
+        }
     }
 }
