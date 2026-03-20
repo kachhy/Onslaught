@@ -226,6 +226,8 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board) {
         const int attacks = bitCount(getPieceAttacks(BLACK_BISHOP, static_cast<Square>(popLSB(bb)), board.getOcc(BOTH)));
         score -= static_cast<int>(!attacks) * BAD_BISHOP;
     }
+    score += bitCount(shiftSouth(board.getPieceBB(WHITE_BISHOP)) & board.getPieceBB(WHITE_PAWN)) * BISHOP_BLOCKING_PAWN;
+    score -= bitCount(shiftNorth(board.getPieceBB(BLACK_BISHOP)) & board.getPieceBB(BLACK_PAWN)) * BISHOP_BLOCKING_PAWN;
     return score;
 }
 
