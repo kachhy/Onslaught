@@ -55,10 +55,10 @@ static inline Score applyPST(const Board& board, const DefaultPiece piece) {
     BitBoard white_piece_bb = board.getPieceBB(makePiece(piece, WHITE));
     BitBoard black_piece_bb = board.getPieceBB(makePiece(piece, BLACK));
     while (white_piece_bb) {
-        score += pst[piece][popLSB(white_piece_bb)];
+        score += pst[piece][flipRank(popLSB(white_piece_bb))];
     }
     while (black_piece_bb) {
-        score -= pst[piece][flipRank(popLSB(black_piece_bb))];
+        score -= pst[piece][popLSB(black_piece_bb)];
     }
     return score;
 }
