@@ -50,6 +50,19 @@ static inline void storePawnEval(const Board& board, const Score score) {
     pawn_evals[index].eval = score;
 } 
 
+static inline Score applyPST(const Board& board, const DefaultPiece piece) {
+    Score score{};
+    BitBoard white_piece_bb = board.getPieceBB(makePiece(piece, WHITE));
+    BitBoard black_piece_bb = board.getPieceBB(makePiece(piece, BLACK));
+    while (white_piece_bb) {
+        score += pst[piece][popLSB(white_piece_bb)];
+    }
+    while (black_piece_bb) {
+        score -= pst[piece][flipRank(popLSB(black_piece_bb))];
+    }
+    return score;
+}
+
 static inline Score evaluatePawns(const Board& board) {
     Score score{};
     if (probePawns(board, score)) {
@@ -112,6 +125,9 @@ static inline Score evaluatePawns(const Board& board) {
         }
     }
 
+    // Pawn PST
+    score += applyPST(board, PAWN);
+
     storePawnEval(board, score);
     return score;
 }
@@ -142,22 +158,8 @@ static inline Score applyMobility(const Board& board) {
     return score;
 }
 
-static inline Score applyPST(const Board& board, const DefaultPiece piece) {
-    Score score{};
-    BitBoard white_piece_bb = board.getPieceBB(makePiece(piece, WHITE));
-    BitBoard black_piece_bb = board.getPieceBB(makePiece(piece, BLACK));
-    while (white_piece_bb) {
-        score += pst[piece][popLSB(white_piece_bb)];
-    }
-    while (black_piece_bb) {
-        score -= pst[piece][flipRank(popLSB(black_piece_bb))];
-    }
-    return score;
-}
-
 static inline Score applyAllPST(const Board& board) {
-    Score score = applyPST(board, PAWN);
-    score += applyPST(board, KNIGHT);
+    Score score = applyPST(board, KNIGHT);
     score += applyPST(board, BISHOP);
     score += applyPST(board, ROOK);
     score += applyPST(board, QUEEN);
