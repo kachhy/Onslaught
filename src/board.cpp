@@ -374,6 +374,14 @@ BitBoard Board::getOcc(Side side) const {
     return occ[side];
 }
 
+BitBoard Board::getDiscoveryAttacks(const Square sq, const Side side) const {
+    BitBoard bishop_attacks = getPieceAttacks(static_cast<Piece>(BISHOP), sq, occ[BOTH]);
+    BitBoard rook_attacks = getPieceAttacks(static_cast<Piece>(ROOK), sq, occ[BOTH]);
+    BitBoard bishops = piece_bb[makePiece(BISHOP, side == WHITE ? BLACK : WHITE)] & ~bishop_attacks;
+    BitBoard rooks = piece_bb[makePiece(ROOK, side == WHITE ? BLACK : WHITE)] & ~rook_attacks;
+    return (bishops & getPieceAttacks(static_cast<Piece>(BISHOP), sq, occ[BOTH] & ~bishop_attacks)) | (rooks & getPieceAttacks(static_cast<Piece>(ROOK), sq, occ[BOTH] & ~rook_attacks));
+}
+
 // TODO: zobrist hash apply consteval functions
 void Board::makeMove(Move move) {
     Square from      = From(move);

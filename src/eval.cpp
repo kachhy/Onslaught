@@ -11,14 +11,14 @@ struct PawnEntry {
 
 constexpr size_t PAWN_TABLE_SIZE = TARGET_BYTES / sizeof(PawnEntry); // 4 MB
 constexpr size_t PAWN_TABLE_MASK = PAWN_TABLE_SIZE - 1; // 262144 - 1 for 4 MB
-alignas(64) PawnEntry pawn_evals[PAWN_TABLE_SIZE]; // Pawn hash table: 262144 entries, which is 2 ^ 18
+alignas(64) static PawnEntry pawn_evals[PAWN_TABLE_SIZE]; // Pawn hash table: 262144 entries, which is 2 ^ 18
 
 struct PieceCounts {
     int wp, bp, wn, bn, wb, bb, wr, br, wq, bq;
 };
 
-BitBoard knight_outpost_table[2][64];
-BitBoard king_critical_files[8];
+static BitBoard knight_outpost_table[2][64];
+static BitBoard king_critical_files[8];
 
 static inline PieceCounts getPieceCounts(const Board& board) {
     return {
@@ -236,17 +236,34 @@ static inline Score evaluateRooks(const Board& board) {
     score += bitCount(board.getPieceBB(WHITE_ROOK) & RANK_7) * ROOK_ON_SEVENTH_FILE;
     score -= bitCount(board.getPieceBB(BLACK_ROOK) & RANK_2) * ROOK_ON_SEVENTH_FILE;
     BitBoard wr = board.getPieceBB(WHITE_ROOK);
+    BitBoard br = board.getPieceBB(BLACK_ROOK);
     while (wr) {
         const BitBoard file_mask = A_FILE << getFile(popLSB(wr));
         if (!(wp & file_mask)) {
             score += !(bp & file_mask) ? ROOK_ON_OPEN_FILE : ROOK_ON_SEMI_OPEN_FILE;
         }
     }
-    BitBoard br = board.getPieceBB(WHITE_ROOK);
     while (br) {
         const BitBoard file_mask = A_FILE << getFile(popLSB(br));
         if (!(bp & file_mask)) {
             score -= !(wp & file_mask) ? ROOK_ON_OPEN_FILE : ROOK_ON_SEMI_OPEN_FILE;
+        }
+    }
+    return score;
+}
+
+static inline Score evaluateQueens(const Board& board) {
+    Score score{};
+    BitBoard wq = board.getPieceBB(WHITE_QUEEN);
+    BitBoard bq = board.getPieceBB(BLACK_QUEEN);
+    while (wq) {
+        if (board.getDiscoveryAttacks(static_cast<Square>(popLSB(wq)), WHITE)) {
+            score += QUEEN_REL_PIN;
+        }
+    }
+    while (bq) {
+        if (board.getDiscoveryAttacks(static_cast<Square>(popLSB(bq)), BLACK)) {
+            score -= QUEEN_REL_PIN;
         }
     }
     return score;
@@ -362,10 +379,21 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
             score -= PAWN_STORM[2];
         }
     }
+    const BitBoard w_file_mask = A_FILE << getFile(w_king_sq);
+    if (!(wp & w_file_mask)) {
+        score += !(bp & w_file_mask) ? KING_ON_OPEN_FILE : KING_ON_SEMI_OPEN_FILE;
+    }
+    const BitBoard b_file_mask = A_FILE << getFile(b_king_sq);
+    if (!(bp & b_file_mask)) {
+        score -= !(wp & b_file_mask) ? KING_ON_OPEN_FILE : KING_ON_SEMI_OPEN_FILE;
+    }
     return score;
 }
 
 int eval(const Board& board) {
+    if (board.isMaterialDraw())
+        return 0;
+
     PieceCounts pc = getPieceCounts(board);
     Score score = applyMaterial(pc);
     score += applyAllPST(board);
@@ -373,6 +401,7 @@ int eval(const Board& board) {
     score += evaluateKnights(board);
     score += evaluateBishops(pc, board);
     score += evaluateRooks(board);
+    score += evaluateQueens(board);
     score += evaluatePawnAdjustments(pc);
     score += evaluatePawns(board);
     score += kingSafety(pc, board);

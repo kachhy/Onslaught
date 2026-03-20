@@ -44,7 +44,14 @@ constexpr BitBoard G8_H8 = (1ULL << G8) | (1ULL << H8);
 constexpr BitBoard A8_B8_C8 = (1ULL << A8) | (1ULL << B8) | (1ULL << C8);
 
 // Eval parameters
-extern const Score material_values[6];
+constexpr Score material_values[6] = {
+    S(82, 94), // PAWN
+    S(337, 281), // KNIGHT
+    S(365, 297), // BISHOP
+    S(477, 512), // ROOK
+    S(1025, 936), // QUEEN
+    S(0, 0), // KING (shouldn't hit this case ever)
+};
 constexpr Score TEMPO = S(26, 0);
 constexpr Score MOBILITY[] = {S(7, 6), S(6, 7), S(3, 5), S(4, 2), S(-5, -4)};
 
@@ -62,10 +69,14 @@ constexpr Score BISHOP_CONTROL_PENALTY = S(-2, -2);
 constexpr Score BAD_BISHOP = S(-10, -15);
 
 constexpr Score ROOK_ON_SEVENTH_FILE = S(0, 50);
-constexpr Score ROOK_ON_SEMI_OPEN_FILE = S(10, 5);
 constexpr Score ROOK_ON_OPEN_FILE = S(30, 10);
+constexpr Score ROOK_ON_SEMI_OPEN_FILE = S(10, 5);
+
+constexpr Score QUEEN_REL_PIN = S(-19, -10);
 
 constexpr Score NO_OPPONENT_QUEENS = S(128, 196);
+constexpr Score KING_ON_OPEN_FILE = S(-36, 0);
+constexpr Score KING_ON_SEMI_OPEN_FILE = S(-20, 0);
 constexpr Score PAWN_SHIELD[4] = {
     S(-36, 0), // missing pawn on this file
     S( 18, 0), // pawn on original rank

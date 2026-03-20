@@ -70,8 +70,10 @@ public:
     // Observers
     Piece pieceAt(uint8_t sq) const;
     BitBoard getOcc(Side side) const;
+    BitBoard getDiscoveryAttacks(const Square sq, const Side side) const;
     std::string getCastlingString() const;
     bool isDraw(uint32_t ply) const;
+    bool isMaterialDraw() const;
     void printBoard() const;
 
     CastlingRights getCastlingRights() const { return castling; }
@@ -128,7 +130,6 @@ private:
     void setPhase();
 
     // Draw detection functions
-    bool isMaterialDraw() const;
     bool isRepetitionDraw(uint32_t ply) const;
 
     // Note: 0 is white side, 64 is black side

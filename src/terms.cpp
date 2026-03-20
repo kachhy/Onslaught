@@ -1,14 +1,5 @@
 #include "terms.h"
 
-const Score material_values[6] = {
-    S(82, 94), // PAWN
-    S(337, 281), // KNIGHT
-    S(365, 297), // BISHOP
-    S(477, 512), // ROOK
-    S(1025, 936), // QUEEN
-    S(0, 0), // KING (shouldn't hit this case ever)
-};
-
 const Score KNIGHT_PAWN_ADJ[9] = {
     S(-20, -20), // 0 pawns
     S(-16, -16),
