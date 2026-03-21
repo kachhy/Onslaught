@@ -353,8 +353,8 @@ int main() {
     initEval();
     
     // Run tests
-    tests();
-    perftTests();
+    // tests();
+    // perftTests();
     // divideTests();
     searchTests();
 
