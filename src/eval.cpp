@@ -282,10 +282,40 @@ static inline Score evaluatePawnAdjustments(const PieceCounts& pc) {
     return score;
 }
 
+static inline int zoneWeakSquares(const Board& board, const BitBoard w_king_zone, const BitBoard b_king_zone) {
+    int count = 0;
+    BitBoard w_defended = 0ULL;
+    BitBoard b_defended = 0ULL;
+    for (uint8_t pc = PAWN; pc < KING; pc++) {
+        const Piece wpc = makePiece(static_cast<DefaultPiece>(pc), WHITE);
+        const Piece bpc = makePiece(static_cast<DefaultPiece>(pc), BLACK);
+        BitBoard wbb = board.getPieceBB(wpc);
+        BitBoard bbb = board.getPieceBB(bpc);
+        while (wbb) {
+            w_defended |= getPieceAttacks(wpc, static_cast<Square>(popLSB(wbb)), board.getOcc(BOTH));
+        }
+        while (bbb) {
+            b_defended |= getPieceAttacks(bpc, static_cast<Square>(popLSB(bbb)), board.getOcc(BOTH));
+        }
+    }
+    count += bitCount(w_king_zone & ~w_defended);
+    count -= bitCount(b_king_zone & ~b_defended);
+    return count;
+}
+
+static inline Score getPieceKingZoneAttacks(const Board& board, const BitBoard king_zone, const Piece piece) {
+    Score score{};
+    BitBoard bb = board.getPieceBB(piece);
+    while (bb) {
+        score += bitCount(getPieceAttacks(piece, static_cast<Square>(popLSB(bb)), board.getOcc(BOTH)) & king_zone) * KING_ZONE_ATTACK[makeDefaultPiece(piece)];
+    }
+    return score;
+}
+
 static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
     Score score{};
     const int w_king_sq = getLSB(board.getPieceBB(WHITE_KING));
-    const int b_king_sq = getLSB(board.getPieceBB(WHITE_KING));
+    const int b_king_sq = getLSB(board.getPieceBB(BLACK_KING));
     const int w_king_rank = getRank(w_king_sq);
     const int b_king_rank = getRank(b_king_sq);
     const BitBoard wp = board.getPieceBB(WHITE_PAWN);
@@ -356,6 +386,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
             }
         }
     }
+
     BitBoard bp_storm = bp & king_critical_files[getFile(w_king_sq)];
     while (bp_storm) {
         const int dist = getRank(popLSB(bp_storm)) - w_king_rank;
@@ -369,7 +400,6 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
             score += PAWN_STORM[2];
         }
     }
-
     BitBoard wp_storm = wp & king_critical_files[getFile(b_king_sq)];
     while (wp_storm) {
         const int dist = b_king_rank - getRank(popLSB(wp_storm));
@@ -391,6 +421,66 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
     if (!(bp & b_file_mask)) {
         score -= !(wp & b_file_mask) ? KING_ON_OPEN_FILE : KING_ON_SEMI_OPEN_FILE;
     }
+
+    BitBoard w_king_zone = 1ULL << w_king_sq;
+    w_king_zone |= shiftEast(w_king_zone) | shiftWest(w_king_zone);
+    w_king_zone |= shiftNorth(w_king_zone) | shiftSouth(w_king_zone);
+    w_king_zone |= shiftNorth(w_king_zone);
+    
+    BitBoard w_ext_king_zone = shiftEast(w_king_zone) | shiftWest(w_king_zone);
+    w_ext_king_zone |= shiftNorth(w_ext_king_zone) | shiftSouth(w_ext_king_zone);
+    w_ext_king_zone &= ~w_king_zone;
+
+    BitBoard b_king_zone = 1ULL << b_king_sq;
+    b_king_zone |= shiftEast(b_king_zone) | shiftWest(b_king_zone);
+    b_king_zone |= shiftNorth(b_king_zone) | shiftSouth(b_king_zone);
+    b_king_zone |= shiftSouth(b_king_zone);
+
+    BitBoard b_ext_king_zone = shiftEast(b_king_zone) | shiftWest(b_king_zone);
+    b_ext_king_zone |= shiftNorth(b_ext_king_zone) | shiftSouth(b_ext_king_zone);
+    b_ext_king_zone &= ~b_king_zone;
+
+    if (board.getThreatenedBy(BLACK) & w_king_zone) {
+        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_KNIGHT);
+        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_BISHOP);
+        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_ROOK);
+        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_QUEEN);
+    }
+    if (board.getThreatenedBy(WHITE) & b_king_zone) {
+        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_KNIGHT);
+        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_BISHOP);
+        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_ROOK);
+        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_QUEEN);
+    }
+
+    score += zoneWeakSquares(board, w_king_zone, b_king_zone) * KING_ZONE_WEAK_SQUARE;
+    score += zoneWeakSquares(board, w_ext_king_zone, b_ext_king_zone) * KING_ZONE_WEAK_SQUARE_EXTENDED;
+    
+    CastlingRights cr = board.getCastlingRights();
+    const bool w_lost_both_cr = !(cr & (WHITE_KS | WHITE_QS));
+    const bool w_lost_one_cr = !w_lost_both_cr && (cr & (WHITE_KS | WHITE_QS)) != (WHITE_KS | WHITE_QS);
+    const bool w_king_non_castled_sq = !((1ULL << w_king_sq) & (G1 | H1 | A1_B1_C1));
+
+    if (w_lost_both_cr) {
+        score += KING_CASTLED[w_king_non_castled_sq];
+    } else if (w_lost_one_cr) {
+        score += KING_LOST_ONE_CASTLING_RIGHT;
+    } else if (w_king_non_castled_sq) {
+        score += KING_UNCASTLED_RIGHTS_REMAIN;
+    }
+
+    const bool b_lost_both_cr = !(cr & (BLACK_KS | BLACK_QS));
+    const bool b_lost_one_cr = !b_lost_both_cr && (cr & (BLACK_KS | BLACK_QS)) != (BLACK_KS | BLACK_QS);
+    const bool b_king_non_castled_sq = !((1ULL << b_king_sq) & (G8 | H8 | A8_B8_C8));
+
+    if (b_lost_both_cr) {
+        score -= KING_CASTLED[b_king_non_castled_sq];
+    } else if (b_lost_one_cr) {
+        score -= KING_LOST_ONE_CASTLING_RIGHT;
+    } else if (b_king_non_castled_sq) {
+        score -= KING_UNCASTLED_RIGHTS_REMAIN;
+    }
+
     return score;
 }
 

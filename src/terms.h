@@ -84,11 +84,25 @@ constexpr Score PAWN_SHIELD[4] = {
     S( 12, 0), // pawn one rank advanced
     S(  5, 0), // pawn two ranks advanced
 };
-const Score PAWN_STORM[3] = {
+constexpr Score PAWN_STORM[3] = {
     S(-5, 0), // pawn far away
     S(-8, 0), // pawn getting close
     S(-14,0), // pawn on 5th rank or closer
 };
+constexpr Score KING_ZONE_ATTACK[4] {
+    S(-20, -10), // Knight
+    S(-20, -10), // Bishop
+    S(-40, -20), // Rook
+    S(-80, -40) // Queen
+};
+constexpr Score KING_ZONE_WEAK_SQUARE = S(-10, -5);
+constexpr Score KING_ZONE_WEAK_SQUARE_EXTENDED = S(-5, -3);
+const Score KING_CASTLED[2] = { 
+    S(0, 0),
+    S(-50, 0)
+};
+const Score KING_LOST_ONE_CASTLING_RIGHT = S(-25, 0);
+const Score KING_UNCASTLED_RIGHTS_REMAIN = S(-15, 0);
 
 extern const Score KNIGHT_PAWN_ADJ[9];
 extern const Score ROOK_PAWN_ADJ[9];
