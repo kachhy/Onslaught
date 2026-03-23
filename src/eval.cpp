@@ -356,13 +356,13 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
     }
     if (getBit(G8_H8, b_king_sq)) {
         for (const uint8_t sq : {F7, G7, H7}) {
-            if (getBit(wp, sq)) {
+            if (getBit(bp, sq)) {
                 score -= PAWN_SHIELD[1];
             }
-            else if (getBit(wp, sq + 8)) {
+            else if (getBit(bp, sq + 8)) {
                 score -= PAWN_SHIELD[2];
             }
-            else if (getBit(wp, sq + 16)) {
+            else if (getBit(bp, sq + 16)) {
                 score -= PAWN_SHIELD[3];
             }
             else {
@@ -372,13 +372,13 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
     }
     else if (getBit(A8_B8_C8, b_king_sq)) {
         for (const uint8_t sq : {A7, B7, C7, D7}) {
-            if (getBit(wp, sq)) {
+            if (getBit(bp, sq)) {
                 score -= PAWN_SHIELD[1];
             }
-            else if (getBit(wp, sq + 8)) {
+            else if (getBit(bp, sq + 8)) {
                 score -= PAWN_SHIELD[2];
             }
-            else if (getBit(wp, sq + 16)) {
+            else if (getBit(bp, sq + 16)) {
                 score -= PAWN_SHIELD[3];
             }
             else {
