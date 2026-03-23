@@ -4,6 +4,7 @@
 #include "attacks.h"
 #include "zobrist.h"
 #include "move.h"
+#include <cstring>
 
 using CastlingRights = uint8_t;
 

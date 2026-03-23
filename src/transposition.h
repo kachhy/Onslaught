@@ -2,7 +2,6 @@
 #define TRANSPOSITION_H
 
 #include "board.h"
-#include <cstring>
 
 struct Entry {
     uint64_t hash;
