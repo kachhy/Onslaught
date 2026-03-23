@@ -73,7 +73,7 @@ constexpr Score BISHOP_CONTROL_PENALTY = S(-2, -2);
 constexpr Score BAD_BISHOP = S(-10, -15);
 constexpr Score BISHOP_BLOCKING_PAWN = S(-20, -1);
 
-constexpr Score ROOK_ON_SEVENTH_FILE = S(0, 50);
+constexpr Score ROOK_ON_SEVENTH_RANK = S(0, 50);
 constexpr Score ROOK_ON_OPEN_FILE = S(30, 10);
 constexpr Score ROOK_ON_SEMI_OPEN_FILE = S(10, 5);
 

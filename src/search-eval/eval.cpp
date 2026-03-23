@@ -50,7 +50,7 @@ static inline void storePawnEval(const Board& board, const Score score) {
     const uint64_t index = board.pawnHash() & PAWN_TABLE_MASK;
     pawn_evals[index].hash = board.pawnHash();
     pawn_evals[index].eval = score;
-} 
+}
 
 static inline Score applyPST(const Board& board, const DefaultPiece piece) {
     Score score{};
@@ -96,8 +96,8 @@ static inline Score evaluatePawns(const Board& board) {
 
     score += dp * DOUBLED_PAWNS;
 
-    BitBoard wp_protected = shiftNorthWest(wp & ~A_FILE) | shiftNorthEast(wp & ~H_FILE);
-    BitBoard bp_protected = shiftSouthWest(bp & ~A_FILE) | shiftSouthEast(bp & ~H_FILE);
+    BitBoard wp_protected = shiftPawnAttacks(wp, WHITE);
+    BitBoard bp_protected = shiftPawnAttacks(bp, BLACK);
 
     for (uint8_t piece = PAWN; piece <= KING; piece++) {
         score += PAWN_PROTECTION[piece] * bitCount(board.getPieceBB(makePiece(static_cast<DefaultPiece>(piece), WHITE)) & wp_protected);
@@ -184,12 +184,12 @@ static inline Score evaluateKnights(const Board& board) {
     Score score{};
     BitBoard wn_candidates = board.getPieceBB(WHITE_KNIGHT) & WHITE_OUTPOST_RANKS;
     while (wn_candidates) {
-        BitBoard potential_attackers = knight_outpost_table[WHITE][popLSB(wn_candidates)];
+        BitBoard potential_attackers = knight_outpost_table[WHITE][popLSB(wn_candidates)] & board.getPieceBB(BLACK_PAWN);
         score += (!potential_attackers) * KNIGHT_OUTPOST;
     }
     BitBoard bn_candidates = board.getPieceBB(BLACK_KNIGHT) & BLACK_OUTPOST_RANKS;
     while (bn_candidates) {
-        BitBoard potential_attackers = knight_outpost_table[BLACK][popLSB(bn_candidates)];
+        BitBoard potential_attackers = knight_outpost_table[BLACK][popLSB(bn_candidates)] & board.getPieceBB(WHITE_PAWN);
         score -= (!potential_attackers) * KNIGHT_OUTPOST;
     }
     score += bitCount(shiftNorth(board.getPieceBB(WHITE_KNIGHT)) & board.getPieceBB(WHITE_PAWN)) * KNIGHT_BEHIND_PAWN;
@@ -240,8 +240,8 @@ static inline Score evaluateRooks(const Board& board) {
     Score score{};
     const BitBoard wp = board.getPieceBB(WHITE_PAWN);
     const BitBoard bp = board.getPieceBB(BLACK_PAWN);
-    score += bitCount(board.getPieceBB(WHITE_ROOK) & RANK_7) * ROOK_ON_SEVENTH_FILE;
-    score -= bitCount(board.getPieceBB(BLACK_ROOK) & RANK_2) * ROOK_ON_SEVENTH_FILE;
+    score += bitCount(board.getPieceBB(WHITE_ROOK) & RANK_7) * ROOK_ON_SEVENTH_RANK;
+    score -= bitCount(board.getPieceBB(BLACK_ROOK) & RANK_2) * ROOK_ON_SEVENTH_RANK;
     BitBoard wr = board.getPieceBB(WHITE_ROOK);
     BitBoard br = board.getPieceBB(BLACK_ROOK);
     while (wr) {
