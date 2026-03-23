@@ -1,7 +1,7 @@
 #ifndef EVAL_H
 #define EVAL_H
 
-#include "../board/rules.h"
+#include "board/rules.h"
 
 constexpr int SCORE_MAX = 32000;
 

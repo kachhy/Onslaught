@@ -1,9 +1,9 @@
 #ifndef BOARD_H
 #define BOARD_H
 
-#include "../movegen/attacks.h"
-#include "../hash/zobrist.h"
-#include "../core/move.h"
+#include "movegen/attacks.h"
+#include "hash/zobrist.h"
+#include "core/move.h"
 #include <cstring>
 
 using CastlingRights = uint8_t;
