@@ -1,10 +1,9 @@
 #ifndef BOARD_H
 #define BOARD_H
 
-#include "movegen/attacks.h"
-#include "hash/zobrist.h"
+#include "core/bitboard.h"
 #include "core/move.h"
-#include <cstring>
+#include <vector>
 
 using CastlingRights = uint8_t;
 
@@ -33,7 +32,7 @@ public:
 
     bool loadFEN(const std::string& fen);
     void clear();
-    
+
     // Observers
     Piece pieceAt(uint8_t sq) const;
     BitBoard getOcc(Side side) const;
@@ -67,7 +66,7 @@ public:
     // Zobrist setup
     void refreshZobrist();
     struct BoardHistory {
-        CastlingRights castling; 
+        CastlingRights castling;
         Square ep_square;
         uint32_t null_move_number;
         uint8_t fmr;
@@ -79,12 +78,15 @@ public:
         uint64_t zobrist_hash;
         uint64_t pawn_hash;
 
-        BoardHistory(CastlingRights castling, Square ep_square, uint32_t null_move_number, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard legal_mask, BitBoard white_threats, BitBoard black_threats, BitBoard pinned, uint64_t zobrist_hash, uint64_t pawn_hash)
-                    : castling(castling), ep_square(ep_square), null_move_number(null_move_number), fmr(fmr), 
-                      captured_piece(captured_piece), checkers(checkers), legal_mask(legal_mask), pinned(pinned), zobrist_hash(zobrist_hash), pawn_hash(pawn_hash) {
-                        threatened_by[WHITE] = white_threats;
-                        threatened_by[BLACK] = black_threats;
-                    }
+        BoardHistory(
+            CastlingRights castling, Square ep_square, uint32_t null_move_number, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard legal_mask,
+            BitBoard white_threats, BitBoard black_threats, BitBoard pinned, uint64_t zobrist_hash, uint64_t pawn_hash
+        ) :
+            castling(castling), ep_square(ep_square), null_move_number(null_move_number), fmr(fmr), captured_piece(captured_piece), checkers(checkers),
+            legal_mask(legal_mask), pinned(pinned), zobrist_hash(zobrist_hash), pawn_hash(pawn_hash) {
+            threatened_by[WHITE] = white_threats;
+            threatened_by[BLACK] = black_threats;
+        }
     };
     std::vector<BoardHistory> getBoardHistory() const { return history; }
 private:
@@ -107,14 +109,14 @@ private:
     BitBoard pinned;
     CastlingRights castling; // castling mask (i.e. 1111 = KQkq)
     Square ep_square;
-    Side stm; // Side to move
+    Side stm;  // Side to move
     Side xstm; // Not side to move
     int phase_score;
 
     // Move counting
     uint32_t move_number;
     uint32_t null_move_number; // For repetition checking
-    uint8_t fmr; // For fifty-move rule draw
+    uint8_t fmr;               // For fifty-move rule draw
 
     // History
     std::vector<BoardHistory> history;

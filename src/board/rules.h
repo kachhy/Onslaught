@@ -1,7 +1,7 @@
 #ifndef RULES_H
 #define RULES_H
 
-#include "movegen/movegen.h"
+#include "board.h"
 
 bool isMaterialDraw(const Board& board);
 bool isRepetitionDraw(const Board& board, uint32_t ply);

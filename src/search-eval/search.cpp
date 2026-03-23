@@ -1,4 +1,7 @@
 #include "search.h"
+#include "eval.h"
+#include "hash/transposition.h"
+#include "movegen/movegen.h"
 
 int search(Board& board, int depth, int alpha, int beta, int ply) {
     if (depth == 0) {
@@ -10,9 +13,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply) {
     bool tt_hit = tt.fetch(board, tt_entry);
 
     if (tt_hit && tt_entry.depth >= static_cast<size_t>(depth)) {
-        if (tt_entry.bound == EXACTBOUND
-            || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta)
-            || (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
+        if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) || (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
             return tt_entry.score;
         }
     }

@@ -1,9 +1,9 @@
 #include "rules.h"
+#include "movegen/movegen.h"
 
 bool isMaterialDraw(const Board& board) {
-    if (board.getPieceBB(WHITE_PAWN) | board.getPieceBB(BLACK_PAWN)
-        | board.getPieceBB(WHITE_ROOK) | board.getPieceBB(BLACK_ROOK)
-        | board.getPieceBB(WHITE_QUEEN) | board.getPieceBB(BLACK_QUEEN)) { // Non-material draw
+    if (board.getPieceBB(WHITE_PAWN) | board.getPieceBB(BLACK_PAWN) | board.getPieceBB(WHITE_ROOK) | board.getPieceBB(BLACK_ROOK) | board.getPieceBB(WHITE_QUEEN) |
+        board.getPieceBB(BLACK_QUEEN)) { // Non-material draw
         return false;
     }
 
@@ -26,8 +26,7 @@ bool isMaterialDraw(const Board& board) {
         if (white_knights == 2 || black_knights == 2) { // KNNvK
             return true;
         }
-        if ((white_knights == 1 && black_bishops == 1)
-            || (white_bishops == 1 && black_knights == 1)) { // KNvKB
+        if ((white_knights == 1 && black_bishops == 1) || (white_bishops == 1 && black_knights == 1)) { // KNvKB
             return true;
         }
     }
@@ -47,7 +46,7 @@ bool isFiftyMoveRuleDraw(const Board& board) {
 
 bool isRepetitionDraw(const Board& board, uint32_t ply) {
     uint16_t distance = std::min(board.getNullMoveNumber(), static_cast<uint32_t>(board.getFMR()));
-    uint16_t r        = 0;
+    uint16_t r = 0;
     std::vector<Board::BoardHistory> board_history = board.getBoardHistory();
     for (int32_t i = board_history.size() - 4; i >= 0 && i >= static_cast<int64_t>(board_history.size()) - distance; i -= 2) {
         if (board_history[i].zobrist_hash == board.hash()) {
@@ -59,10 +58,8 @@ bool isRepetitionDraw(const Board& board, uint32_t ply) {
             }
         }
     }
-    
+
     return false;
 }
 
-bool isDraw(const Board& board, uint32_t ply) {
-    return isMaterialDraw(board) || isRepetitionDraw(board, ply) || isFiftyMoveRuleDraw(board);
-}
+bool isDraw(const Board& board, uint32_t ply) { return isMaterialDraw(board) || isRepetitionDraw(board, ply) || isFiftyMoveRuleDraw(board); }

@@ -1,4 +1,5 @@
 #include "movegen.h"
+#include "attacks.h"
 
 MoveList getQuietMoves(const Board& board) {
     MoveList out;

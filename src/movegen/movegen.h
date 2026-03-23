@@ -1,13 +1,13 @@
 #ifndef MOVEGEN_H
 #define MOVEGEN_H
 
-#include "core/movelist.h"
 #include "board/board.h"
+#include "core/movelist.h"
 
 enum MoveFlag {
-  QUIET_MOVE_MOVEGEN = 0b01,
-  NOISY_MOVE_MOVEGEN = 0b10,
-  LEGAL_MOVE_MOVEGEN = QUIET_MOVE_MOVEGEN | NOISY_MOVE_MOVEGEN,
+    QUIET_MOVE_MOVEGEN = 0b01,
+    NOISY_MOVE_MOVEGEN = 0b10,
+    LEGAL_MOVE_MOVEGEN = QUIET_MOVE_MOVEGEN | NOISY_MOVE_MOVEGEN,
 };
 
 constexpr inline BitBoard getDoublePushRank(Side side) { return side == WHITE ? RANK_4 : RANK_5; }

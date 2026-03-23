@@ -1,4 +1,7 @@
 #include "board.h"
+#include "hash/zobrist.h"
+#include "movegen/attacks.h"
+#include <iostream>
 #include <sstream>
 
 Board::Board() {
@@ -50,29 +53,25 @@ std::string Board::getCastlingString() const {
     std::string out = "";
     if (castling & 8) {
         out += 'K';
-    }
-    else {
+    } else {
         out += '-';
     }
 
     if (castling & 4) {
         out += 'Q';
-    }
-    else {
+    } else {
         out += '-';
     }
 
     if (castling & 2) {
         out += 'k';
-    }
-    else {
+    } else {
         out += '-';
     }
 
     if (castling & 1) {
         out += 'q';
-    }
-    else {
+    } else {
         out += '-';
     }
 
@@ -101,13 +100,9 @@ void Board::printBoard() const {
         }
     }
     std::cout << "\n  a b c d e f g h\n"
-              << "\nTurn: " << (stm == WHITE ? "White" : "Black")
-              << "\nEP Square: " << board_coords[ep_square] 
-              << "\nCastling: " << getCastlingString()
-              << "\nZobrist: " << zobrist_hash
-              << "\nPawn hash: " << pawn_hash
-              << "\nPhase: " << phase_score
-              << "\n" << std::endl;
+              << "\nTurn: " << (stm == WHITE ? "White" : "Black") << "\nEP Square: " << board_coords[ep_square] << "\nCastling: " << getCastlingString()
+              << "\nZobrist: " << zobrist_hash << "\nPawn hash: " << pawn_hash << "\nPhase: " << phase_score << "\n"
+              << std::endl;
 }
 
 void Board::clear() {
@@ -119,17 +114,17 @@ void Board::clear() {
     threatened_by[BLACK] = 0ULL;
 
     // Turns
-    stm  = WHITE;
+    stm = WHITE;
     xstm = BLACK;
 
     // Counters
-    move_number      = 1;
+    move_number = 1;
     null_move_number = 0;
-    fmr              = 0;
+    fmr = 0;
 
     // EP squares and Castling rights
     ep_square = NO_SQUARE;
-    castling  = 0xF;
+    castling = 0xF;
 
     for (uint8_t i = 0; i < 64; i++) {
         castling_rights[i] = 0xf;
@@ -146,7 +141,7 @@ void Board::clear() {
     castling_rights[A8] = 0xf ^ BLACK_QS;
 }
 
-bool Board::loadFEN(const std::string &fen) {
+bool Board::loadFEN(const std::string& fen) {
     clear();
 
     std::istringstream iss(fen);
@@ -192,8 +187,7 @@ bool Board::loadFEN(const std::string &fen) {
         case 'r': setBit(piece_bb[BLACK_ROOK], sq); break;
         case 'q': setBit(piece_bb[BLACK_QUEEN], sq); break;
         case 'k': setBit(piece_bb[BLACK_KING], sq); break;
-        default:
-            return false;
+        default: return false;
         }
 
         ++file;
@@ -262,27 +256,27 @@ bool Board::loadFEN(const std::string &fen) {
     return true;
 }
 
-BitBoard Board::getOcc(Side side) const {
-    return occ[side];
-}
+BitBoard Board::getOcc(Side side) const { return occ[side]; }
 
 BitBoard Board::getDiscoveryAttacks(const Square sq, const Side side) const {
     BitBoard bishop_attacks = getPieceAttacks(static_cast<Piece>(BISHOP), sq, occ[BOTH]);
     BitBoard rook_attacks = getPieceAttacks(static_cast<Piece>(ROOK), sq, occ[BOTH]);
     BitBoard bishops = piece_bb[makePiece(BISHOP, side == WHITE ? BLACK : WHITE)] & ~bishop_attacks;
     BitBoard rooks = piece_bb[makePiece(ROOK, side == WHITE ? BLACK : WHITE)] & ~rook_attacks;
-    return (bishops & getPieceAttacks(static_cast<Piece>(BISHOP), sq, occ[BOTH] & ~bishop_attacks)) | (rooks & getPieceAttacks(static_cast<Piece>(ROOK), sq, occ[BOTH] & ~rook_attacks));
+    return (bishops & getPieceAttacks(static_cast<Piece>(BISHOP), sq, occ[BOTH] & ~bishop_attacks)) |
+           (rooks & getPieceAttacks(static_cast<Piece>(ROOK), sq, occ[BOTH] & ~rook_attacks));
 }
 
 // TODO: zobrist hash apply consteval functions
 void Board::makeMove(Move move) {
-    Square from      = From(move);
-    Square to        = To(move);
-    Piece piece      = MovePiece(move);
-    Piece captured   = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
+    Square from = From(move);
+    Square to = To(move);
+    Piece piece = MovePiece(move);
+    Piece captured = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
 
-    history.emplace_back(castling, ep_square, null_move_number, fmr, captured, checkers, legal_mask,
-                        threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash);
+    history.emplace_back(
+        castling, ep_square, null_move_number, fmr, captured, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash
+    );
 
     fmr++;
     null_move_number++;
@@ -292,72 +286,70 @@ void Board::makeMove(Move move) {
     flipBits(occ[BOTH], from, to);
 
     piece_board[from] = NO_PIECE;
-    piece_board[to]   = piece;
+    piece_board[to] = piece;
 
     zobrist_hash ^= piece_keys[piece][from];
 
     if (Castle(move)) {
-        switch (to)
-        {
-            // K
-            case G1:
-                // move H rook
-                popBit(piece_bb[WHITE_ROOK], H1);
-                setBit(piece_bb[WHITE_ROOK], F1);
-                flipBit(occ[stm], H1);
-                flipBit(occ[BOTH], H1);
-                flipBit(occ[stm], F1);
-                flipBit(occ[BOTH], F1);
-                piece_board[H1] = NO_PIECE;
-                piece_board[F1] = WHITE_ROOK;
-                zobrist_hash ^= piece_keys[WHITE_ROOK][H1];
-                zobrist_hash ^= piece_keys[WHITE_ROOK][F1];
-                break;
-            // Q
-            case C1:
-                // move A rook
-                popBit(piece_bb[WHITE_ROOK], A1);
-                setBit(piece_bb[WHITE_ROOK], D1);
-                flipBit(occ[stm], A1);
-                flipBit(occ[BOTH], A1);
-                flipBit(occ[stm], D1);
-                flipBit(occ[BOTH], D1);
-                piece_board[A1] = NO_PIECE;
-                piece_board[D1] = WHITE_ROOK;
-                zobrist_hash ^= piece_keys[WHITE_ROOK][A1];
-                zobrist_hash ^= piece_keys[WHITE_ROOK][D1];
-                break;
-            // k
-            case G8:
-                popBit(piece_bb[BLACK_ROOK], H8);
-                setBit(piece_bb[BLACK_ROOK], F8);
-                flipBit(occ[stm], H8);
-                flipBit(occ[BOTH], H8);
-                flipBit(occ[stm], F8);
-                flipBit(occ[BOTH], F8);
-                piece_board[H8] = NO_PIECE;
-                piece_board[F8] = BLACK_ROOK;
-                zobrist_hash ^= piece_keys[BLACK_ROOK][H8];
-                zobrist_hash ^= piece_keys[BLACK_ROOK][F8];
-                break;
-            // q
-            case C8:
-                popBit(piece_bb[BLACK_ROOK], A8);
-                setBit(piece_bb[BLACK_ROOK], D8);
-                flipBit(occ[stm], A8);
-                flipBit(occ[BOTH], A8);
-                flipBit(occ[stm], D8);
-                flipBit(occ[BOTH], D8);
-                piece_board[A8] = NO_PIECE;
-                piece_board[D8] = BLACK_ROOK;
-                zobrist_hash ^= piece_keys[BLACK_ROOK][A8];
-                zobrist_hash ^= piece_keys[BLACK_ROOK][D8];
-                break;
-            default: // should never get here, removing warning
-                break;
+        switch (to) {
+        // K
+        case G1:
+            // move H rook
+            popBit(piece_bb[WHITE_ROOK], H1);
+            setBit(piece_bb[WHITE_ROOK], F1);
+            flipBit(occ[stm], H1);
+            flipBit(occ[BOTH], H1);
+            flipBit(occ[stm], F1);
+            flipBit(occ[BOTH], F1);
+            piece_board[H1] = NO_PIECE;
+            piece_board[F1] = WHITE_ROOK;
+            zobrist_hash ^= piece_keys[WHITE_ROOK][H1];
+            zobrist_hash ^= piece_keys[WHITE_ROOK][F1];
+            break;
+        // Q
+        case C1:
+            // move A rook
+            popBit(piece_bb[WHITE_ROOK], A1);
+            setBit(piece_bb[WHITE_ROOK], D1);
+            flipBit(occ[stm], A1);
+            flipBit(occ[BOTH], A1);
+            flipBit(occ[stm], D1);
+            flipBit(occ[BOTH], D1);
+            piece_board[A1] = NO_PIECE;
+            piece_board[D1] = WHITE_ROOK;
+            zobrist_hash ^= piece_keys[WHITE_ROOK][A1];
+            zobrist_hash ^= piece_keys[WHITE_ROOK][D1];
+            break;
+        // k
+        case G8:
+            popBit(piece_bb[BLACK_ROOK], H8);
+            setBit(piece_bb[BLACK_ROOK], F8);
+            flipBit(occ[stm], H8);
+            flipBit(occ[BOTH], H8);
+            flipBit(occ[stm], F8);
+            flipBit(occ[BOTH], F8);
+            piece_board[H8] = NO_PIECE;
+            piece_board[F8] = BLACK_ROOK;
+            zobrist_hash ^= piece_keys[BLACK_ROOK][H8];
+            zobrist_hash ^= piece_keys[BLACK_ROOK][F8];
+            break;
+        // q
+        case C8:
+            popBit(piece_bb[BLACK_ROOK], A8);
+            setBit(piece_bb[BLACK_ROOK], D8);
+            flipBit(occ[stm], A8);
+            flipBit(occ[BOTH], A8);
+            flipBit(occ[stm], D8);
+            flipBit(occ[BOTH], D8);
+            piece_board[A8] = NO_PIECE;
+            piece_board[D8] = BLACK_ROOK;
+            zobrist_hash ^= piece_keys[BLACK_ROOK][A8];
+            zobrist_hash ^= piece_keys[BLACK_ROOK][D8];
+            break;
+        default: // should never get here, removing warning
+            break;
         }
-    }
-    else if (Capture(move)) {
+    } else if (Capture(move)) {
         Square sq = IsEP(move) ? static_cast<Square>(static_cast<int>(to) - (stm == WHITE ? NORTH : SOUTH)) : to;
 
         if (IsEP(move)) {
@@ -402,17 +394,16 @@ void Board::makeMove(Move move) {
                 ep_square = new_ep_square;
                 zobrist_hash ^= ep_keys[new_ep_square];
             }
-        }
-        else if (Prom(move)) { // Promotion
+        } else if (Prom(move)) { // Promotion
             Piece prom_piece = makePiece(promPiece(move), stm);
-            
+
             flipBit(piece_bb[piece], to);
             flipBit(piece_bb[prom_piece], to);
 
             piece_board[to] = static_cast<Piece>(prom_piece);
             zobrist_hash ^= piece_keys[prom_piece][to] ^ piece_keys[piece][to];
             phase_score += phase_weights[makeDefaultPiece(prom_piece)];
-            
+
             pawn_hash ^= piece_keys[piece][to]; // Undo to hash- pawn no longer exists
         }
 
@@ -429,26 +420,26 @@ void Board::makeMove(Move move) {
 }
 
 void Board::undoMove(Move move) {
-    Square from      = From(move);
-    Square to        = To(move);
-    Piece piece      = MovePiece(move);
+    Square from = From(move);
+    Square to = To(move);
+    Piece piece = MovePiece(move);
 
     BoardHistory& hist_data = history.back();
-    castling             = hist_data.castling;
-    ep_square            = hist_data.ep_square;
-    null_move_number     = hist_data.null_move_number;
-    fmr                  = hist_data.fmr;
-    checkers             = hist_data.checkers;
-    legal_mask           = hist_data.legal_mask;
+    castling = hist_data.castling;
+    ep_square = hist_data.ep_square;
+    null_move_number = hist_data.null_move_number;
+    fmr = hist_data.fmr;
+    checkers = hist_data.checkers;
+    legal_mask = hist_data.legal_mask;
     threatened_by[WHITE] = hist_data.threatened_by[WHITE];
     threatened_by[BLACK] = hist_data.threatened_by[BLACK];
-    pinned               = hist_data.pinned;
-    zobrist_hash         = hist_data.zobrist_hash;
-    pawn_hash            = hist_data.pawn_hash;
+    pinned = hist_data.pinned;
+    zobrist_hash = hist_data.zobrist_hash;
+    pawn_hash = hist_data.pawn_hash;
 
     move_number -= (stm == BLACK);
-    stm          = xstm;
-    xstm         = stm == WHITE ? BLACK : WHITE; // optimizable
+    stm = xstm;
+    xstm = stm == WHITE ? BLACK : WHITE; // optimizable
 
     if (Prom(move)) {
         Piece prom_piece = makePiece(promPiece(move), stm);
@@ -465,64 +456,62 @@ void Board::undoMove(Move move) {
     flipBits(occ[BOTH], to, from);
 
     piece_board[from] = piece;
-    piece_board[to]   = NO_PIECE;
+    piece_board[to] = NO_PIECE;
 
     if (Castle(move)) {
-        switch (to)
-        {
-            // White Kingside (K) - Rook was on F1, move back to H1
-            case G1:
-                popBit(piece_bb[WHITE_ROOK], F1);
-                setBit(piece_bb[WHITE_ROOK], H1);
-                flipBit(occ[stm], F1);
-                flipBit(occ[BOTH], F1);
-                flipBit(occ[stm], H1);
-                flipBit(occ[BOTH], H1);
-                piece_board[F1] = NO_PIECE;
-                piece_board[H1] = WHITE_ROOK;
-                break;
+        switch (to) {
+        // White Kingside (K) - Rook was on F1, move back to H1
+        case G1:
+            popBit(piece_bb[WHITE_ROOK], F1);
+            setBit(piece_bb[WHITE_ROOK], H1);
+            flipBit(occ[stm], F1);
+            flipBit(occ[BOTH], F1);
+            flipBit(occ[stm], H1);
+            flipBit(occ[BOTH], H1);
+            piece_board[F1] = NO_PIECE;
+            piece_board[H1] = WHITE_ROOK;
+            break;
 
-            // White Queenside (Q) - Rook was on D1, move back to A1
-            case C1:
-                popBit(piece_bb[WHITE_ROOK], D1);
-                setBit(piece_bb[WHITE_ROOK], A1);
-                flipBit(occ[stm], D1);
-                flipBit(occ[BOTH], D1);
-                flipBit(occ[stm], A1);
-                flipBit(occ[BOTH], A1);
-                piece_board[D1] = NO_PIECE;
-                piece_board[A1] = WHITE_ROOK;
-                break;
+        // White Queenside (Q) - Rook was on D1, move back to A1
+        case C1:
+            popBit(piece_bb[WHITE_ROOK], D1);
+            setBit(piece_bb[WHITE_ROOK], A1);
+            flipBit(occ[stm], D1);
+            flipBit(occ[BOTH], D1);
+            flipBit(occ[stm], A1);
+            flipBit(occ[BOTH], A1);
+            piece_board[D1] = NO_PIECE;
+            piece_board[A1] = WHITE_ROOK;
+            break;
 
-            // Black Kingside (k) - Rook was on F8, move back to H8
-            case G8:
-                popBit(piece_bb[BLACK_ROOK], F8);
-                setBit(piece_bb[BLACK_ROOK], H8);
-                flipBit(occ[stm], F8);
-                flipBit(occ[BOTH], F8);
-                flipBit(occ[stm], H8);
-                flipBit(occ[BOTH], H8);
-                piece_board[F8] = NO_PIECE;
-                piece_board[H8] = BLACK_ROOK;
-                break;
+        // Black Kingside (k) - Rook was on F8, move back to H8
+        case G8:
+            popBit(piece_bb[BLACK_ROOK], F8);
+            setBit(piece_bb[BLACK_ROOK], H8);
+            flipBit(occ[stm], F8);
+            flipBit(occ[BOTH], F8);
+            flipBit(occ[stm], H8);
+            flipBit(occ[BOTH], H8);
+            piece_board[F8] = NO_PIECE;
+            piece_board[H8] = BLACK_ROOK;
+            break;
 
-            // Black Queenside (q) - Rook was on D8, move back to A8
-            case C8:
-                popBit(piece_bb[BLACK_ROOK], D8);
-                setBit(piece_bb[BLACK_ROOK], A8);
-                flipBit(occ[stm], D8);
-                flipBit(occ[BOTH], D8);
-                flipBit(occ[stm], A8);
-                flipBit(occ[BOTH], A8);
-                piece_board[D8] = NO_PIECE;
-                piece_board[A8] = BLACK_ROOK;
-                break;
-            default: // should never get here
-                break;
+        // Black Queenside (q) - Rook was on D8, move back to A8
+        case C8:
+            popBit(piece_bb[BLACK_ROOK], D8);
+            setBit(piece_bb[BLACK_ROOK], A8);
+            flipBit(occ[stm], D8);
+            flipBit(occ[BOTH], D8);
+            flipBit(occ[stm], A8);
+            flipBit(occ[BOTH], A8);
+            piece_board[D8] = NO_PIECE;
+            piece_board[A8] = BLACK_ROOK;
+            break;
+        default: // should never get here
+            break;
         }
-    }
-    else if (Capture(move)) {
-        Square sq      = IsEP(move) ? static_cast<Square>(static_cast<int>(to) - (stm == WHITE ? NORTH : SOUTH)) : to;
+    } else if (Capture(move)) {
+        Square sq = IsEP(move) ? static_cast<Square>(static_cast<int>(to) - (stm == WHITE ? NORTH : SOUTH)) : to;
         Piece captured = hist_data.captured_piece;
 
         flipBit(piece_bb[captured], sq);
@@ -541,8 +530,7 @@ void Board::refreshZobrist() {
     pawn_hash = 0ULL;
     BitBoard bb;
 
-    for (uint8_t pc = static_cast<uint8_t>(WHITE_PAWN); pc <= static_cast<uint8_t>(BLACK_KING); pc++)
-    {
+    for (uint8_t pc = static_cast<uint8_t>(WHITE_PAWN); pc <= static_cast<uint8_t>(BLACK_KING); pc++) {
         bb = piece_bb[pc];
         while (bb) // This can in theory be a for loop. Maybe it looks nicer, maybe it doesn't?
         {
@@ -568,12 +556,12 @@ void Board::refreshZobrist() {
 void Board::setSpecials() {
     Square king_square = static_cast<Square>(getLSB(piece_bb[makePiece(KING, stm)]));
 
-    pinned    = BitBoard(0);
-    checkers  = (getKnightAttacks(king_square) & piece_bb[makePiece(KNIGHT, xstm)]);
+    pinned = BitBoard(0);
+    checkers = (getKnightAttacks(king_square) & piece_bb[makePiece(KNIGHT, xstm)]);
     checkers |= (getPawnAttacks(king_square, stm) & piece_bb[makePiece(PAWN, xstm)]);
 
     BitBoard sliders = (piece_bb[makePiece(BISHOP, xstm)] | piece_bb[makePiece(QUEEN, xstm)]) & getBishopAttacks(king_square, BitBoard(0));
-    sliders         |= (piece_bb[makePiece(ROOK, xstm)] | piece_bb[makePiece(QUEEN, xstm)]) & getRookAttacks(king_square, BitBoard(0));
+    sliders |= (piece_bb[makePiece(ROOK, xstm)] | piece_bb[makePiece(QUEEN, xstm)]) & getRookAttacks(king_square, BitBoard(0));
 
     while (sliders) {
         Square sq = static_cast<Square>(popLSB(sliders));
@@ -581,8 +569,7 @@ void Board::setSpecials() {
 
         if (!blockers) {
             setBit(checkers, sq);
-        }
-        else if (bitCount(blockers) == 1) {
+        } else if (bitCount(blockers) == 1) {
             pinned |= blockers & occ[stm];
         }
     }
@@ -616,12 +603,12 @@ void Board::setThreatened() {
     threatened_by[BLACK] |= shiftPawnAttacks(piece_bb[BLACK_PAWN], BLACK);
     for (int white_index = WHITE_PAWN + 1, black_index = BLACK_PAWN + 1; white_index <= WHITE_KING; white_index++, black_index++) {
         BitBoard cur_piece_bb = piece_bb[white_index];
-        while(cur_piece_bb) {
+        while (cur_piece_bb) {
             Square cur_square = static_cast<Square>(popLSB(cur_piece_bb));
             threatened_by[WHITE] |= getPieceAttacks(static_cast<Piece>(white_index), cur_square, occ[BOTH]);
         }
         cur_piece_bb = piece_bb[black_index];
-        while(cur_piece_bb) {
+        while (cur_piece_bb) {
             Square cur_square = static_cast<Square>(popLSB(cur_piece_bb));
             threatened_by[BLACK] |= getPieceAttacks(static_cast<Piece>(black_index), cur_square, occ[BOTH]);
         }

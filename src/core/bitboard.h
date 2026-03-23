@@ -1,7 +1,6 @@
 #ifndef BITBOARD_H
 #define BITBOARD_H
 
-#include <iostream>
 #include "types.h"
 
 using BitBoard = uint64_t;
@@ -33,7 +32,7 @@ constexpr BitBoard RANK_6 = 0x0000000000FF0000ULL;
 constexpr BitBoard RANK_7 = 0x000000000000FF00ULL;
 constexpr BitBoard RANK_8 = 0x00000000000000FFULL;
 
-constexpr BitBoard DARK_SQUARES  = 0x55AA55AA55AA55AAULL;
+constexpr BitBoard DARK_SQUARES = 0x55AA55AA55AA55AAULL;
 constexpr BitBoard LIGHT_SQUARES = 0xFFFFFFFFFFFFFFFFULL & ~DARK_SQUARES;
 
 constexpr inline BitBoard shiftNorth(const BitBoard bitboard) { return bitboard >> 8; }
@@ -49,7 +48,11 @@ constexpr inline int getBit(const BitBoard bitboard, int bit) { return static_ca
 constexpr inline int bitCount(const BitBoard bitboard) { return __builtin_popcountll(bitboard); }
 constexpr inline int getLSB(const BitBoard bitboard) { return __builtin_ctzll(bitboard); }
 constexpr inline int getMSB(const BitBoard bitboard) { return 63 ^ __builtin_clzll(bitboard); }
-constexpr inline int popLSB(BitBoard& bitboard) { int lsb = getLSB(bitboard); bitboard &= bitboard - 1; return lsb; }
+constexpr inline int popLSB(BitBoard& bitboard) {
+    int lsb = getLSB(bitboard);
+    bitboard &= bitboard - 1;
+    return lsb;
+}
 
 void setBit(BitBoard& bitboard, int bit);
 void popBit(BitBoard& bitboard, int bit);
@@ -63,7 +66,9 @@ constexpr BitBoard getRankMask(int rank) { return BitBoard(0xFF) << (rank * 8); 
 constexpr BitBoard getFileMask(int file) { return BitBoard(0x0101010101010101ULL) << file; }
 
 constexpr BitBoard shiftPawnPushes(const BitBoard pawns, int side) { return (side == WHITE) ? shiftNorth(pawns) : shiftSouth(pawns); }
-constexpr BitBoard shiftPawnAttacks(const BitBoard pawns, int side) { return (side == WHITE) ? shiftNorthWest(pawns) | shiftNorthEast(pawns) : shiftSouthWest(pawns) | shiftSouthEast(pawns); }
+constexpr BitBoard shiftPawnAttacks(const BitBoard pawns, int side) {
+    return (side == WHITE) ? shiftNorthWest(pawns) | shiftNorthEast(pawns) : shiftSouthWest(pawns) | shiftSouthEast(pawns);
+}
 constexpr BitBoard shiftPawnCapturesWest(const BitBoard pawns, int side) { return (side == WHITE) ? shiftNorthWest(pawns) : shiftSouthWest(pawns); }
 constexpr BitBoard shiftPawnCapturesEast(const BitBoard pawns, int side) { return (side == WHITE) ? shiftNorthEast(pawns) : shiftSouthEast(pawns); }
 

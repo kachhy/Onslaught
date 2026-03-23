@@ -1,4 +1,6 @@
 #include "zobrist.h"
+#include "core/types.h"
+#include "random.h"
 
 uint64_t piece_keys[12][64];
 uint64_t ep_keys[64];

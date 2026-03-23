@@ -1,8 +1,7 @@
 #ifndef ZOBRIST_H
 #define ZOBRIST_H
 
-#include "random.h"
-#include "core/types.h"
+#include <cstdint>
 
 extern uint64_t piece_keys[12][64];
 extern uint64_t ep_keys[64];

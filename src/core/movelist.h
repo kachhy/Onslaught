@@ -14,15 +14,29 @@ public:
         using pointer = Move*;
         using reference = Move&;
 
-        iterator(Move* ptr) : ptr(ptr) {}
+        iterator(Move* ptr) : ptr(ptr) { }
 
         reference operator*() const { return *ptr; }
         pointer operator->() const { return ptr; }
 
-        iterator& operator++() { ++ptr; return *this; }
-        iterator operator++(int) { iterator tmp = *this; ++ptr; return tmp; }
-        iterator& operator--() { --ptr; return *this; }
-        iterator operator--(int) { iterator tmp = *this; --ptr; return tmp; }
+        iterator& operator++() {
+            ++ptr;
+            return *this;
+        }
+        iterator operator++(int) {
+            iterator tmp = *this;
+            ++ptr;
+            return tmp;
+        }
+        iterator& operator--() {
+            --ptr;
+            return *this;
+        }
+        iterator operator--(int) {
+            iterator tmp = *this;
+            --ptr;
+            return tmp;
+        }
 
         iterator operator+(difference_type n) const { return iterator(ptr + n); }
         iterator operator-(difference_type n) const { return iterator(ptr - n); }
@@ -32,16 +46,16 @@ public:
 
         bool operator==(const iterator& other) const { return ptr == other.ptr; }
         bool operator!=(const iterator& other) const { return ptr != other.ptr; }
-        bool operator< (const iterator& other) const { return ptr <  other.ptr; }
-        bool operator> (const iterator& other) const { return ptr >  other.ptr; }
+        bool operator<(const iterator& other) const { return ptr < other.ptr; }
+        bool operator>(const iterator& other) const { return ptr > other.ptr; }
         bool operator<=(const iterator& other) const { return ptr <= other.ptr; }
         bool operator>=(const iterator& other) const { return ptr >= other.ptr; }
     private:
         Move* ptr;
     };
 
-    MoveList() : count(0), sel_sort_index(0) {};
-    
+    MoveList() : count(0), sel_sort_index(0) { };
+
     uint8_t size() const { return count; }
     bool empty() const { return !count; }
     void emplace_back(const Move move);

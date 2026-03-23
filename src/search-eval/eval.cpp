@@ -1,5 +1,7 @@
 #include "eval.h"
+#include "movegen/attacks.h"
 #include "terms.h"
+#include "board/rules.h"
 
 constexpr size_t TABLE_SIZE_MB = 4;
 constexpr size_t TARGET_BYTES = TABLE_SIZE_MB * MEGABYTE;

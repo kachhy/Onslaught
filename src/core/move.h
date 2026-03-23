@@ -1,8 +1,8 @@
 #ifndef MOVE_H
 #define MOVE_H
 
-#include <string>
 #include "types.h"
+#include <string>
 
 using Move = uint32_t;
 
