@@ -4,6 +4,7 @@
 #include "core/bitboard.h"
 #include "core/move.h"
 #include <vector>
+#include <cstring>
 
 using CastlingRights = uint8_t;
 
