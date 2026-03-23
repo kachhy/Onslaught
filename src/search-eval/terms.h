@@ -1,7 +1,7 @@
 #ifndef TERMS_H
 #define TERMS_H
 
-#include "../core/bitboard.h"
+#include "core/bitboard.h"
 
 // Score type
 struct Score {
