@@ -107,7 +107,7 @@ static inline Score evaluatePawns(const Board& board) {
         Square sq = static_cast<Square>(popLSB(temp_wp));
         int rank = getRank(sq);
         if (rank > 2) { 
-            BitBoard forward_ray = 0x8080808080808080ULL >> (63 - sq);
+            BitBoard forward_ray = H_FILE >> (63 - sq);
             if (!(forward_ray & (bp | bp_protected))) {
                 score += PASSED_PAWNS[rank - 3];
             }
@@ -118,7 +118,7 @@ static inline Score evaluatePawns(const Board& board) {
         Square sq = static_cast<Square>(popLSB(temp_bp));
         int rank = getRank(sq);
         if (rank < 5) {
-            BitBoard forward_ray = 0x0101010101010101ULL << sq;
+            BitBoard forward_ray = A_FILE << sq;
             if (!(forward_ray & (wp | wp_protected))) {
                 score -= PASSED_PAWNS[4 - rank]; 
             }
@@ -516,16 +516,16 @@ void initEval() {
         BitBoard below = rank > 0 ? (~0ULL << ((8 - rank) * 8)) : 0ULL;
         BitBoard adj_files = 0ULL;
         if (file > 0) {
-            adj_files |= (0x0101010101010101ULL << (file - 1));
+            adj_files |= (A_FILE << (file - 1));
         }
         if (file < 7) {
-            adj_files |= (0x0101010101010101ULL << (file + 1));
+            adj_files |= (A_FILE << (file + 1));
         }
         knight_outpost_table[WHITE][sq] = above & adj_files;
         knight_outpost_table[BLACK][sq] = below & adj_files;
 
         if (sq < 8) {
-            adj_files |= (0x0101010101010101ULL << file);
+            adj_files |= (A_FILE << file);
             king_critical_files[sq] = adj_files;
         }
     }
