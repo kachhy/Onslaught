@@ -1,7 +1,7 @@
 #ifndef TRANSPOSITION_H
 #define TRANSPOSITION_H
 
-#include "board.h"
+#include "../board/board.h"
 
 struct Entry {
     uint64_t hash;

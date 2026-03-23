@@ -1,7 +1,7 @@
 #ifndef ATTACKS_H
 #define ATTACKS_H
 
-#include "bitboard.h"
+#include "../core/bitboard.h"
 
 extern BitBoard bishop_masks[64];
 extern BitBoard rook_masks[64];
