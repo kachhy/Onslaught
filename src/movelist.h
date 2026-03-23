@@ -5,7 +5,7 @@
 #include <cstdint>
 #include "move.h"
 
-constexpr inline uint8_t MAX_MOVES = 255; // Max discovered moves in a legal position is 218.
+constexpr uint8_t MAX_MOVES = 255; // Max discovered moves in a legal position is 218.
 
 class MoveList {
 public:

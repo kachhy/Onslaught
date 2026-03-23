@@ -13,18 +13,20 @@ enum MoveFlag {
   LEGAL_MOVE_MOVEGEN = QUIET_MOVE_MOVEGEN | NOISY_MOVE_MOVEGEN,
 };
 
-constexpr inline BitBoard getPromoRank(Side side) { return side == WHITE ? RANK_7 : RANK_2; }
 constexpr inline BitBoard getDoublePushRank(Side side) { return side == WHITE ? RANK_4 : RANK_5; }
 constexpr inline BitBoard getAttackingEPRank(Side side) { return side == WHITE ? RANK_5 : RANK_4; }
 
 MoveList getQuietMoves(const Board& board);
 MoveList getNoisyMoves(const Board& board);
-MoveList addPieceLegalMoves(const Board &board);
-MoveList getLegalMoves(const Board &board);
+MoveList getLegalMoves(const Board& board);
 
-void addLegalPawnMoves(MoveList& moves, const Board& board, Piece piece, MoveFlag move_flag);
-void addPieceLegalMoves(MoveList& moves, const Board& board, Piece piece, MoveFlag move_flag);
+void addLegalPawnMoves(MoveList& moves, const Board& board, MoveFlag move_flag);
 void addEPLegalMoves(MoveList& moves, const Board& board);
-void addLegalKingMoves(MoveList& moves, const Board& board);
+void addPieceLegalMoves(MoveList& moves, const Board& board, Piece piece, MoveFlag move_flag);
+void addLegalKingMoves(MoveList& moves, const Board& board, MoveFlag move_flag);
+
+void addAllLegalPieceMoves(MoveList& moves, const Board& board);
+void addAllNoisyPieceMoves(MoveList& moves, const Board& board);
+void addAllQuietPieceMoves(MoveList& moves, const Board& board);
 
 #endif // MOVEGEN_H

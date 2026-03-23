@@ -1,51 +1,47 @@
 #include "movegen.h"
-#include "attacks.h"
-#include "bitboard.h"
-#include "board.h"
-#include "types.h"
 
 MoveList getQuietMoves(const Board& board) {
-    MoveList output;
-    addLegalPawnMoves(output, board, makePiece(PAWN, board.getSTM()), QUIET_MOVE_MOVEGEN);
-    for (int i = makePiece(PAWN, board.getSTM()) + 1; i <= makePiece(KING, board.getSTM()); i++) {
-        addPieceLegalMoves(output, board, static_cast<Piece>(i), QUIET_MOVE_MOVEGEN);
+    MoveList out;
+    if (bitCount(board.getCheckersMask()) > 1) {
+        addLegalKingMoves(out, board, QUIET_MOVE_MOVEGEN);
+        return out;
     }
-    return output;
+    addAllQuietPieceMoves(out, board);
+    addLegalKingMoves(out, board, QUIET_MOVE_MOVEGEN);
+    addLegalPawnMoves(out, board, QUIET_MOVE_MOVEGEN);
+    return out;
 }
 
 MoveList getNoisyMoves(const Board& board) {
-    MoveList output;
-    addLegalPawnMoves(output, board, makePiece(PAWN, board.getSTM()), NOISY_MOVE_MOVEGEN);
-    for (int i = makePiece(PAWN, board.getSTM()) + 1; i <= makePiece(KING, board.getSTM()); i++) {
-        addPieceLegalMoves(output, board, static_cast<Piece>(i), NOISY_MOVE_MOVEGEN);
+    MoveList out;
+    if (bitCount(board.getCheckersMask()) > 1) {
+        addLegalKingMoves(out, board, NOISY_MOVE_MOVEGEN);
+        return out;
     }
-    return output;
-}
-
-MoveList getLegalPieceMoves(const Board &board) {
-    MoveList output;
-    for (int i = makePiece(PAWN, board.getSTM()) + 1; i <= makePiece(KING, board.getSTM()) - 1; i++) {
-        addPieceLegalMoves(output, board, static_cast<Piece>(i), LEGAL_MOVE_MOVEGEN);
-    }
-    return output;
+    addAllNoisyPieceMoves(out, board);
+    addLegalKingMoves(out, board, NOISY_MOVE_MOVEGEN);
+    addLegalPawnMoves(out, board, NOISY_MOVE_MOVEGEN);
+    addEPLegalMoves(out, board);
+    return out;
 }
 
 MoveList getLegalMoves(const Board& board) {
     MoveList out;
     if (bitCount(board.getCheckersMask()) > 1) {
-        addLegalKingMoves(out, board);
+        addLegalKingMoves(out, board, LEGAL_MOVE_MOVEGEN);
         return out;
     }
-    out = getLegalPieceMoves(board);
-    addLegalKingMoves(out, board);
-    addLegalPawnMoves(out, board, makePiece(PAWN, board.getSTM()), LEGAL_MOVE_MOVEGEN);
+    addAllLegalPieceMoves(out, board);
+    addLegalKingMoves(out, board, LEGAL_MOVE_MOVEGEN);
+    addLegalPawnMoves(out, board, LEGAL_MOVE_MOVEGEN);
     addEPLegalMoves(out, board);
     return out;
 }
 
-void addLegalPawnMoves(MoveList& moves, const Board& board, Piece piece, MoveFlag move_flag) {
-    BitBoard cur_pawn_bb = board.getPieceBB(piece);
-    Side cur_side = getPieceSide(piece);
+void addLegalPawnMoves(MoveList& moves, const Board& board, MoveFlag move_flag) {
+    Side cur_side = board.getSTM();
+    Piece cur_piece = makePiece(PAWN, cur_side);
+    BitBoard cur_pawn_bb = board.getPieceBB(cur_piece);
     BitBoard legal_mask = board.getLegalMask();
     Square king_sq = board.getKingSquare();
     if (move_flag & QUIET_MOVE_MOVEGEN) {
@@ -64,12 +60,12 @@ void addLegalPawnMoves(MoveList& moves, const Board& board, Piece piece, MoveFla
             }
             BitBoard cur_bb = (BitBoard(1) << cur_to_square) & pin_mask;
             if (cur_bb & (RANK_1 | RANK_8)) {
-                moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, piece, KNIGHT_PROMO_FLAG | QUIET_FLAG));
-                moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, piece, BISHOP_PROMO_FLAG | QUIET_FLAG));
-                moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, piece, ROOK_PROMO_FLAG | QUIET_FLAG));
-                moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, piece, QUEEN_PROMO_FLAG | QUIET_FLAG));
+                moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, KNIGHT_PROMO_FLAG | QUIET_FLAG));
+                moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, BISHOP_PROMO_FLAG | QUIET_FLAG));
+                moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, ROOK_PROMO_FLAG | QUIET_FLAG));
+                moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, QUEEN_PROMO_FLAG | QUIET_FLAG));
             } else if (cur_bb) {
-                moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, piece, QUIET_FLAG));
+                moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, QUIET_FLAG));
             }
         }
         while (double_pushes) {
@@ -84,7 +80,7 @@ void addLegalPawnMoves(MoveList& moves, const Board& board, Piece piece, MoveFla
             if (((BitBoard(1) << cur_to_square) & pin_mask) == 0) {
                 continue;
             }
-            moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, piece, QUIET_FLAG));
+            moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, QUIET_FLAG));
         }
     }
     if (move_flag & NOISY_MOVE_MOVEGEN) {
@@ -96,16 +92,18 @@ void addLegalPawnMoves(MoveList& moves, const Board& board, Piece piece, MoveFla
             } else {
                 pin_mask = ~BitBoard(0);
             }
-            BitBoard cur_pawn_attacks = (getPieceAttacks(piece, cur_from_square, board.getOcc(BOTH)) & (board.getOcc(static_cast<Side>(getPieceSide(piece) ^ 1)))) & legal_mask & pin_mask;
+            BitBoard cur_pawn_attacks =
+                (getPieceAttacks(cur_piece, cur_from_square, board.getOcc(BOTH)) & (board.getOcc(static_cast<Side>(getPieceSide(cur_piece) ^ 1)))) & legal_mask &
+                pin_mask;
             while (cur_pawn_attacks) {
                 Square cur_to_square = static_cast<Square>(popLSB(cur_pawn_attacks));
                 if ((BitBoard(1) << cur_to_square) & (RANK_1 | RANK_8)) {
-                    moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, piece, KNIGHT_PROMO_FLAG | CAPTURE_FLAG));
-                    moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, piece, BISHOP_PROMO_FLAG | CAPTURE_FLAG));
-                    moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, piece, ROOK_PROMO_FLAG | CAPTURE_FLAG));
-                    moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, piece, QUEEN_PROMO_FLAG | CAPTURE_FLAG));
+                    moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, KNIGHT_PROMO_FLAG | CAPTURE_FLAG));
+                    moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, BISHOP_PROMO_FLAG | CAPTURE_FLAG));
+                    moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, ROOK_PROMO_FLAG | CAPTURE_FLAG));
+                    moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, QUEEN_PROMO_FLAG | CAPTURE_FLAG));
                 } else {
-                    moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, piece, CAPTURE_FLAG));
+                    moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, CAPTURE_FLAG));
                 }
             }
         }
@@ -114,7 +112,6 @@ void addLegalPawnMoves(MoveList& moves, const Board& board, Piece piece, MoveFla
 
 void addEPLegalMoves(MoveList& moves, const Board& board) {
     Square ep_square = board.getEPSquare();
-    
     if (ep_square == NO_SQUARE) {
         return;
     }
@@ -143,7 +140,7 @@ void addEPLegalMoves(MoveList& moves, const Board& board) {
         if (enemy_sliders_on_ep_rank && king_on_ep_rank) {
             BitBoard occ_no_ep_pawns = board.getOcc(BOTH) & ~(shifted_ep_square | (BitBoard(1) << cur_from_square));
             bool check_risk = false;
-            while(enemy_sliders_on_ep_rank) {
+            while (enemy_sliders_on_ep_rank) {
                 Square cur_slider_square = static_cast<Square>(popLSB(enemy_sliders_on_ep_rank));
                 if (!(occ_no_ep_pawns & between_squares[cur_slider_square][getLSB(king_on_ep_rank)])) {
                     check_risk = true;
@@ -171,22 +168,41 @@ void addPieceLegalMoves(MoveList& moves, const Board& board, Piece piece, MoveFl
         } else {
             pin_mask = ~BitBoard(0);
         }
+        BitBoard cur_piece_attacks = getPieceAttacks(piece, cur_from_square, occ_both) & legal_mask & pin_mask;
         if (move_flag & QUIET_MOVE_MOVEGEN) {
-            BitBoard cur_piece_attacks = getPieceAttacks(piece, cur_from_square, occ_both) & ~occ_both & legal_mask & pin_mask;
-            while (cur_piece_attacks) {
-                moves.emplace_back(GenerateMove(cur_from_square, static_cast<Square>(popLSB(cur_piece_attacks)), piece, QUIET_FLAG));
+            BitBoard quiet_cur_piece_attacks = cur_piece_attacks & ~occ_both;
+            while (quiet_cur_piece_attacks) {
+                moves.emplace_back(GenerateMove(cur_from_square, static_cast<Square>(popLSB(quiet_cur_piece_attacks)), piece, QUIET_FLAG));
             }
         }
         if (move_flag & NOISY_MOVE_MOVEGEN) {
-            BitBoard cur_piece_attacks = getPieceAttacks(piece, cur_from_square, occ_both) & board.getOcc(static_cast<Side>(getPieceSide(piece) ^ 1)) & legal_mask & pin_mask;
-            while (cur_piece_attacks) {
-                moves.emplace_back(GenerateMove(cur_from_square, static_cast<Square>(popLSB(cur_piece_attacks)), piece, CAPTURE_FLAG));
+            BitBoard noisy_cur_piece_attacks = cur_piece_attacks & board.getOcc(static_cast<Side>(getPieceSide(piece) ^ 1));
+            while (noisy_cur_piece_attacks) {
+                moves.emplace_back(GenerateMove(cur_from_square, static_cast<Square>(popLSB(noisy_cur_piece_attacks)), piece, CAPTURE_FLAG));
             }
         }
     }
 }
 
-void addLegalKingMoves(MoveList& moves, const Board& board) {
+void addAllLegalPieceMoves(MoveList& moves, const Board& board) {
+    for (int i = makePiece(PAWN, board.getSTM()) + 1; i <= makePiece(KING, board.getSTM()) - 1; i++) {
+        addPieceLegalMoves(moves, board, static_cast<Piece>(i), LEGAL_MOVE_MOVEGEN);
+    }
+}
+
+void addAllNoisyPieceMoves(MoveList& moves, const Board& board) {
+    for (int i = makePiece(PAWN, board.getSTM()) + 1; i <= makePiece(KING, board.getSTM()) - 1; i++) {
+        addPieceLegalMoves(moves, board, static_cast<Piece>(i), NOISY_MOVE_MOVEGEN);
+    }
+}
+
+void addAllQuietPieceMoves(MoveList& moves, const Board& board) {
+    for (int i = makePiece(PAWN, board.getSTM()) + 1; i <= makePiece(KING, board.getSTM()) - 1; i++) {
+        addPieceLegalMoves(moves, board, static_cast<Piece>(i), QUIET_MOVE_MOVEGEN);
+    }
+}
+
+void addLegalKingMoves(MoveList& moves, const Board& board, MoveFlag move_flag) {
     Side stm = board.getSTM();
     Side xstm = board.getXSTM();
     Piece cur_piece = makePiece(KING, stm);
@@ -204,20 +220,24 @@ void addLegalKingMoves(MoveList& moves, const Board& board) {
         checker_rays |= cur_line;
     }
     BitBoard king_moves = getKingAttacks(cur_from_square) & ~board.getThreatenedByXSTM() & ~board.getOcc(stm) & ~checker_rays;
-    BitBoard quiet_king_moves = king_moves & ~board.getOcc(xstm);
-    king_moves &= board.getOcc(xstm);
-    while (king_moves) {
-        Square cur_to_square = static_cast<Square>(popLSB(king_moves));
-        moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, CAPTURE_FLAG));
+    if (move_flag & QUIET_MOVE_MOVEGEN) {
+        BitBoard quiet_king_moves = king_moves & ~board.getOcc(xstm);
+        while (quiet_king_moves) {
+            Square cur_to_square = static_cast<Square>(popLSB(quiet_king_moves));
+            moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, QUIET_FLAG));
+        }
     }
-    while (quiet_king_moves) {
-        Square cur_to_square = static_cast<Square>(popLSB(quiet_king_moves));
-        moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, QUIET_FLAG));
+    if (move_flag & NOISY_MOVE_MOVEGEN) {
+        king_moves &= board.getOcc(xstm);
+        while (king_moves) {
+            Square cur_to_square = static_cast<Square>(popLSB(king_moves));
+            moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, CAPTURE_FLAG));
+        }
     }
-    if (board.getCheckersMask()) {
+    if (board.getCheckersMask() || (move_flag == NOISY_MOVE_MOVEGEN)) {
         return;
     }
-    
+
     // 1111 = KQkq
     CastlingRights castling_rights = board.getCastlingRights();
     BitBoard occ = board.getOcc(BOTH);
