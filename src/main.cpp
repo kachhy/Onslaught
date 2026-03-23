@@ -1,6 +1,8 @@
 #include "search.h"
 #include <cassert>
 #include <iomanip>
+#include <chrono>
+#include <unordered_map>
 
 constexpr unsigned long long nodes_position_1[] = {
     1ULL,
