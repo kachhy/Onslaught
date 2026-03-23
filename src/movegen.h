@@ -1,13 +1,11 @@
 #ifndef MOVEGEN_H
 #define MOVEGEN_H
 
+#include "movelist.h"
 #include "attacks.h"
 #include "bitboard.h"
 #include "board.h"
 #include "types.h"
-#include <vector>
-
-using MoveList = std::vector<Move>;
 
 enum MoveFlag {
   QUIET_MOVE_MOVEGEN = 0b01,
