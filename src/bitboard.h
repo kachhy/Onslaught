@@ -2,8 +2,6 @@
 #define BITBOARD_H
 
 #include <iostream>
-#include <stdlib.h>
-#include <cstdint>
 #include "types.h"
 
 using BitBoard = uint64_t;

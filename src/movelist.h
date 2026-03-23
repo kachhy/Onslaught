@@ -1,8 +1,6 @@
 #ifndef MOVELIST_H
 #define MOVELIST_H
 
-#include <algorithm>
-#include <cstdint>
 #include "move.h"
 
 constexpr uint8_t MAX_MOVES = 255; // Max discovered moves in a legal position is 218.

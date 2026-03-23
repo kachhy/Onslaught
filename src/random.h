@@ -1,7 +1,6 @@
 #ifndef RANDOM_H
 #define RANDOM_H
 
-#include <cstdint>
 #include <random>
 
 constexpr uint64_t DEFAULT_U64_SEED = 1804289383ULL;

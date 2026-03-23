@@ -485,7 +485,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
 }
 
 int eval(const Board& board) {
-    if (board.isMaterialDraw())
+    if (isMaterialDraw(board))
         return 0;
 
     PieceCounts pc = getPieceCounts(board);

@@ -1,12 +1,7 @@
 #ifndef BOARD_H
 #define BOARD_H
 
-#include <string.h> // for memset
-#include <string>
-#include <vector>
 #include "attacks.h"
-#include "bitboard.h"
-#include "types.h"
 #include "zobrist.h"
 #include "move.h"
 
@@ -43,8 +38,6 @@ public:
     BitBoard getOcc(Side side) const;
     BitBoard getDiscoveryAttacks(const Square sq, const Side side) const;
     std::string getCastlingString() const;
-    bool isDraw(uint32_t ply) const;
-    bool isMaterialDraw() const;
     void printBoard() const;
 
     CastlingRights getCastlingRights() const { return castling; }
@@ -54,6 +47,7 @@ public:
     BitBoard getThreatenedBySTM() const { return threatened_by[stm]; }
     BitBoard getThreatenedByXSTM() const { return threatened_by[xstm]; }
     BitBoard getLegalMask() const { return legal_mask; }
+    uint32_t getNullMoveNumber() const { return null_move_number; }
     Side getSTM() const { return stm; }
     Side getXSTM() const { return xstm; }
     BitBoard getPieceBB(Piece p) const { return piece_bb[p]; }
@@ -71,7 +65,6 @@ public:
 
     // Zobrist setup
     void refreshZobrist();
-private:
     struct BoardHistory {
         CastlingRights castling; 
         Square ep_square;
@@ -92,6 +85,8 @@ private:
                         threatened_by[BLACK] = black_threats;
                     }
     };
+    std::vector<BoardHistory> getBoardHistory() const { return history; }
+private:
 
     // Private member functions
     void setSpecials();
@@ -99,9 +94,6 @@ private:
     void setPieceBoard();
     void setOcc();
     void setPhase();
-
-    // Draw detection functions
-    bool isRepetitionDraw(uint32_t ply) const;
 
     // Note: 0 is white side, 64 is black side
     BitBoard piece_bb[12];
@@ -130,8 +122,5 @@ private:
     uint64_t zobrist_hash;
     uint64_t pawn_hash;
 };
-
-#include "movegen.h"
-bool isFiftyMoveRuleDraw(Board& board);
 
 #endif // BOARD_H

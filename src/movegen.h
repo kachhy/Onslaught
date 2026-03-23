@@ -2,10 +2,7 @@
 #define MOVEGEN_H
 
 #include "movelist.h"
-#include "attacks.h"
-#include "bitboard.h"
 #include "board.h"
-#include "types.h"
 
 enum MoveFlag {
   QUIET_MOVE_MOVEGEN = 0b01,

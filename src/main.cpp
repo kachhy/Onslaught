@@ -1,18 +1,6 @@
-#include "attacks.h"
-#include "bitboard.h"
-#include "board.h"
-#include "movegen.h"
-#include "types.h"
-#include "zobrist.h"
-#include "transposition.h"
 #include "search.h"
-#include "eval.h"
-#include <unordered_map>
 #include <cassert>
-#include <chrono>
-#include <cstddef>
 #include <iomanip>
-#include <ios>
 
 constexpr unsigned long long nodes_position_1[] = {
     1ULL,

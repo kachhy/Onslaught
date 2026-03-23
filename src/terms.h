@@ -1,9 +1,7 @@
 #ifndef TERMS_H
 #define TERMS_H
 
-#include <cstdint>
 #include "bitboard.h"
-#include "types.h"
 
 // Score type
 struct Score {

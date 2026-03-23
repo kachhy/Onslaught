@@ -1,9 +1,5 @@
 #include "board.h"
-#include "attacks.h"
-#include "bitboard.h"
-#include "types.h"
 #include <sstream>
-#include <cctype>
 
 Board::Board() {
     history.reserve(MAX_PLY);
@@ -81,73 +77,6 @@ std::string Board::getCastlingString() const {
     }
 
     return out;
-}
-
-bool Board::isMaterialDraw() const {
-    if (piece_bb[WHITE_PAWN] | piece_bb[BLACK_PAWN]
-        | piece_bb[WHITE_ROOK] | piece_bb[BLACK_ROOK]
-        | piece_bb[WHITE_QUEEN] | piece_bb[BLACK_QUEEN]) { // Non-material draw
-        return false;
-    }
-
-    const uint8_t white_knights = bitCount(piece_bb[WHITE_KNIGHT]);
-    const uint8_t black_knights = bitCount(piece_bb[BLACK_KNIGHT]);
-    const uint8_t white_bishops = bitCount(piece_bb[WHITE_BISHOP]);
-    const uint8_t black_bishops = bitCount(piece_bb[BLACK_BISHOP]);
-    const uint8_t total_minorpc = white_knights + black_knights + white_bishops + black_bishops;
-
-    if (total_minorpc <= 1) { // KvK or KvK + minor piece
-        return true;
-    }
-    if (total_minorpc == 2) {
-        if (white_knights == 1 && black_knights == 1) { // KNvKN
-            return true;
-        }
-        if (white_bishops == 1 && black_bishops == 1) { // KBvKB
-            return true;
-        }
-        if (white_knights == 2 || black_knights == 2) { // KNNvK
-            return true;
-        }
-        if ((white_knights == 1 && black_bishops == 1)
-            || (white_bishops == 1 && black_knights == 1)) { // KNvKB
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool isFiftyMoveRuleDraw(const Board& board) {
-    if (board.getFMR() > 99) {
-        if (board.inCheck()) {
-            return !getLegalMoves(board).empty();
-        }
-        return true;
-    }
-    return false;
-}
-
-bool Board::isRepetitionDraw(uint32_t ply) const {
-    uint16_t distance = std::min(null_move_number, static_cast<uint32_t>(fmr));
-    uint16_t r        = 0;
-
-    for (int32_t i = history.size() - 4; i >= 0 && i >= static_cast<int64_t>(history.size()) - distance; i -= 2) {
-        if (history[i].zobrist_hash == hash()) {
-            if (i > static_cast<int64_t>(history.size()) - ply) {
-                return true;
-            }
-            if (++r == 2) {
-                return true;
-            }
-        }
-    }
-    
-    return false;
-}
-
-bool Board::isDraw(uint32_t ply) const {
-    return isMaterialDraw() || isRepetitionDraw(ply) || isFiftyMoveRuleDraw(*this);
 }
 
 void Board::printBoard() const {
@@ -424,6 +353,8 @@ void Board::makeMove(Move move) {
                 zobrist_hash ^= piece_keys[BLACK_ROOK][A8];
                 zobrist_hash ^= piece_keys[BLACK_ROOK][D8];
                 break;
+            default: // should never get here, removing warning
+                break;
         }
     }
     else if (Capture(move)) {
@@ -585,6 +516,8 @@ void Board::undoMove(Move move) {
                 flipBit(occ[BOTH], A8);
                 piece_board[D8] = NO_PIECE;
                 piece_board[A8] = BLACK_ROOK;
+                break;
+            default: // should never get here
                 break;
         }
     }
