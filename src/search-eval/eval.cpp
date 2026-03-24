@@ -26,6 +26,7 @@ struct EvalInfo {
 };
 
 static BitBoard knight_outpost_table[2][64];
+static BitBoard king_zones[2][2][64]; // SIDE -> REG(0) or EXTENDED(1) -> SQUARE
 static BitBoard king_critical_files[8];
 
 static inline PieceCounts getPieceCounts(const Board& board) {
@@ -452,23 +453,8 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
         score -= !(wp & b_file_mask) ? KING_ON_OPEN_FILE : KING_ON_SEMI_OPEN_FILE;
     }
 
-    BitBoard w_king_zone = 1ULL << w_king_sq;
-    w_king_zone |= shiftEast(w_king_zone) | shiftWest(w_king_zone);
-    w_king_zone |= shiftNorth(w_king_zone) | shiftSouth(w_king_zone);
-    w_king_zone |= shiftNorth(w_king_zone);
-
-    BitBoard w_ext_king_zone = shiftEast(w_king_zone) | shiftWest(w_king_zone);
-    w_ext_king_zone |= shiftNorth(w_ext_king_zone) | shiftSouth(w_ext_king_zone);
-    w_ext_king_zone &= ~w_king_zone;
-
-    BitBoard b_king_zone = 1ULL << b_king_sq;
-    b_king_zone |= shiftEast(b_king_zone) | shiftWest(b_king_zone);
-    b_king_zone |= shiftNorth(b_king_zone) | shiftSouth(b_king_zone);
-    b_king_zone |= shiftSouth(b_king_zone);
-
-    BitBoard b_ext_king_zone = shiftEast(b_king_zone) | shiftWest(b_king_zone);
-    b_ext_king_zone |= shiftNorth(b_ext_king_zone) | shiftSouth(b_ext_king_zone);
-    b_ext_king_zone &= ~b_king_zone;
+    const BitBoard w_king_zone = king_zones[WHITE][0][w_king_sq];
+    const BitBoard b_king_zone = king_zones[BLACK][0][b_king_sq];
 
     if (board.getThreatenedBy(BLACK) & w_king_zone) {
         score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_KNIGHT, info);
@@ -484,7 +470,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
     }
 
     score += zoneWeakSquares(board, w_king_zone, b_king_zone, info) * KING_ZONE_WEAK_SQUARE;
-    score += zoneWeakSquares(board, w_ext_king_zone, b_ext_king_zone, info) * KING_ZONE_WEAK_SQUARE_EXTENDED;
+    score += zoneWeakSquares(board, king_zones[WHITE][1][w_king_sq], king_zones[BLACK][1][b_king_sq], info) * KING_ZONE_WEAK_SQUARE_EXTENDED;
 
     CastlingRights cr = board.getCastlingRights();
     const bool w_lost_both_cr = !(cr & (WHITE_KS | WHITE_QS));
@@ -559,5 +545,28 @@ void initEval() {
             adj_files |= (A_FILE << file);
             king_critical_files[sq] = adj_files;
         }
+
+        BitBoard w_king_zone = 1ULL << sq;
+        w_king_zone |= shiftEast(w_king_zone) | shiftWest(w_king_zone);
+        w_king_zone |= shiftNorth(w_king_zone) | shiftSouth(w_king_zone);
+        w_king_zone |= shiftNorth(w_king_zone);
+
+        BitBoard w_ext_king_zone = shiftEast(w_king_zone) | shiftWest(w_king_zone);
+        w_ext_king_zone |= shiftNorth(w_ext_king_zone) | shiftSouth(w_ext_king_zone);
+        w_ext_king_zone &= ~w_king_zone;
+
+        BitBoard b_king_zone = 1ULL << sq;
+        b_king_zone |= shiftEast(b_king_zone) | shiftWest(b_king_zone);
+        b_king_zone |= shiftNorth(b_king_zone) | shiftSouth(b_king_zone);
+        b_king_zone |= shiftSouth(b_king_zone);
+
+        BitBoard b_ext_king_zone = shiftEast(b_king_zone) | shiftWest(b_king_zone);
+        b_ext_king_zone |= shiftNorth(b_ext_king_zone) | shiftSouth(b_ext_king_zone);
+        b_ext_king_zone &= ~b_king_zone;
+
+        king_zones[WHITE][0][sq] = w_king_zone;
+        king_zones[WHITE][1][sq] = w_ext_king_zone;
+        king_zones[BLACK][0][sq] = b_king_zone;
+        king_zones[BLACK][1][sq] = b_ext_king_zone;
     }
 }
