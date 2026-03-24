@@ -19,6 +19,10 @@ struct PieceCounts {
     int wp, bp, wn, bn, wb, bb, wr, br, wq, bq;
 };
 
+struct EvalInfo {
+    BitBoard pawn_attacks[2];
+};
+
 static BitBoard knight_outpost_table[2][64];
 static BitBoard king_critical_files[8];
 
@@ -35,6 +39,13 @@ static inline PieceCounts getPieceCounts(const Board& board) {
         bitCount(board.getPieceBB(WHITE_QUEEN)),
         bitCount(board.getPieceBB(BLACK_QUEEN)),
     };
+}
+
+static inline EvalInfo precomputeEvalInfo(const Board& board) {
+    EvalInfo info;
+    info.pawn_attacks[WHITE] = shiftPawnAttacks(board.getPieceBB(WHITE_PAWN), WHITE);
+    info.pawn_attacks[BLACK] = shiftPawnAttacks(board.getPieceBB(BLACK_PAWN), BLACK);
+    return info;
 }
 
 static inline bool probePawns(const Board& board, Score& score) {
@@ -65,7 +76,7 @@ static inline Score applyPST(const Board& board, const DefaultPiece piece) {
     return score;
 }
 
-static inline Score evaluatePawns(const Board& board) {
+static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     Score score{};
     if (probePawns(board, score)) {
         return score;
@@ -96,8 +107,8 @@ static inline Score evaluatePawns(const Board& board) {
 
     score += dp * DOUBLED_PAWNS;
 
-    BitBoard wp_protected = shiftPawnAttacks(wp, WHITE);
-    BitBoard bp_protected = shiftPawnAttacks(bp, BLACK);
+    BitBoard wp_protected = info.pawn_attacks[WHITE];
+    BitBoard bp_protected = info.pawn_attacks[BLACK];
 
     for (uint8_t piece = PAWN; piece <= KING; piece++) {
         score += PAWN_PROTECTION[piece] * bitCount(board.getPieceBB(makePiece(static_cast<DefaultPiece>(piece), WHITE)) & wp_protected);
@@ -187,7 +198,7 @@ static inline Score evaluateKnights(const Board& board) {
     return score;
 }
 
-static inline Score evaluateBishops(const PieceCounts& pc, const Board& board) {
+static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, const EvalInfo& info) {
     Score score{};
     if (pc.wb >= 2) {
         score += BISHOP_PAIR;
@@ -211,8 +222,8 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board) {
         const int pawns_same_color = bitCount(board.getPieceBB(BLACK_PAWN) & DARK_SQUARES);
         score -= pawns_same_color * BISHOP_CONTROL_PENALTY;
     }
-    BitBoard bp_attacks = shiftPawnAttacks(board.getPieceBB(BLACK_PAWN), BLACK); 
-    BitBoard wp_attacks = shiftPawnAttacks(board.getPieceBB(WHITE_PAWN), WHITE);
+    BitBoard wp_attacks = info.pawn_attacks[WHITE];
+    BitBoard bp_attacks = info.pawn_attacks[BLACK]; 
     BitBoard wb = board.getPieceBB(WHITE_BISHOP);
     while (wb) {
         const Square sq = static_cast<Square>(popLSB(wb));
@@ -321,12 +332,12 @@ static inline Score evaluatePawnAdjustments(const PieceCounts& pc) {
     return score;
 }
 
-static inline int zoneWeakSquares(const Board& board, const BitBoard w_king_zone, const BitBoard b_king_zone) {
+static inline int zoneWeakSquares(const Board& board, const BitBoard w_king_zone, const BitBoard b_king_zone, const EvalInfo& info) {
     int count = 0;
     BitBoard w_defended = 0ULL;
     BitBoard b_defended = 0ULL;
-    w_defended |= shiftPawnAttacks(board.getPieceBB(WHITE_PAWN), WHITE);
-    b_defended |= shiftPawnAttacks(board.getPieceBB(BLACK_PAWN), BLACK);
+    w_defended |= info.pawn_attacks[WHITE];
+    b_defended |= info.pawn_attacks[BLACK];
     for (uint8_t pc = KNIGHT; pc < KING; pc++) {
         const Piece wpc = makePiece(static_cast<DefaultPiece>(pc), WHITE);
         const Piece bpc = makePiece(static_cast<DefaultPiece>(pc), BLACK);
@@ -353,7 +364,7 @@ static inline Score getPieceKingZoneAttacks(const Board& board, const BitBoard k
     return score;
 }
 
-static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
+static inline Score kingSafety(const PieceCounts& pc, const Board& board, const EvalInfo& info) {
     Score score{};
     const int w_king_sq = getLSB(board.getPieceBB(WHITE_KING));
     const int b_king_sq = getLSB(board.getPieceBB(BLACK_KING));
@@ -494,8 +505,8 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
         score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_QUEEN);
     }
 
-    score += zoneWeakSquares(board, w_king_zone, b_king_zone) * KING_ZONE_WEAK_SQUARE;
-    score += zoneWeakSquares(board, w_ext_king_zone, b_ext_king_zone) * KING_ZONE_WEAK_SQUARE_EXTENDED;
+    score += zoneWeakSquares(board, w_king_zone, b_king_zone, info) * KING_ZONE_WEAK_SQUARE;
+    score += zoneWeakSquares(board, w_ext_king_zone, b_ext_king_zone, info) * KING_ZONE_WEAK_SQUARE_EXTENDED;
     
     CastlingRights cr = board.getCastlingRights();
     const bool w_lost_both_cr = !(cr & (WHITE_KS | WHITE_QS));
@@ -526,19 +537,21 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
 }
 
 int eval(const Board& board) {
-    // if (isMaterialDraw(board))
-    //     return 0;
+    if (isMaterialDraw(board)) {
+        return 0;
+    }
 
+    EvalInfo info = precomputeEvalInfo(board);
     PieceCounts pc = getPieceCounts(board);
     Score score = applyMaterial(pc);
     score += applyAllPST(board);
     score += evaluateKnights(board);
-    score += evaluateBishops(pc, board);
+    score += evaluateBishops(pc, board, info);
     score += evaluateRooks(board);
     score += evaluateQueens(board);
     score += evaluatePawnAdjustments(pc);
-    score += evaluatePawns(board);
-    score += kingSafety(pc, board);
+    score += evaluatePawns(board, info);
+    score += kingSafety(pc, board, info);
 
     // Tempo bonus
     score += (board.getSTM() == WHITE) ? TEMPO : -TEMPO;
