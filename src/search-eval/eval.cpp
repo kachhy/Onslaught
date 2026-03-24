@@ -135,32 +135,6 @@ static inline Score evaluatePawns(const Board& board) {
     return score;
 }
 
-static inline Score applyMobility(const Board& board) {
-    Score score{};
-    const BitBoard occ = board.getOcc(BOTH);
-    const BitBoard white_pieces = board.getOcc(WHITE);
-    const BitBoard black_pieces = board.getOcc(BLACK);
-    for (uint8_t piece = KNIGHT; piece <= QUEEN; piece++) {
-        const Piece wpc = makePiece(static_cast<DefaultPiece>(piece), WHITE);
-        const Piece bpc = makePiece(static_cast<DefaultPiece>(piece), BLACK);
-        BitBoard temp = board.getPieceBB(makePiece(static_cast<DefaultPiece>(piece), WHITE));
-        while (temp) {
-            Square sq = static_cast<Square>(popLSB(temp));
-            BitBoard attacks = getPieceAttacks(wpc, sq, occ);
-            attacks &= ~white_pieces; 
-            score += MOBILITY[piece] * bitCount(attacks); 
-        }
-        temp = board.getPieceBB(makePiece(static_cast<DefaultPiece>(piece), BLACK));
-        while (temp) {
-            Square sq = static_cast<Square>(popLSB(temp));
-            BitBoard attacks = getPieceAttacks(bpc, sq, occ);
-            attacks &= ~black_pieces;
-            score -= MOBILITY[piece] * bitCount(attacks);
-        }
-    }
-    return score;
-}
-
 static inline Score applyAllPST(const Board& board) {
     Score score = applyPST(board, KNIGHT);
     score += applyPST(board, BISHOP);
@@ -194,6 +168,22 @@ static inline Score evaluateKnights(const Board& board) {
     }
     score += bitCount(shiftNorth(board.getPieceBB(WHITE_KNIGHT)) & board.getPieceBB(WHITE_PAWN)) * KNIGHT_BEHIND_PAWN;
     score -= bitCount(shiftSouth(board.getPieceBB(BLACK_KNIGHT)) & board.getPieceBB(BLACK_PAWN)) * KNIGHT_BEHIND_PAWN;
+
+    BitBoard wn = board.getPieceBB(WHITE_KNIGHT);
+    while (wn) {
+        Square sq = static_cast<Square>(popLSB(wn));
+        BitBoard attacks = getPieceAttacks(WHITE_KNIGHT, sq, board.getOcc(BOTH));
+        attacks &= ~board.getOcc(WHITE); 
+        score += MOBILITY[KNIGHT] * bitCount(attacks); 
+    }
+    BitBoard bn = board.getPieceBB(BLACK_KNIGHT);
+    while (bn) {
+        Square sq = static_cast<Square>(popLSB(bn));
+        BitBoard attacks = getPieceAttacks(BLACK_KNIGHT, sq, board.getOcc(BOTH));
+        attacks &= ~board.getOcc(BLACK);
+        score -= MOBILITY[KNIGHT] * bitCount(attacks);
+    }
+
     return score;
 }
 
@@ -236,6 +226,9 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board) {
             int blocking_pawns = bitCount(attacks & board.getPieceBB(WHITE_PAWN));
             score += blocking_pawns * BAD_BISHOP;
         }
+
+        attacks &= ~board.getOcc(WHITE); 
+        score += MOBILITY[BISHOP] * bitCount(attacks); 
     }
     BitBoard bb = board.getPieceBB(BLACK_BISHOP);
     while (bb) {
@@ -243,12 +236,16 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board) {
         BitBoard attacks = getPieceAttacks(BLACK_BISHOP, sq, board.getOcc(BOTH));
         BitBoard valid_moves = attacks & ~board.getOcc(BLACK);
         BitBoard safe_moves = valid_moves & ~wp_attacks;
+
         if (!safe_moves) {
             score -= TRAPPED_BISHOP;
         } else {
             int blocking_pawns = bitCount(attacks & board.getPieceBB(BLACK_PAWN));
             score -= blocking_pawns * BAD_BISHOP;
         }
+
+        attacks &= ~board.getOcc(BLACK);
+        score -= MOBILITY[BISHOP] * bitCount(attacks);
     }
     score += bitCount(shiftSouth(board.getPieceBB(WHITE_BISHOP)) & board.getPieceBB(WHITE_PAWN)) * BISHOP_BLOCKING_PAWN;
     score -= bitCount(shiftNorth(board.getPieceBB(BLACK_BISHOP)) & board.getPieceBB(BLACK_PAWN)) * BISHOP_BLOCKING_PAWN;
@@ -264,16 +261,26 @@ static inline Score evaluateRooks(const Board& board) {
     BitBoard wr = board.getPieceBB(WHITE_ROOK);
     BitBoard br = board.getPieceBB(BLACK_ROOK);
     while (wr) {
-        const BitBoard file_mask = A_FILE << getFile(popLSB(wr));
+        const uint8_t sq = popLSB(wr);
+        const BitBoard file_mask = A_FILE << getFile(sq);
         if (!(wp & file_mask)) {
             score += !(bp & file_mask) ? ROOK_ON_OPEN_FILE : ROOK_ON_SEMI_OPEN_FILE;
         }
+
+        BitBoard attacks = getPieceAttacks(WHITE_ROOK, static_cast<Square>(sq), board.getOcc(BOTH));
+        attacks &= ~board.getOcc(WHITE); 
+        score += MOBILITY[ROOK] * bitCount(attacks); 
     }
     while (br) {
-        const BitBoard file_mask = A_FILE << getFile(popLSB(br));
+        const uint8_t sq = popLSB(br);
+        const BitBoard file_mask = A_FILE << getFile(sq);
         if (!(bp & file_mask)) {
             score -= !(wp & file_mask) ? ROOK_ON_OPEN_FILE : ROOK_ON_SEMI_OPEN_FILE;
         }
+
+        BitBoard attacks = getPieceAttacks(BLACK_ROOK, static_cast<Square>(sq), board.getOcc(BOTH));
+        attacks &= ~board.getOcc(BLACK); 
+        score -= MOBILITY[ROOK] * bitCount(attacks); 
     }
     return score;
 }
@@ -283,14 +290,24 @@ static inline Score evaluateQueens(const Board& board) {
     BitBoard wq = board.getPieceBB(WHITE_QUEEN);
     BitBoard bq = board.getPieceBB(BLACK_QUEEN);
     while (wq) {
-        if (board.getDiscoveryAttacks(static_cast<Square>(popLSB(wq)), WHITE)) {
+        const Square sq = static_cast<Square>(popLSB(wq));
+        if (board.getDiscoveryAttacks(sq, WHITE)) {
             score += QUEEN_REL_PIN;
         }
+
+        BitBoard attacks = getPieceAttacks(WHITE_QUEEN, sq, board.getOcc(BOTH));
+        attacks &= ~board.getOcc(WHITE); 
+        score += MOBILITY[QUEEN] * bitCount(attacks); 
     }
     while (bq) {
-        if (board.getDiscoveryAttacks(static_cast<Square>(popLSB(bq)), BLACK)) {
+        const Square sq = static_cast<Square>(popLSB(bq));
+        if (board.getDiscoveryAttacks(sq, BLACK)) {
             score -= QUEEN_REL_PIN;
         }
+
+        BitBoard attacks = getPieceAttacks(BLACK_QUEEN, sq, board.getOcc(BOTH));
+        attacks &= ~board.getOcc(BLACK); 
+        score -= MOBILITY[QUEEN] * bitCount(attacks); 
     }
     return score;
 }
@@ -513,7 +530,6 @@ int eval(const Board& board) {
     PieceCounts pc = getPieceCounts(board);
     Score score = applyMaterial(pc);
     score += applyAllPST(board);
-    score += applyMobility(board);
     score += evaluateKnights(board);
     score += evaluateBishops(pc, board);
     score += evaluateRooks(board);
