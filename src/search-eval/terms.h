@@ -56,7 +56,7 @@ constexpr Score material_values[6] = {
     S(1025, 936), // QUEEN
     S(0, 0),      // KING (shouldn't hit this case ever)
 };
-constexpr Score TEMPO = S(26, 0);
+constexpr Score TEMPO = S(20, 0);
 constexpr Score MOBILITY[] = { S(7, 6), S(6, 7), S(3, 5), S(4, 2), S(-5, -4) };
 
 constexpr Score PAWN_PHALANX = S(10, 15);
@@ -72,6 +72,7 @@ constexpr Score BISHOP_PAIR = S(29, 84);
 constexpr Score BISHOP_CONTROL_PENALTY = S(-2, -2);
 constexpr Score BAD_BISHOP = S(-10, -15);
 constexpr Score BISHOP_BLOCKING_PAWN = S(-20, -1);
+constexpr Score TRAPPED_BISHOP = S(-263, -203);
 
 constexpr Score ROOK_ON_SEVENTH_RANK = S(0, 50);
 constexpr Score ROOK_ON_OPEN_FILE = S(30, 10);

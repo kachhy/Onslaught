@@ -2,6 +2,7 @@
 #include "movegen/attacks.h"
 #include "terms.h"
 #include "board/rules.h"
+#include <iostream>
 
 constexpr size_t TABLE_SIZE_MB = 4;
 constexpr size_t TARGET_BYTES = TABLE_SIZE_MB * MEGABYTE;
@@ -221,15 +222,34 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board) {
         const int pawns_same_color = bitCount(board.getPieceBB(BLACK_PAWN) & DARK_SQUARES);
         score -= pawns_same_color * BISHOP_CONTROL_PENALTY;
     }
+    BitBoard bp_attacks = shiftPawnAttacks(board.getPieceBB(BLACK_PAWN), BLACK); 
+    BitBoard wp_attacks = shiftPawnAttacks(board.getPieceBB(WHITE_PAWN), WHITE);
     BitBoard wb = board.getPieceBB(WHITE_BISHOP);
     while (wb) {
-        const int attacks = bitCount(getPieceAttacks(WHITE_BISHOP, static_cast<Square>(popLSB(wb)), board.getOcc(BOTH)));
-        score += static_cast<int>(!attacks) * BAD_BISHOP;
+        const Square sq = static_cast<Square>(popLSB(wb));
+        BitBoard attacks = getPieceAttacks(WHITE_BISHOP, sq, board.getOcc(BOTH));
+        BitBoard valid_moves = attacks & ~board.getOcc(WHITE);
+        BitBoard safe_moves = valid_moves & ~bp_attacks;
+
+        if (!safe_moves) {
+            score += TRAPPED_BISHOP; 
+        } else {
+            int blocking_pawns = bitCount(attacks & board.getPieceBB(WHITE_PAWN));
+            score += blocking_pawns * BAD_BISHOP;
+        }
     }
     BitBoard bb = board.getPieceBB(BLACK_BISHOP);
     while (bb) {
-        const int attacks = bitCount(getPieceAttacks(BLACK_BISHOP, static_cast<Square>(popLSB(bb)), board.getOcc(BOTH)));
-        score -= static_cast<int>(!attacks) * BAD_BISHOP;
+        const Square sq = static_cast<Square>(popLSB(bb));
+        BitBoard attacks = getPieceAttacks(BLACK_BISHOP, sq, board.getOcc(BOTH));
+        BitBoard valid_moves = attacks & ~board.getOcc(BLACK);
+        BitBoard safe_moves = valid_moves & ~wp_attacks;
+        if (!safe_moves) {
+            score -= TRAPPED_BISHOP;
+        } else {
+            int blocking_pawns = bitCount(attacks & board.getPieceBB(BLACK_PAWN));
+            score -= blocking_pawns * BAD_BISHOP;
+        }
     }
     score += bitCount(shiftSouth(board.getPieceBB(WHITE_BISHOP)) & board.getPieceBB(WHITE_PAWN)) * BISHOP_BLOCKING_PAWN;
     score -= bitCount(shiftNorth(board.getPieceBB(BLACK_BISHOP)) & board.getPieceBB(BLACK_PAWN)) * BISHOP_BLOCKING_PAWN;
@@ -487,8 +507,6 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
     return score;
 }
 
-#include <iostream>
-
 int eval(const Board& board) {
     // if (isMaterialDraw(board))
     //     return 0;
@@ -505,16 +523,16 @@ int eval(const Board& board) {
     score += evaluatePawns(board);
     score += kingSafety(pc, board);
 
-    std::cout << "Subscores:\nMaterial:" << T(applyMaterial(pc), 0)
-              << "\nPST: " << T(applyAllPST(board), 0)
-              << "\nMob: " << T(applyMobility(board), 0)
-              << "\nKnights: " << T(evaluateKnights(board), 0)
-              << "\nBishops: " << T(evaluateBishops(pc, board), 0)
-              << "\nRooks: " << T(evaluateRooks(board), 0)
-              << "\nQueens: " << T(evaluateQueens(board), 0)
-              << "\nPawn Adj: " << T(evaluatePawnAdjustments(pc), 0)
-              << "\nPawns: " << T(evaluatePawns(board), 0)
-              << "\nKing safety: " << T(kingSafety(pc, board), 0) << std::endl;
+    std::cout << "Subscores:\nMaterial:" << T(applyMaterial(pc), 24)
+              << "\nPST: " << T(applyAllPST(board), 24)
+              << "\nMob: " << T(applyMobility(board), 24)
+              << "\nKnights: " << T(evaluateKnights(board), 24)
+              << "\nBishops: " << T(evaluateBishops(pc, board), 24)
+              << "\nRooks: " << T(evaluateRooks(board), 24)
+              << "\nQueens: " << T(evaluateQueens(board), 24)
+              << "\nPawn Adj: " << T(evaluatePawnAdjustments(pc), 24)
+              << "\nPawns: " << T(evaluatePawns(board), 24)
+              << "\nKing safety: " << T(kingSafety(pc, board), 24) << std::endl;
 
     // Tempo bonus
     score += (board.getSTM() == WHITE) ? TEMPO : -TEMPO;
@@ -535,9 +553,6 @@ void initEval() {
         const int rank = getRank(sq);
         BitBoard above = rank > 0 ? (1ULL << (rank * 8)) - 1 : 0ULL;
         BitBoard below = rank < 7 ? (~0ULL << ((rank + 1) * 8)) : 0ULL;
-        std::cout << "\nabove/below " << board_coords[sq] << ":" << static_cast<uint16_t>(sq) << ":\n";
-        printBitboard(above);
-        printBitboard(below);
         BitBoard adj_files = 0ULL;
         if (file > 0) {
             adj_files |= (A_FILE << (file - 1));
