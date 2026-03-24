@@ -351,7 +351,7 @@ static inline int zoneWeakSquares(const Board& board, const BitBoard w_king_zone
     BitBoard b_defended = 0ULL;
     w_defended |= info.pawn_attacks[WHITE];
     b_defended |= info.pawn_attacks[BLACK];
-    for (uint8_t pc = KNIGHT; pc < KING; pc++) {
+    for (uint8_t pc = KNIGHT; pc <= QUEEN; pc++) {
         const Piece wpc = makePiece(static_cast<DefaultPiece>(pc), WHITE);
         const Piece bpc = makePiece(static_cast<DefaultPiece>(pc), BLACK);
         BitBoard wbb = board.getPieceBB(wpc);
