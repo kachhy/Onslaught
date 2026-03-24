@@ -2,7 +2,6 @@
 #include "movegen/attacks.h"
 #include "terms.h"
 #include "board/rules.h"
-#include <iostream>
 
 constexpr size_t TABLE_SIZE_MB = 4;
 constexpr size_t TARGET_BYTES = TABLE_SIZE_MB * MEGABYTE;
@@ -523,28 +522,12 @@ int eval(const Board& board) {
     score += evaluatePawns(board);
     score += kingSafety(pc, board);
 
-    std::cout << "Subscores:\nMaterial:" << T(applyMaterial(pc), 24)
-              << "\nPST: " << T(applyAllPST(board), 24)
-              << "\nMob: " << T(applyMobility(board), 24)
-              << "\nKnights: " << T(evaluateKnights(board), 24)
-              << "\nBishops: " << T(evaluateBishops(pc, board), 24)
-              << "\nRooks: " << T(evaluateRooks(board), 24)
-              << "\nQueens: " << T(evaluateQueens(board), 24)
-              << "\nPawn Adj: " << T(evaluatePawnAdjustments(pc), 24)
-              << "\nPawns: " << T(evaluatePawns(board), 24)
-              << "\nKing safety: " << T(kingSafety(pc, board), 24) << std::endl;
-
     // Tempo bonus
     score += (board.getSTM() == WHITE) ? TEMPO : -TEMPO;
 
     int r_score = T(score, board.phase());
 
     return board.getSTM() == WHITE ? r_score : -r_score;
-}
-
-int eval_perspective(const Board& board) {
-    int base_score = eval(board);
-    return board.getSTM() == BLACK ? -base_score : base_score;
 }
 
 void initEval() {
