@@ -1,7 +1,8 @@
 #include "eval.h"
+#include "board/rules.h"
 #include "movegen/attacks.h"
 #include "terms.h"
-#include "board/rules.h"
+
 
 constexpr size_t TABLE_SIZE_MB = 4;
 constexpr size_t TARGET_BYTES = TABLE_SIZE_MB * MEGABYTE;
@@ -12,8 +13,8 @@ struct PawnEntry {
 };
 
 constexpr size_t PAWN_TABLE_SIZE = TARGET_BYTES / sizeof(PawnEntry); // 4 MB
-constexpr size_t PAWN_TABLE_MASK = PAWN_TABLE_SIZE - 1; // 262144 - 1 for 4 MB
-alignas(64) static PawnEntry pawn_evals[PAWN_TABLE_SIZE]; // Pawn hash table: 262144 entries, which is 2 ^ 18
+constexpr size_t PAWN_TABLE_MASK = PAWN_TABLE_SIZE - 1;              // 262144 - 1 for 4 MB
+alignas(64) static PawnEntry pawn_evals[PAWN_TABLE_SIZE];            // Pawn hash table: 262144 entries, which is 2 ^ 18
 
 struct PieceCounts {
     int wp, bp, wn, bn, wb, bb, wr, br, wq, bq;
@@ -29,15 +30,9 @@ static BitBoard king_critical_files[8];
 
 static inline PieceCounts getPieceCounts(const Board& board) {
     return {
-        bitCount(board.getPieceBB(WHITE_PAWN)),
-        bitCount(board.getPieceBB(BLACK_PAWN)),
-        bitCount(board.getPieceBB(WHITE_KNIGHT)),
-        bitCount(board.getPieceBB(BLACK_KNIGHT)),
-        bitCount(board.getPieceBB(WHITE_BISHOP)),
-        bitCount(board.getPieceBB(BLACK_BISHOP)),
-        bitCount(board.getPieceBB(WHITE_ROOK)),
-        bitCount(board.getPieceBB(BLACK_ROOK)),
-        bitCount(board.getPieceBB(WHITE_QUEEN)),
+        bitCount(board.getPieceBB(WHITE_PAWN)),   bitCount(board.getPieceBB(BLACK_PAWN)),   bitCount(board.getPieceBB(WHITE_KNIGHT)),
+        bitCount(board.getPieceBB(BLACK_KNIGHT)), bitCount(board.getPieceBB(WHITE_BISHOP)), bitCount(board.getPieceBB(BLACK_BISHOP)),
+        bitCount(board.getPieceBB(WHITE_ROOK)),   bitCount(board.getPieceBB(BLACK_ROOK)),   bitCount(board.getPieceBB(WHITE_QUEEN)),
         bitCount(board.getPieceBB(BLACK_QUEEN)),
     };
 }
@@ -98,29 +93,19 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     if (probePawns(board, score)) {
         return score;
     }
-    
+
     BitBoard wp = board.getPieceBB(WHITE_PAWN);
     BitBoard bp = board.getPieceBB(BLACK_PAWN);
 
     score += PAWN_PHALANX * bitCount(shiftWest(wp) & wp);
     score -= PAWN_PHALANX * bitCount(shiftWest(bp) & bp);
 
-    const int dp = std::max(bitCount(A_FILE & wp) - 1, 0)
-                 + std::max(bitCount(B_FILE & wp) - 1, 0)
-                 + std::max(bitCount(C_FILE & wp) - 1, 0)
-                 + std::max(bitCount(D_FILE & wp) - 1, 0)
-                 + std::max(bitCount(E_FILE & wp) - 1, 0)
-                 + std::max(bitCount(F_FILE & wp) - 1, 0)
-                 + std::max(bitCount(G_FILE & wp) - 1, 0)
-                 + std::max(bitCount(H_FILE & wp) - 1, 0)
-                 - std::max(bitCount(A_FILE & bp) - 1, 0)
-                 - std::max(bitCount(B_FILE & bp) - 1, 0)
-                 - std::max(bitCount(C_FILE & bp) - 1, 0)
-                 - std::max(bitCount(D_FILE & bp) - 1, 0)
-                 - std::max(bitCount(E_FILE & bp) - 1, 0)
-                 - std::max(bitCount(F_FILE & bp) - 1, 0)
-                 - std::max(bitCount(G_FILE & bp) - 1, 0)
-                 - std::max(bitCount(H_FILE & bp) - 1, 0);
+    const int dp = std::max(bitCount(A_FILE & wp) - 1, 0) + std::max(bitCount(B_FILE & wp) - 1, 0) + std::max(bitCount(C_FILE & wp) - 1, 0) +
+                   std::max(bitCount(D_FILE & wp) - 1, 0) + std::max(bitCount(E_FILE & wp) - 1, 0) + std::max(bitCount(F_FILE & wp) - 1, 0) +
+                   std::max(bitCount(G_FILE & wp) - 1, 0) + std::max(bitCount(H_FILE & wp) - 1, 0) - std::max(bitCount(A_FILE & bp) - 1, 0) -
+                   std::max(bitCount(B_FILE & bp) - 1, 0) - std::max(bitCount(C_FILE & bp) - 1, 0) - std::max(bitCount(D_FILE & bp) - 1, 0) -
+                   std::max(bitCount(E_FILE & bp) - 1, 0) - std::max(bitCount(F_FILE & bp) - 1, 0) - std::max(bitCount(G_FILE & bp) - 1, 0) -
+                   std::max(bitCount(H_FILE & bp) - 1, 0);
 
     score += dp * DOUBLED_PAWNS;
 
@@ -133,11 +118,11 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     }
 
     // Passed pawns
-    BitBoard temp_wp = wp; 
+    BitBoard temp_wp = wp;
     while (temp_wp) {
         const Square sq = static_cast<Square>(popLSB(temp_wp));
         const int rank = getRank(sq);
-        if (rank > 2) { 
+        if (rank > 2) {
             const BitBoard forward_ray = H_FILE >> (63 - sq);
             if (!(forward_ray & (bp | bp_protected))) {
                 score += PASSED_PAWNS[rank - 3];
@@ -151,7 +136,7 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
         if (rank < 5) {
             const BitBoard forward_ray = A_FILE << sq;
             if (!(forward_ray & (wp | wp_protected))) {
-                score -= PASSED_PAWNS[4 - rank]; 
+                score -= PASSED_PAWNS[4 - rank];
             }
         }
     }
@@ -200,8 +185,8 @@ static inline Score evaluateKnights(const Board& board, const EvalInfo& info) {
     BitBoard wn = board.getPieceBB(WHITE_KNIGHT);
     while (wn) {
         BitBoard attacks = info.piece_attacks[popLSB(wn)];
-        attacks &= ~board.getOcc(WHITE); 
-        score += MOBILITY[KNIGHT] * bitCount(attacks); 
+        attacks &= ~board.getOcc(WHITE);
+        score += MOBILITY[KNIGHT] * bitCount(attacks);
     }
     BitBoard bn = board.getPieceBB(BLACK_KNIGHT);
     while (bn) {
@@ -224,21 +209,19 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
     if ((board.getPieceBB(WHITE_BISHOP) & LIGHT_SQUARES) && !(board.getPieceBB(WHITE_BISHOP) & DARK_SQUARES)) {
         const int pawns_same_color = bitCount(board.getPieceBB(WHITE_PAWN) & LIGHT_SQUARES);
         score += pawns_same_color * BISHOP_CONTROL_PENALTY;
-    }
-    else if ((board.getPieceBB(WHITE_BISHOP) & DARK_SQUARES) && !(board.getPieceBB(WHITE_BISHOP) & LIGHT_SQUARES)) {
+    } else if ((board.getPieceBB(WHITE_BISHOP) & DARK_SQUARES) && !(board.getPieceBB(WHITE_BISHOP) & LIGHT_SQUARES)) {
         const int pawns_same_color = bitCount(board.getPieceBB(WHITE_PAWN) & DARK_SQUARES);
         score += pawns_same_color * BISHOP_CONTROL_PENALTY;
     }
     if ((board.getPieceBB(BLACK_BISHOP) & LIGHT_SQUARES) && !(board.getPieceBB(BLACK_BISHOP) & DARK_SQUARES)) {
         const int pawns_same_color = bitCount(board.getPieceBB(BLACK_PAWN) & LIGHT_SQUARES);
         score -= pawns_same_color * BISHOP_CONTROL_PENALTY;
-    }
-    else if ((board.getPieceBB(BLACK_BISHOP) & DARK_SQUARES) && !(board.getPieceBB(BLACK_BISHOP) & LIGHT_SQUARES)) {
+    } else if ((board.getPieceBB(BLACK_BISHOP) & DARK_SQUARES) && !(board.getPieceBB(BLACK_BISHOP) & LIGHT_SQUARES)) {
         const int pawns_same_color = bitCount(board.getPieceBB(BLACK_PAWN) & DARK_SQUARES);
         score -= pawns_same_color * BISHOP_CONTROL_PENALTY;
     }
     BitBoard wp_attacks = info.pawn_attacks[WHITE];
-    BitBoard bp_attacks = info.pawn_attacks[BLACK]; 
+    BitBoard bp_attacks = info.pawn_attacks[BLACK];
     BitBoard wb = board.getPieceBB(WHITE_BISHOP);
     while (wb) {
         BitBoard attacks = info.piece_attacks[popLSB(wb)];
@@ -246,14 +229,14 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
         BitBoard safe_moves = valid_moves & ~bp_attacks;
 
         if (!safe_moves) {
-            score += TRAPPED_BISHOP; 
+            score += TRAPPED_BISHOP;
         } else {
             int blocking_pawns = bitCount(attacks & board.getPieceBB(WHITE_PAWN));
             score += blocking_pawns * BAD_BISHOP;
         }
 
-        attacks &= ~board.getOcc(WHITE); 
-        score += MOBILITY[BISHOP] * bitCount(attacks); 
+        attacks &= ~board.getOcc(WHITE);
+        score += MOBILITY[BISHOP] * bitCount(attacks);
     }
     BitBoard bb = board.getPieceBB(BLACK_BISHOP);
     while (bb) {
@@ -292,8 +275,8 @@ static inline Score evaluateRooks(const Board& board, const EvalInfo& info) {
         }
 
         BitBoard attacks = info.piece_attacks[sq];
-        attacks &= ~board.getOcc(WHITE); 
-        score += MOBILITY[ROOK] * bitCount(attacks); 
+        attacks &= ~board.getOcc(WHITE);
+        score += MOBILITY[ROOK] * bitCount(attacks);
     }
     while (br) {
         const uint8_t sq = popLSB(br);
@@ -303,8 +286,8 @@ static inline Score evaluateRooks(const Board& board, const EvalInfo& info) {
         }
 
         BitBoard attacks = info.piece_attacks[sq];
-        attacks &= ~board.getOcc(BLACK); 
-        score -= MOBILITY[ROOK] * bitCount(attacks); 
+        attacks &= ~board.getOcc(BLACK);
+        score -= MOBILITY[ROOK] * bitCount(attacks);
     }
     return score;
 }
@@ -320,8 +303,8 @@ static inline Score evaluateQueens(const Board& board, const EvalInfo& info) {
         }
 
         BitBoard attacks = info.piece_attacks[sq];
-        attacks &= ~board.getOcc(WHITE); 
-        score += MOBILITY[QUEEN] * bitCount(attacks); 
+        attacks &= ~board.getOcc(WHITE);
+        score += MOBILITY[QUEEN] * bitCount(attacks);
     }
     while (bq) {
         const Square sq = static_cast<Square>(popLSB(bq));
@@ -330,8 +313,8 @@ static inline Score evaluateQueens(const Board& board, const EvalInfo& info) {
         }
 
         BitBoard attacks = info.piece_attacks[sq];
-        attacks &= ~board.getOcc(BLACK); 
-        score -= MOBILITY[QUEEN] * bitCount(attacks); 
+        attacks &= ~board.getOcc(BLACK);
+        score -= MOBILITY[QUEEN] * bitCount(attacks);
     }
     return score;
 }
@@ -388,65 +371,51 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
     score += NO_OPPONENT_QUEENS * !(pc.bq);
     score -= NO_OPPONENT_QUEENS * !(pc.wq);
     if (getBit(G1_H1, w_king_sq)) {
-        for (const uint8_t sq : {F2, G2, H2}) {
+        for (const uint8_t sq : { F2, G2, H2 }) {
             if (getBit(wp, sq)) {
                 score += PAWN_SHIELD[1];
-            }
-            else if (getBit(wp, sq - 8)) {
+            } else if (getBit(wp, sq - 8)) {
                 score += PAWN_SHIELD[2];
-            }
-            else if (getBit(wp, sq - 16)) {
+            } else if (getBit(wp, sq - 16)) {
                 score += PAWN_SHIELD[3];
-            }
-            else {
+            } else {
                 score += PAWN_SHIELD[0];
             }
         }
-    }
-    else if (getBit(A1_B1_C1, w_king_sq)) {
-        for (const uint8_t sq : {A2, B2, C2, D2}) {
+    } else if (getBit(A1_B1_C1, w_king_sq)) {
+        for (const uint8_t sq : { A2, B2, C2, D2 }) {
             if (getBit(wp, sq)) {
                 score += PAWN_SHIELD[1];
-            }
-            else if (getBit(wp, sq - 8)) {
+            } else if (getBit(wp, sq - 8)) {
                 score += PAWN_SHIELD[2];
-            }
-            else if (getBit(wp, sq - 16)) {
+            } else if (getBit(wp, sq - 16)) {
                 score += PAWN_SHIELD[3];
-            }
-            else {
+            } else {
                 score += PAWN_SHIELD[0];
             }
         }
     }
     if (getBit(G8_H8, b_king_sq)) {
-        for (const uint8_t sq : {F7, G7, H7}) {
+        for (const uint8_t sq : { F7, G7, H7 }) {
             if (getBit(bp, sq)) {
                 score -= PAWN_SHIELD[1];
-            }
-            else if (getBit(bp, sq + 8)) {
+            } else if (getBit(bp, sq + 8)) {
                 score -= PAWN_SHIELD[2];
-            }
-            else if (getBit(bp, sq + 16)) {
+            } else if (getBit(bp, sq + 16)) {
                 score -= PAWN_SHIELD[3];
-            }
-            else {
+            } else {
                 score -= PAWN_SHIELD[0];
             }
         }
-    }
-    else if (getBit(A8_B8_C8, b_king_sq)) {
-        for (const uint8_t sq : {A7, B7, C7, D7}) {
+    } else if (getBit(A8_B8_C8, b_king_sq)) {
+        for (const uint8_t sq : { A7, B7, C7, D7 }) {
             if (getBit(bp, sq)) {
                 score -= PAWN_SHIELD[1];
-            }
-            else if (getBit(bp, sq + 8)) {
+            } else if (getBit(bp, sq + 8)) {
                 score -= PAWN_SHIELD[2];
-            }
-            else if (getBit(bp, sq + 16)) {
+            } else if (getBit(bp, sq + 16)) {
                 score -= PAWN_SHIELD[3];
-            }
-            else {
+            } else {
                 score -= PAWN_SHIELD[0];
             }
         }
@@ -457,11 +426,9 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
         const int dist = getRank(popLSB(bp_storm)) - w_king_rank;
         if (dist < 5) {
             score += PAWN_STORM[0];
-        }
-        else if (dist < 6) {
+        } else if (dist < 6) {
             score += PAWN_STORM[1];
-        }
-        else {
+        } else {
             score += PAWN_STORM[2];
         }
     }
@@ -470,11 +437,9 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
         const int dist = b_king_rank - getRank(popLSB(wp_storm));
         if (dist < 5) {
             score -= PAWN_STORM[0];
-        }
-        else if (dist < 6) {
+        } else if (dist < 6) {
             score -= PAWN_STORM[1];
-        }
-        else {
+        } else {
             score -= PAWN_STORM[2];
         }
     }
@@ -491,7 +456,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
     w_king_zone |= shiftEast(w_king_zone) | shiftWest(w_king_zone);
     w_king_zone |= shiftNorth(w_king_zone) | shiftSouth(w_king_zone);
     w_king_zone |= shiftNorth(w_king_zone);
-    
+
     BitBoard w_ext_king_zone = shiftEast(w_king_zone) | shiftWest(w_king_zone);
     w_ext_king_zone |= shiftNorth(w_ext_king_zone) | shiftSouth(w_ext_king_zone);
     w_ext_king_zone &= ~w_king_zone;
@@ -520,7 +485,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
 
     score += zoneWeakSquares(board, w_king_zone, b_king_zone, info) * KING_ZONE_WEAK_SQUARE;
     score += zoneWeakSquares(board, w_ext_king_zone, b_ext_king_zone, info) * KING_ZONE_WEAK_SQUARE_EXTENDED;
-    
+
     CastlingRights cr = board.getCastlingRights();
     const bool w_lost_both_cr = !(cr & (WHITE_KS | WHITE_QS));
     const bool w_lost_one_cr = !w_lost_both_cr && (cr & (WHITE_KS | WHITE_QS)) != (WHITE_KS | WHITE_QS);
