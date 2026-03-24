@@ -490,8 +490,8 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
 #include <iostream>
 
 int eval(const Board& board) {
-    if (isMaterialDraw(board))
-        return 0;
+    // if (isMaterialDraw(board))
+    //     return 0;
 
     PieceCounts pc = getPieceCounts(board);
     Score score = applyMaterial(pc);
@@ -505,6 +505,17 @@ int eval(const Board& board) {
     score += evaluatePawns(board);
     score += kingSafety(pc, board);
 
+    std::cout << "Subscores:\nMaterial:" << T(applyMaterial(pc), 0)
+              << "\nPST: " << T(applyAllPST(board), 0)
+              << "\nMob: " << T(applyMobility(board), 0)
+              << "\nKnights: " << T(evaluateKnights(board), 0)
+              << "\nBishops: " << T(evaluateBishops(pc, board), 0)
+              << "\nRooks: " << T(evaluateRooks(board), 0)
+              << "\nQueens: " << T(evaluateQueens(board), 0)
+              << "\nPawn Adj: " << T(evaluatePawnAdjustments(pc), 0)
+              << "\nPawns: " << T(evaluatePawns(board), 0)
+              << "\nKing safety: " << T(kingSafety(pc, board), 0) << std::endl;
+
     // Tempo bonus
     score += (board.getSTM() == WHITE) ? TEMPO : -TEMPO;
 
@@ -513,12 +524,20 @@ int eval(const Board& board) {
     return board.getSTM() == WHITE ? r_score : -r_score;
 }
 
+int eval_perspective(const Board& board) {
+    int base_score = eval(board);
+    return board.getSTM() == BLACK ? -base_score : base_score;
+}
+
 void initEval() {
     for (uint8_t sq = 0; sq < 64; ++sq) {
         const int file = getFile(sq);
         const int rank = getRank(sq);
-        BitBoard above = rank < 7 ? (1ULL << ((7 - rank) * 8)) - 1 : 0ULL;
-        BitBoard below = rank > 0 ? (~0ULL << ((8 - rank) * 8)) : 0ULL;
+        BitBoard above = rank > 0 ? (1ULL << (rank * 8)) - 1 : 0ULL;
+        BitBoard below = rank < 7 ? (~0ULL << ((rank + 1) * 8)) : 0ULL;
+        std::cout << "\nabove/below " << board_coords[sq] << ":" << static_cast<uint16_t>(sq) << ":\n";
+        printBitboard(above);
+        printBitboard(below);
         BitBoard adj_files = 0ULL;
         if (file > 0) {
             adj_files |= (A_FILE << (file - 1));
