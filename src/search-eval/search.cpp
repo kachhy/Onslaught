@@ -3,9 +3,46 @@
 #include "hash/transposition.h"
 #include "movegen/movegen.h"
 
+int quiesce(Board& board, int alpha, int beta) {
+    int static_eval;
+    int best_value;
+    MoveList moves;
+    if (board.inCheck()) {
+        best_value = -SCORE_MAX;
+        moves = getLegalMoves(board);
+    } else {
+        static_eval = eval(board);
+        best_value = static_eval;
+        if (best_value >= beta) {
+            return best_value;
+        }
+        if (best_value > alpha) {
+            alpha = best_value;
+        }
+        moves = getNoisyMoves(board);
+    }
+    for (Move noisy_move : moves) {
+        board.makeMove(noisy_move);
+        int score = -quiesce(board, -beta, -alpha);
+        board.undoMove(noisy_move);
+        if (score >= beta) {
+            return score;
+        }
+        if (score > best_value) {
+            best_value = score;
+        }
+        if (score > alpha) {
+            alpha = score;
+        }
+    }
+
+    return best_value;
+}
+
 int search(Board& board, int depth, int alpha, int beta, int ply) {
     if (depth == 0) {
-        return eval(board);
+        return quiesce(board, alpha, beta);
+        // return eval(board);
     }
 
     // Transposition table

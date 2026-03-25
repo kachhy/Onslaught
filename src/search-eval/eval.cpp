@@ -523,16 +523,16 @@ int eval(const Board& board) {
     score += evaluatePawns(board);
     score += kingSafety(pc, board);
 
-    std::cout << "Subscores:\nMaterial:" << T(applyMaterial(pc), 24)
-              << "\nPST: " << T(applyAllPST(board), 24)
-              << "\nMob: " << T(applyMobility(board), 24)
-              << "\nKnights: " << T(evaluateKnights(board), 24)
-              << "\nBishops: " << T(evaluateBishops(pc, board), 24)
-              << "\nRooks: " << T(evaluateRooks(board), 24)
-              << "\nQueens: " << T(evaluateQueens(board), 24)
-              << "\nPawn Adj: " << T(evaluatePawnAdjustments(pc), 24)
-              << "\nPawns: " << T(evaluatePawns(board), 24)
-              << "\nKing safety: " << T(kingSafety(pc, board), 24) << std::endl;
+    // std::cout << "Subscores:\nMaterial:" << T(applyMaterial(pc), 24)
+    //           << "\nPST: " << T(applyAllPST(board), 24)
+    //           << "\nMob: " << T(applyMobility(board), 24)
+    //           << "\nKnights: " << T(evaluateKnights(board), 24)
+    //           << "\nBishops: " << T(evaluateBishops(pc, board), 24)
+    //           << "\nRooks: " << T(evaluateRooks(board), 24)
+    //           << "\nQueens: " << T(evaluateQueens(board), 24)
+    //           << "\nPawn Adj: " << T(evaluatePawnAdjustments(pc), 24)
+    //           << "\nPawns: " << T(evaluatePawns(board), 24)
+    //           << "\nKing safety: " << T(kingSafety(pc, board), 24) << std::endl;
 
     // Tempo bonus
     score += (board.getSTM() == WHITE) ? TEMPO : -TEMPO;
