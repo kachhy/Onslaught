@@ -39,6 +39,7 @@ debug: $(BIN)
 release: $(BIN)
 lto: $(BIN)
 pg: $(BIN)
+tune: $(BIN)
 
 $(BIN): $(OBJ)
 	@echo "  LINK $@"
