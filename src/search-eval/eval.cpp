@@ -1,8 +1,8 @@
 #include "eval.h"
+#include "board/rules.h"
 #include "movegen/attacks.h"
 #include "terms.h"
-#include "board/rules.h"
-#include <iostream>
+
 
 constexpr size_t TABLE_SIZE_MB = 4;
 constexpr size_t TARGET_BYTES = TABLE_SIZE_MB * MEGABYTE;
@@ -13,29 +13,52 @@ struct PawnEntry {
 };
 
 constexpr size_t PAWN_TABLE_SIZE = TARGET_BYTES / sizeof(PawnEntry); // 4 MB
-constexpr size_t PAWN_TABLE_MASK = PAWN_TABLE_SIZE - 1; // 262144 - 1 for 4 MB
-alignas(64) static PawnEntry pawn_evals[PAWN_TABLE_SIZE]; // Pawn hash table: 262144 entries, which is 2 ^ 18
+constexpr size_t PAWN_TABLE_MASK = PAWN_TABLE_SIZE - 1;              // 262144 - 1 for 4 MB
+alignas(64) static PawnEntry pawn_evals[PAWN_TABLE_SIZE];            // Pawn hash table: 262144 entries, which is 2 ^ 18
 
 struct PieceCounts {
     int wp, bp, wn, bn, wb, bb, wr, br, wq, bq;
 };
 
+struct EvalInfo {
+    BitBoard pawn_attacks[2];
+    BitBoard piece_attacks[64]; // Since there can only ever be one type of piece per square, we can just get their attacks.
+};
+
 static BitBoard knight_outpost_table[2][64];
+static BitBoard king_zones[2][2][64]; // SIDE -> REG(0) or EXTENDED(1) -> SQUARE
 static BitBoard king_critical_files[8];
 
 static inline PieceCounts getPieceCounts(const Board& board) {
     return {
-        bitCount(board.getPieceBB(WHITE_PAWN)),
-        bitCount(board.getPieceBB(BLACK_PAWN)),
-        bitCount(board.getPieceBB(WHITE_KNIGHT)),
-        bitCount(board.getPieceBB(BLACK_KNIGHT)),
-        bitCount(board.getPieceBB(WHITE_BISHOP)),
-        bitCount(board.getPieceBB(BLACK_BISHOP)),
-        bitCount(board.getPieceBB(WHITE_ROOK)),
-        bitCount(board.getPieceBB(BLACK_ROOK)),
-        bitCount(board.getPieceBB(WHITE_QUEEN)),
+        bitCount(board.getPieceBB(WHITE_PAWN)),   bitCount(board.getPieceBB(BLACK_PAWN)),   bitCount(board.getPieceBB(WHITE_KNIGHT)),
+        bitCount(board.getPieceBB(BLACK_KNIGHT)), bitCount(board.getPieceBB(WHITE_BISHOP)), bitCount(board.getPieceBB(BLACK_BISHOP)),
+        bitCount(board.getPieceBB(WHITE_ROOK)),   bitCount(board.getPieceBB(BLACK_ROOK)),   bitCount(board.getPieceBB(WHITE_QUEEN)),
         bitCount(board.getPieceBB(BLACK_QUEEN)),
     };
+}
+
+static inline EvalInfo precomputeEvalInfo(const Board& board) {
+    EvalInfo info;
+    info.pawn_attacks[WHITE] = shiftPawnAttacks(board.getPieceBB(WHITE_PAWN), WHITE);
+    info.pawn_attacks[BLACK] = shiftPawnAttacks(board.getPieceBB(BLACK_PAWN), BLACK);
+
+    for (uint8_t piece = KNIGHT; piece <= QUEEN; ++piece) {
+        const Piece wpc = makePiece(static_cast<DefaultPiece>(piece), WHITE);
+        const Piece bpc = makePiece(static_cast<DefaultPiece>(piece), BLACK);
+        BitBoard temp = board.getPieceBB(wpc);
+        while (temp) {
+            const uint8_t sq = popLSB(temp);
+            info.piece_attacks[sq] = getPieceAttacks(wpc, static_cast<Square>(sq), board.getOcc(BOTH));
+        }
+        temp = board.getPieceBB(bpc);
+        while (temp) {
+            const uint8_t sq = popLSB(temp);
+            info.piece_attacks[sq] = getPieceAttacks(bpc, static_cast<Square>(sq), board.getOcc(BOTH));
+        }
+    }
+
+    return info;
 }
 
 static inline bool probePawns(const Board& board, Score& score) {
@@ -53,67 +76,63 @@ static inline void storePawnEval(const Board& board, const Score score) {
     pawn_evals[index].eval = score;
 }
 
-static inline Score applyPST(const Board& board, const DefaultPiece piece) {
+static inline Score applyPST(const Board& board, const Piece piece_w, const Piece piece_b) {
     Score score{};
-    BitBoard white_piece_bb = board.getPieceBB(makePiece(piece, WHITE));
-    BitBoard black_piece_bb = board.getPieceBB(makePiece(piece, BLACK));
+    BitBoard white_piece_bb = board.getPieceBB(piece_w);
+    BitBoard black_piece_bb = board.getPieceBB(piece_b);
     while (white_piece_bb) {
-        score += pst[piece][popLSB(white_piece_bb)];
+        score += pst[piece_w][popLSB(white_piece_bb)];
     }
     while (black_piece_bb) {
-        score -= pst[piece][flipRank(popLSB(black_piece_bb))];
+        score -= pst[piece_b][popLSB(black_piece_bb)];
     }
     return score;
 }
 
-static inline Score evaluatePawns(const Board& board) {
+static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     Score score{};
     if (probePawns(board, score)) {
         return score;
     }
-    
+
     BitBoard wp = board.getPieceBB(WHITE_PAWN);
     BitBoard bp = board.getPieceBB(BLACK_PAWN);
 
     score += PAWN_PHALANX * bitCount(shiftWest(wp) & wp);
     score -= PAWN_PHALANX * bitCount(shiftWest(bp) & bp);
 
-    const int dp = std::max(bitCount(A_FILE & wp) - 1, 0)
-                 + std::max(bitCount(B_FILE & wp) - 1, 0)
-                 + std::max(bitCount(C_FILE & wp) - 1, 0)
-                 + std::max(bitCount(D_FILE & wp) - 1, 0)
-                 + std::max(bitCount(E_FILE & wp) - 1, 0)
-                 + std::max(bitCount(F_FILE & wp) - 1, 0)
-                 + std::max(bitCount(G_FILE & wp) - 1, 0)
-                 + std::max(bitCount(H_FILE & wp) - 1, 0)
-                 - std::max(bitCount(A_FILE & bp) - 1, 0)
-                 - std::max(bitCount(B_FILE & bp) - 1, 0)
-                 - std::max(bitCount(C_FILE & bp) - 1, 0)
-                 - std::max(bitCount(D_FILE & bp) - 1, 0)
-                 - std::max(bitCount(E_FILE & bp) - 1, 0)
-                 - std::max(bitCount(F_FILE & bp) - 1, 0)
-                 - std::max(bitCount(G_FILE & bp) - 1, 0)
-                 - std::max(bitCount(H_FILE & bp) - 1, 0);
+    const int dp = std::max(bitCount(A_FILE & wp) - 1, 0) + std::max(bitCount(B_FILE & wp) - 1, 0) + std::max(bitCount(C_FILE & wp) - 1, 0) +
+                   std::max(bitCount(D_FILE & wp) - 1, 0) + std::max(bitCount(E_FILE & wp) - 1, 0) + std::max(bitCount(F_FILE & wp) - 1, 0) +
+                   std::max(bitCount(G_FILE & wp) - 1, 0) + std::max(bitCount(H_FILE & wp) - 1, 0) - std::max(bitCount(A_FILE & bp) - 1, 0) -
+                   std::max(bitCount(B_FILE & bp) - 1, 0) - std::max(bitCount(C_FILE & bp) - 1, 0) - std::max(bitCount(D_FILE & bp) - 1, 0) -
+                   std::max(bitCount(E_FILE & bp) - 1, 0) - std::max(bitCount(F_FILE & bp) - 1, 0) - std::max(bitCount(G_FILE & bp) - 1, 0) -
+                   std::max(bitCount(H_FILE & bp) - 1, 0);
 
     score += dp * DOUBLED_PAWNS;
 
-    BitBoard wp_protected = shiftPawnAttacks(wp, WHITE);
-    BitBoard bp_protected = shiftPawnAttacks(bp, BLACK);
+    BitBoard wp_protected = info.pawn_attacks[WHITE];
+    BitBoard bp_protected = info.pawn_attacks[BLACK];
 
     for (uint8_t piece = PAWN; piece <= KING; piece++) {
         score += PAWN_PROTECTION[piece] * bitCount(board.getPieceBB(makePiece(static_cast<DefaultPiece>(piece), WHITE)) & wp_protected);
         score -= PAWN_PROTECTION[piece] * bitCount(board.getPieceBB(makePiece(static_cast<DefaultPiece>(piece), BLACK)) & bp_protected);
     }
 
-    // Passed pawns
-    BitBoard temp_wp = wp; 
+    // Passed pawns & backwards pawns
+    BitBoard temp_wp = wp;
     while (temp_wp) {
         const Square sq = static_cast<Square>(popLSB(temp_wp));
         const int rank = getRank(sq);
-        if (rank > 2) { 
-            const BitBoard forward_ray = H_FILE >> (63 - sq);
-            if (!(forward_ray & (bp | bp_protected))) {
-                score += PASSED_PAWNS[rank - 3];
+        const BitBoard forward_ray = H_FILE >> (63 - sq);
+        if (rank > 2 && !(forward_ray & (bp | bp_protected))) {
+            score += PASSED_PAWNS[rank - 3];
+        } else if (sq < 56) {
+            // Backwards pawns
+            // We can re-use knight outpost table because it will cover pawns that can potentially cover us
+            BitBoard potential_defenders = board.getPieceBB(WHITE_PAWN) & knight_outpost_table[BLACK][sq];
+            const Square forward_sq = static_cast<Square>(static_cast<uint8_t>(sq) + 8);
+            if (potential_defenders && getBit(bp_protected, forward_sq)) {
+                score += BACKWARDS_PAWN;
             }
         }
     }
@@ -121,53 +140,32 @@ static inline Score evaluatePawns(const Board& board) {
     while (temp_bp) {
         const Square sq = static_cast<Square>(popLSB(temp_bp));
         const int rank = getRank(sq);
-        if (rank < 5) {
-            const BitBoard forward_ray = A_FILE << sq;
-            if (!(forward_ray & (wp | wp_protected))) {
-                score -= PASSED_PAWNS[4 - rank]; 
+        const BitBoard forward_ray = A_FILE << sq;
+        if (rank < 5 && !(forward_ray & (wp | wp_protected))) {
+            score -= PASSED_PAWNS[4 - rank];
+        } else if (sq >= 8) {
+            // Backwards pawns
+            // We can re-use knight outpost table because it will cover pawns that can potentially cover us
+            BitBoard potential_defenders = board.getPieceBB(BLACK_PAWN) & knight_outpost_table[WHITE][sq];
+            const Square forward_sq = static_cast<Square>(static_cast<uint8_t>(sq) - 8);
+            if (potential_defenders && getBit(wp_protected, forward_sq)) {
+                score -= BACKWARDS_PAWN;
             }
         }
     }
 
     // Pawn PST
-    score += applyPST(board, PAWN);
-
+    score += applyPST(board, WHITE_PAWN, BLACK_PAWN);
     storePawnEval(board, score);
     return score;
 }
 
-static inline Score applyMobility(const Board& board) {
-    Score score{};
-    const BitBoard occ = board.getOcc(BOTH);
-    const BitBoard white_pieces = board.getOcc(WHITE);
-    const BitBoard black_pieces = board.getOcc(BLACK);
-    for (uint8_t piece = KNIGHT; piece <= QUEEN; piece++) {
-        const Piece wpc = makePiece(static_cast<DefaultPiece>(piece), WHITE);
-        const Piece bpc = makePiece(static_cast<DefaultPiece>(piece), BLACK);
-        BitBoard temp = board.getPieceBB(makePiece(static_cast<DefaultPiece>(piece), WHITE));
-        while (temp) {
-            Square sq = static_cast<Square>(popLSB(temp));
-            BitBoard attacks = getPieceAttacks(wpc, sq, occ);
-            attacks &= ~white_pieces; 
-            score += MOBILITY[piece] * bitCount(attacks); 
-        }
-        temp = board.getPieceBB(makePiece(static_cast<DefaultPiece>(piece), BLACK));
-        while (temp) {
-            Square sq = static_cast<Square>(popLSB(temp));
-            BitBoard attacks = getPieceAttacks(bpc, sq, occ);
-            attacks &= ~black_pieces;
-            score -= MOBILITY[piece] * bitCount(attacks);
-        }
-    }
-    return score;
-}
-
 static inline Score applyAllPST(const Board& board) {
-    Score score = applyPST(board, KNIGHT);
-    score += applyPST(board, BISHOP);
-    score += applyPST(board, ROOK);
-    score += applyPST(board, QUEEN);
-    score += applyPST(board, KING);
+    Score score = applyPST(board, WHITE_KNIGHT, BLACK_KNIGHT);
+    score += applyPST(board, WHITE_BISHOP, BLACK_BISHOP);
+    score += applyPST(board, WHITE_ROOK, BLACK_ROOK);
+    score += applyPST(board, WHITE_QUEEN, BLACK_QUEEN);
+    score += applyPST(board, WHITE_KING, BLACK_KING);
     return score;
 }
 
@@ -181,7 +179,7 @@ static inline Score applyMaterial(const PieceCounts& pc) {
     return score;
 }
 
-static inline Score evaluateKnights(const Board& board) {
+static inline Score evaluateKnights(const Board& board, const EvalInfo& info) {
     Score score{};
     BitBoard wn_candidates = board.getPieceBB(WHITE_KNIGHT) & WHITE_OUTPOST_RANKS;
     while (wn_candidates) {
@@ -195,10 +193,24 @@ static inline Score evaluateKnights(const Board& board) {
     }
     score += bitCount(shiftNorth(board.getPieceBB(WHITE_KNIGHT)) & board.getPieceBB(WHITE_PAWN)) * KNIGHT_BEHIND_PAWN;
     score -= bitCount(shiftSouth(board.getPieceBB(BLACK_KNIGHT)) & board.getPieceBB(BLACK_PAWN)) * KNIGHT_BEHIND_PAWN;
+
+    BitBoard wn = board.getPieceBB(WHITE_KNIGHT);
+    while (wn) {
+        BitBoard attacks = info.piece_attacks[popLSB(wn)];
+        attacks &= ~board.getOcc(WHITE);
+        score += MOBILITY[KNIGHT] * bitCount(attacks);
+    }
+    BitBoard bn = board.getPieceBB(BLACK_KNIGHT);
+    while (bn) {
+        BitBoard attacks = info.piece_attacks[popLSB(bn)];
+        attacks &= ~board.getOcc(BLACK);
+        score -= MOBILITY[KNIGHT] * bitCount(attacks);
+    }
+
     return score;
 }
 
-static inline Score evaluateBishops(const PieceCounts& pc, const Board& board) {
+static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, const EvalInfo& info) {
     Score score{};
     if (pc.wb >= 2) {
         score += BISHOP_PAIR;
@@ -209,54 +221,57 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board) {
     if ((board.getPieceBB(WHITE_BISHOP) & LIGHT_SQUARES) && !(board.getPieceBB(WHITE_BISHOP) & DARK_SQUARES)) {
         const int pawns_same_color = bitCount(board.getPieceBB(WHITE_PAWN) & LIGHT_SQUARES);
         score += pawns_same_color * BISHOP_CONTROL_PENALTY;
-    }
-    else if ((board.getPieceBB(WHITE_BISHOP) & DARK_SQUARES) && !(board.getPieceBB(WHITE_BISHOP) & LIGHT_SQUARES)) {
+    } else if ((board.getPieceBB(WHITE_BISHOP) & DARK_SQUARES) && !(board.getPieceBB(WHITE_BISHOP) & LIGHT_SQUARES)) {
         const int pawns_same_color = bitCount(board.getPieceBB(WHITE_PAWN) & DARK_SQUARES);
         score += pawns_same_color * BISHOP_CONTROL_PENALTY;
     }
     if ((board.getPieceBB(BLACK_BISHOP) & LIGHT_SQUARES) && !(board.getPieceBB(BLACK_BISHOP) & DARK_SQUARES)) {
         const int pawns_same_color = bitCount(board.getPieceBB(BLACK_PAWN) & LIGHT_SQUARES);
         score -= pawns_same_color * BISHOP_CONTROL_PENALTY;
-    }
-    else if ((board.getPieceBB(BLACK_BISHOP) & DARK_SQUARES) && !(board.getPieceBB(BLACK_BISHOP) & LIGHT_SQUARES)) {
+    } else if ((board.getPieceBB(BLACK_BISHOP) & DARK_SQUARES) && !(board.getPieceBB(BLACK_BISHOP) & LIGHT_SQUARES)) {
         const int pawns_same_color = bitCount(board.getPieceBB(BLACK_PAWN) & DARK_SQUARES);
         score -= pawns_same_color * BISHOP_CONTROL_PENALTY;
     }
-    BitBoard bp_attacks = shiftPawnAttacks(board.getPieceBB(BLACK_PAWN), BLACK); 
-    BitBoard wp_attacks = shiftPawnAttacks(board.getPieceBB(WHITE_PAWN), WHITE);
+    BitBoard wp_attacks = info.pawn_attacks[WHITE];
+    BitBoard bp_attacks = info.pawn_attacks[BLACK];
     BitBoard wb = board.getPieceBB(WHITE_BISHOP);
     while (wb) {
-        const Square sq = static_cast<Square>(popLSB(wb));
-        BitBoard attacks = getPieceAttacks(WHITE_BISHOP, sq, board.getOcc(BOTH));
+        BitBoard attacks = info.piece_attacks[popLSB(wb)];
         BitBoard valid_moves = attacks & ~board.getOcc(WHITE);
         BitBoard safe_moves = valid_moves & ~bp_attacks;
 
-        if (!safe_moves) {
-            score += TRAPPED_BISHOP; 
-        } else {
-            int blocking_pawns = bitCount(attacks & board.getPieceBB(WHITE_PAWN));
-            score += blocking_pawns * BAD_BISHOP;
+        int blocking_pawns = bitCount(attacks & board.getPieceBB(WHITE_PAWN));
+        score += blocking_pawns * BAD_BISHOP;
+
+        if (valid_moves && !safe_moves) {
+            score += TRAPPED_BISHOP;
         }
+
+        attacks &= ~board.getOcc(WHITE);
+        score += MOBILITY[BISHOP] * bitCount(attacks);
     }
     BitBoard bb = board.getPieceBB(BLACK_BISHOP);
     while (bb) {
-        const Square sq = static_cast<Square>(popLSB(bb));
-        BitBoard attacks = getPieceAttacks(BLACK_BISHOP, sq, board.getOcc(BOTH));
+        BitBoard attacks = info.piece_attacks[popLSB(bb)];
         BitBoard valid_moves = attacks & ~board.getOcc(BLACK);
         BitBoard safe_moves = valid_moves & ~wp_attacks;
-        if (!safe_moves) {
+
+        int blocking_pawns = bitCount(attacks & board.getPieceBB(BLACK_PAWN));
+        score -= blocking_pawns * BAD_BISHOP;
+        
+        if (valid_moves && !safe_moves) {
             score -= TRAPPED_BISHOP;
-        } else {
-            int blocking_pawns = bitCount(attacks & board.getPieceBB(BLACK_PAWN));
-            score -= blocking_pawns * BAD_BISHOP;
         }
+
+        attacks &= ~board.getOcc(BLACK);
+        score -= MOBILITY[BISHOP] * bitCount(attacks);
     }
     score += bitCount(shiftSouth(board.getPieceBB(WHITE_BISHOP)) & board.getPieceBB(WHITE_PAWN)) * BISHOP_BLOCKING_PAWN;
     score -= bitCount(shiftNorth(board.getPieceBB(BLACK_BISHOP)) & board.getPieceBB(BLACK_PAWN)) * BISHOP_BLOCKING_PAWN;
     return score;
 }
 
-static inline Score evaluateRooks(const Board& board) {
+static inline Score evaluateRooks(const Board& board, const EvalInfo& info) {
     Score score{};
     const BitBoard wp = board.getPieceBB(WHITE_PAWN);
     const BitBoard bp = board.getPieceBB(BLACK_PAWN);
@@ -265,33 +280,53 @@ static inline Score evaluateRooks(const Board& board) {
     BitBoard wr = board.getPieceBB(WHITE_ROOK);
     BitBoard br = board.getPieceBB(BLACK_ROOK);
     while (wr) {
-        const BitBoard file_mask = A_FILE << getFile(popLSB(wr));
+        const uint8_t sq = popLSB(wr);
+        const BitBoard file_mask = A_FILE << getFile(sq);
         if (!(wp & file_mask)) {
             score += !(bp & file_mask) ? ROOK_ON_OPEN_FILE : ROOK_ON_SEMI_OPEN_FILE;
         }
+
+        BitBoard attacks = info.piece_attacks[sq];
+        attacks &= ~board.getOcc(WHITE);
+        score += MOBILITY[ROOK] * bitCount(attacks);
     }
     while (br) {
-        const BitBoard file_mask = A_FILE << getFile(popLSB(br));
+        const uint8_t sq = popLSB(br);
+        const BitBoard file_mask = A_FILE << getFile(sq);
         if (!(bp & file_mask)) {
             score -= !(wp & file_mask) ? ROOK_ON_OPEN_FILE : ROOK_ON_SEMI_OPEN_FILE;
         }
+
+        BitBoard attacks = info.piece_attacks[sq];
+        attacks &= ~board.getOcc(BLACK);
+        score -= MOBILITY[ROOK] * bitCount(attacks);
     }
     return score;
 }
 
-static inline Score evaluateQueens(const Board& board) {
+static inline Score evaluateQueens(const Board& board, const EvalInfo& info) {
     Score score{};
     BitBoard wq = board.getPieceBB(WHITE_QUEEN);
     BitBoard bq = board.getPieceBB(BLACK_QUEEN);
     while (wq) {
-        if (board.getDiscoveryAttacks(static_cast<Square>(popLSB(wq)), WHITE)) {
+        const Square sq = static_cast<Square>(popLSB(wq));
+        if (board.getDiscoveryAttacks(sq, WHITE)) {
             score += QUEEN_REL_PIN;
         }
+
+        BitBoard attacks = info.piece_attacks[sq];
+        attacks &= ~board.getOcc(WHITE);
+        score += MOBILITY[QUEEN] * bitCount(attacks);
     }
     while (bq) {
-        if (board.getDiscoveryAttacks(static_cast<Square>(popLSB(bq)), BLACK)) {
+        const Square sq = static_cast<Square>(popLSB(bq));
+        if (board.getDiscoveryAttacks(sq, BLACK)) {
             score -= QUEEN_REL_PIN;
         }
+
+        BitBoard attacks = info.piece_attacks[sq];
+        attacks &= ~board.getOcc(BLACK);
+        score -= MOBILITY[QUEEN] * bitCount(attacks);
     }
     return score;
 }
@@ -305,20 +340,22 @@ static inline Score evaluatePawnAdjustments(const PieceCounts& pc) {
     return score;
 }
 
-static inline int zoneWeakSquares(const Board& board, const BitBoard w_king_zone, const BitBoard b_king_zone) {
+static inline int zoneWeakSquares(const Board& board, const BitBoard w_king_zone, const BitBoard b_king_zone, const EvalInfo& info) {
     int count = 0;
     BitBoard w_defended = 0ULL;
     BitBoard b_defended = 0ULL;
-    for (uint8_t pc = PAWN; pc < KING; pc++) {
+    w_defended |= info.pawn_attacks[WHITE];
+    b_defended |= info.pawn_attacks[BLACK];
+    for (uint8_t pc = KNIGHT; pc <= QUEEN; pc++) {
         const Piece wpc = makePiece(static_cast<DefaultPiece>(pc), WHITE);
         const Piece bpc = makePiece(static_cast<DefaultPiece>(pc), BLACK);
         BitBoard wbb = board.getPieceBB(wpc);
         BitBoard bbb = board.getPieceBB(bpc);
         while (wbb) {
-            w_defended |= getPieceAttacks(wpc, static_cast<Square>(popLSB(wbb)), board.getOcc(BOTH));
+            w_defended |= info.piece_attacks[popLSB(wbb)];
         }
         while (bbb) {
-            b_defended |= getPieceAttacks(bpc, static_cast<Square>(popLSB(bbb)), board.getOcc(BOTH));
+            b_defended |= info.piece_attacks[popLSB(bbb)];
         }
     }
     count += bitCount(w_king_zone & ~w_defended);
@@ -326,16 +363,16 @@ static inline int zoneWeakSquares(const Board& board, const BitBoard w_king_zone
     return count;
 }
 
-static inline Score getPieceKingZoneAttacks(const Board& board, const BitBoard king_zone, const Piece piece) {
+static inline Score getPieceKingZoneAttacks(const Board& board, const BitBoard king_zone, const Piece piece, const EvalInfo& info) {
     Score score{};
     BitBoard bb = board.getPieceBB(piece);
     while (bb) {
-        score += bitCount(getPieceAttacks(piece, static_cast<Square>(popLSB(bb)), board.getOcc(BOTH)) & king_zone) * KING_ZONE_ATTACK[makeDefaultPiece(piece)];
+        score += bitCount(info.piece_attacks[popLSB(bb)] & king_zone) * KING_ZONE_ATTACK[makeDefaultPiece(piece)];
     }
     return score;
 }
 
-static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
+static inline Score kingSafety(const PieceCounts& pc, const Board& board, const EvalInfo& info) {
     Score score{};
     const int w_king_sq = getLSB(board.getPieceBB(WHITE_KING));
     const int b_king_sq = getLSB(board.getPieceBB(BLACK_KING));
@@ -346,65 +383,51 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
     score += NO_OPPONENT_QUEENS * !(pc.bq);
     score -= NO_OPPONENT_QUEENS * !(pc.wq);
     if (getBit(G1_H1, w_king_sq)) {
-        for (const uint8_t sq : {F2, G2, H2}) {
+        for (const uint8_t sq : { F2, G2, H2 }) {
             if (getBit(wp, sq)) {
                 score += PAWN_SHIELD[1];
-            }
-            else if (getBit(wp, sq - 8)) {
+            } else if (getBit(wp, sq - 8)) {
                 score += PAWN_SHIELD[2];
-            }
-            else if (getBit(wp, sq - 16)) {
+            } else if (getBit(wp, sq - 16)) {
                 score += PAWN_SHIELD[3];
-            }
-            else {
+            } else {
                 score += PAWN_SHIELD[0];
             }
         }
-    }
-    else if (getBit(A1_B1_C1, w_king_sq)) {
-        for (const uint8_t sq : {A2, B2, C2, D2}) {
+    } else if (getBit(A1_B1_C1, w_king_sq)) {
+        for (const uint8_t sq : { A2, B2, C2, D2 }) {
             if (getBit(wp, sq)) {
                 score += PAWN_SHIELD[1];
-            }
-            else if (getBit(wp, sq - 8)) {
+            } else if (getBit(wp, sq - 8)) {
                 score += PAWN_SHIELD[2];
-            }
-            else if (getBit(wp, sq - 16)) {
+            } else if (getBit(wp, sq - 16)) {
                 score += PAWN_SHIELD[3];
-            }
-            else {
+            } else {
                 score += PAWN_SHIELD[0];
             }
         }
     }
     if (getBit(G8_H8, b_king_sq)) {
-        for (const uint8_t sq : {F7, G7, H7}) {
+        for (const uint8_t sq : { F7, G7, H7 }) {
             if (getBit(bp, sq)) {
                 score -= PAWN_SHIELD[1];
-            }
-            else if (getBit(bp, sq + 8)) {
+            } else if (getBit(bp, sq + 8)) {
                 score -= PAWN_SHIELD[2];
-            }
-            else if (getBit(bp, sq + 16)) {
+            } else if (getBit(bp, sq + 16)) {
                 score -= PAWN_SHIELD[3];
-            }
-            else {
+            } else {
                 score -= PAWN_SHIELD[0];
             }
         }
-    }
-    else if (getBit(A8_B8_C8, b_king_sq)) {
-        for (const uint8_t sq : {A7, B7, C7, D7}) {
+    } else if (getBit(A8_B8_C8, b_king_sq)) {
+        for (const uint8_t sq : { A7, B7, C7, D7 }) {
             if (getBit(bp, sq)) {
                 score -= PAWN_SHIELD[1];
-            }
-            else if (getBit(bp, sq + 8)) {
+            } else if (getBit(bp, sq + 8)) {
                 score -= PAWN_SHIELD[2];
-            }
-            else if (getBit(bp, sq + 16)) {
+            } else if (getBit(bp, sq + 16)) {
                 score -= PAWN_SHIELD[3];
-            }
-            else {
+            } else {
                 score -= PAWN_SHIELD[0];
             }
         }
@@ -415,11 +438,9 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
         const int dist = getRank(popLSB(bp_storm)) - w_king_rank;
         if (dist < 5) {
             score += PAWN_STORM[0];
-        }
-        else if (dist < 6) {
+        } else if (dist < 6) {
             score += PAWN_STORM[1];
-        }
-        else {
+        } else {
             score += PAWN_STORM[2];
         }
     }
@@ -428,11 +449,9 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
         const int dist = b_king_rank - getRank(popLSB(wp_storm));
         if (dist < 5) {
             score -= PAWN_STORM[0];
-        }
-        else if (dist < 6) {
+        } else if (dist < 6) {
             score -= PAWN_STORM[1];
-        }
-        else {
+        } else {
             score -= PAWN_STORM[2];
         }
     }
@@ -445,40 +464,25 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
         score -= !(wp & b_file_mask) ? KING_ON_OPEN_FILE : KING_ON_SEMI_OPEN_FILE;
     }
 
-    BitBoard w_king_zone = 1ULL << w_king_sq;
-    w_king_zone |= shiftEast(w_king_zone) | shiftWest(w_king_zone);
-    w_king_zone |= shiftNorth(w_king_zone) | shiftSouth(w_king_zone);
-    w_king_zone |= shiftNorth(w_king_zone);
-    
-    BitBoard w_ext_king_zone = shiftEast(w_king_zone) | shiftWest(w_king_zone);
-    w_ext_king_zone |= shiftNorth(w_ext_king_zone) | shiftSouth(w_ext_king_zone);
-    w_ext_king_zone &= ~w_king_zone;
-
-    BitBoard b_king_zone = 1ULL << b_king_sq;
-    b_king_zone |= shiftEast(b_king_zone) | shiftWest(b_king_zone);
-    b_king_zone |= shiftNorth(b_king_zone) | shiftSouth(b_king_zone);
-    b_king_zone |= shiftSouth(b_king_zone);
-
-    BitBoard b_ext_king_zone = shiftEast(b_king_zone) | shiftWest(b_king_zone);
-    b_ext_king_zone |= shiftNorth(b_ext_king_zone) | shiftSouth(b_ext_king_zone);
-    b_ext_king_zone &= ~b_king_zone;
+    const BitBoard w_king_zone = king_zones[WHITE][0][w_king_sq];
+    const BitBoard b_king_zone = king_zones[BLACK][0][b_king_sq];
 
     if (board.getThreatenedBy(BLACK) & w_king_zone) {
-        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_KNIGHT);
-        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_BISHOP);
-        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_ROOK);
-        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_QUEEN);
+        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_KNIGHT, info);
+        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_BISHOP, info);
+        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_ROOK, info);
+        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_QUEEN, info);
     }
     if (board.getThreatenedBy(WHITE) & b_king_zone) {
-        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_KNIGHT);
-        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_BISHOP);
-        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_ROOK);
-        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_QUEEN);
+        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_KNIGHT, info);
+        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_BISHOP, info);
+        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_ROOK, info);
+        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_QUEEN, info);
     }
 
-    score += zoneWeakSquares(board, w_king_zone, b_king_zone) * KING_ZONE_WEAK_SQUARE;
-    score += zoneWeakSquares(board, w_ext_king_zone, b_ext_king_zone) * KING_ZONE_WEAK_SQUARE_EXTENDED;
-    
+    score += zoneWeakSquares(board, w_king_zone, b_king_zone, info) * KING_ZONE_WEAK_SQUARE;
+    score += zoneWeakSquares(board, king_zones[WHITE][1][w_king_sq], king_zones[BLACK][1][b_king_sq], info) * KING_ZONE_WEAK_SQUARE_EXTENDED;
+
     CastlingRights cr = board.getCastlingRights();
     const bool w_lost_both_cr = !(cr & (WHITE_KS | WHITE_QS));
     const bool w_lost_one_cr = !w_lost_both_cr && (cr & (WHITE_KS | WHITE_QS)) != (WHITE_KS | WHITE_QS);
@@ -508,31 +512,21 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board) {
 }
 
 int eval(const Board& board) {
-    // if (isMaterialDraw(board))
-    //     return 0;
+    if (isMaterialDraw(board)) {
+        return 0;
+    }
 
+    EvalInfo info = precomputeEvalInfo(board);
     PieceCounts pc = getPieceCounts(board);
     Score score = applyMaterial(pc);
     score += applyAllPST(board);
-    score += applyMobility(board);
-    score += evaluateKnights(board);
-    score += evaluateBishops(pc, board);
-    score += evaluateRooks(board);
-    score += evaluateQueens(board);
+    score += evaluateKnights(board, info);
+    score += evaluateBishops(pc, board, info);
+    score += evaluateRooks(board, info);
+    score += evaluateQueens(board, info);
     score += evaluatePawnAdjustments(pc);
-    score += evaluatePawns(board);
-    score += kingSafety(pc, board);
-
-    std::cout << "Subscores:\nMaterial:" << T(applyMaterial(pc), 24)
-              << "\nPST: " << T(applyAllPST(board), 24)
-              << "\nMob: " << T(applyMobility(board), 24)
-              << "\nKnights: " << T(evaluateKnights(board), 24)
-              << "\nBishops: " << T(evaluateBishops(pc, board), 24)
-              << "\nRooks: " << T(evaluateRooks(board), 24)
-              << "\nQueens: " << T(evaluateQueens(board), 24)
-              << "\nPawn Adj: " << T(evaluatePawnAdjustments(pc), 24)
-              << "\nPawns: " << T(evaluatePawns(board), 24)
-              << "\nKing safety: " << T(kingSafety(pc, board), 24) << std::endl;
+    score += evaluatePawns(board, info);
+    score += kingSafety(pc, board, info);
 
     // Tempo bonus
     score += (board.getSTM() == WHITE) ? TEMPO : -TEMPO;
@@ -540,11 +534,6 @@ int eval(const Board& board) {
     int r_score = T(score, board.phase());
 
     return board.getSTM() == WHITE ? r_score : -r_score;
-}
-
-int eval_perspective(const Board& board) {
-    int base_score = eval(board);
-    return board.getSTM() == BLACK ? -base_score : base_score;
 }
 
 void initEval() {
@@ -567,5 +556,28 @@ void initEval() {
             adj_files |= (A_FILE << file);
             king_critical_files[sq] = adj_files;
         }
+
+        BitBoard w_king_zone = 1ULL << sq;
+        w_king_zone |= shiftEast(w_king_zone) | shiftWest(w_king_zone);
+        w_king_zone |= shiftNorth(w_king_zone) | shiftSouth(w_king_zone);
+        w_king_zone |= shiftNorth(w_king_zone);
+
+        BitBoard w_ext_king_zone = shiftEast(w_king_zone) | shiftWest(w_king_zone);
+        w_ext_king_zone |= shiftNorth(w_ext_king_zone) | shiftSouth(w_ext_king_zone);
+        w_ext_king_zone &= ~w_king_zone;
+
+        BitBoard b_king_zone = 1ULL << sq;
+        b_king_zone |= shiftEast(b_king_zone) | shiftWest(b_king_zone);
+        b_king_zone |= shiftNorth(b_king_zone) | shiftSouth(b_king_zone);
+        b_king_zone |= shiftSouth(b_king_zone);
+
+        BitBoard b_ext_king_zone = shiftEast(b_king_zone) | shiftWest(b_king_zone);
+        b_ext_king_zone |= shiftNorth(b_ext_king_zone) | shiftSouth(b_ext_king_zone);
+        b_ext_king_zone &= ~b_king_zone;
+
+        king_zones[WHITE][0][sq] = w_king_zone;
+        king_zones[WHITE][1][sq] = w_ext_king_zone;
+        king_zones[BLACK][0][sq] = b_king_zone;
+        king_zones[BLACK][1][sq] = b_ext_king_zone;
     }
 }
