@@ -62,6 +62,7 @@ constexpr Score MOBILITY[] = { S(7, 6), S(6, 7), S(3, 5), S(4, 2), S(-5, -4) };
 constexpr Score PAWN_PHALANX = S(10, 15);
 constexpr Score DOUBLED_PAWNS = S(-10, -40);
 constexpr Score PAWN_CONTROL = S(10, 5);
+constexpr Score BACKWARDS_PAWN = S(-20, -10);
 constexpr Score PAWN_PROTECTION[] = { S(24, 17), S(5, 20), S(7, 22), S(9, 10), S(-4, 20), S(-30, 25) };
 constexpr Score PASSED_PAWNS[] = { S(0, 0), S(0, 0), S(0, 0), S(10, 12), S(50, 48), S(100, 115), S(285, 205), S(0, 0) };
 
@@ -106,8 +107,29 @@ const Score KING_CASTLED[2] = { S(0, 0), S(-50, 0) };
 const Score KING_LOST_ONE_CASTLING_RIGHT = S(-25, 0);
 const Score KING_UNCASTLED_RIGHTS_REMAIN = S(-15, 0);
 
-extern const Score KNIGHT_PAWN_ADJ[9];
-extern const Score ROOK_PAWN_ADJ[9];
+constexpr Score KNIGHT_PAWN_ADJ[9] = {
+    S(-20, -20), // 0 pawns
+    S(-16, -16),
+    S(-12, -12),
+    S( -4,  -4),
+    S(  0,   0), // 4 pawns 
+    S(  4,   4),
+    S(  8,   8),
+    S( 12,  12),
+    S( 16,  16), // 8 pawns
+};
+
+constexpr Score ROOK_PAWN_ADJ[9] = {
+    S( 20,  30),
+    S( 15,  22),
+    S( 10,  15),
+    S(  5,   8),
+    S(  0,   0),
+    S( -5,  -8),
+    S(-10, -15),
+    S(-15, -22),
+    S(-20, -30),
+};
 extern const Score pst[12][64];
 
 #endif // TERMS_H

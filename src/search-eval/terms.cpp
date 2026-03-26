@@ -1,29 +1,5 @@
 #include "terms.h"
 
-const Score KNIGHT_PAWN_ADJ[9] = {
-    S(-20, -20), // 0 pawns
-    S(-16, -16),
-    S(-12, -12),
-    S( -4,  -4),
-    S(  0,   0), // 4 pawns 
-    S(  4,   4),
-    S(  8,   8),
-    S( 12,  12),
-    S( 16,  16), // 8 pawns
-};
-
-const Score ROOK_PAWN_ADJ[9] = {
-    S( 20,  30),
-    S( 15,  22),
-    S( 10,  15),
-    S(  5,   8),
-    S(  0,   0),
-    S( -5,  -8),
-    S(-10, -15),
-    S(-15, -22),
-    S(-20, -30),
-};
-
 const Score pst[12][64] = {
     // White pawn
     {

@@ -118,15 +118,21 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
         score -= PAWN_PROTECTION[piece] * bitCount(board.getPieceBB(makePiece(static_cast<DefaultPiece>(piece), BLACK)) & bp_protected);
     }
 
-    // Passed pawns
+    // Passed pawns & backwards pawns
     BitBoard temp_wp = wp;
     while (temp_wp) {
         const Square sq = static_cast<Square>(popLSB(temp_wp));
         const int rank = getRank(sq);
-        if (rank > 2) {
-            const BitBoard forward_ray = H_FILE >> (63 - sq);
-            if (!(forward_ray & (bp | bp_protected))) {
-                score += PASSED_PAWNS[rank - 3];
+        const BitBoard forward_ray = H_FILE >> (63 - sq);
+        if (rank > 2 && !(forward_ray & (bp | bp_protected))) {
+            score += PASSED_PAWNS[rank - 3];
+        } else if (sq < 56) {
+            // Backwards pawns
+            // We can re-use knight outpost table because it will cover pawns that can potentially cover us
+            BitBoard potential_defenders = board.getPieceBB(WHITE_PAWN) & knight_outpost_table[BLACK][sq];
+            const Square forward_sq = static_cast<Square>(static_cast<uint8_t>(sq) + 8);
+            if (potential_defenders && getBit(bp_protected, forward_sq)) {
+                score += BACKWARDS_PAWN;
             }
         }
     }
@@ -134,17 +140,22 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     while (temp_bp) {
         const Square sq = static_cast<Square>(popLSB(temp_bp));
         const int rank = getRank(sq);
-        if (rank < 5) {
-            const BitBoard forward_ray = A_FILE << sq;
-            if (!(forward_ray & (wp | wp_protected))) {
-                score -= PASSED_PAWNS[4 - rank];
+        const BitBoard forward_ray = A_FILE << sq;
+        if (rank < 5 && !(forward_ray & (wp | wp_protected))) {
+            score -= PASSED_PAWNS[4 - rank];
+        } else if (sq >= 8) {
+            // Backwards pawns
+            // We can re-use knight outpost table because it will cover pawns that can potentially cover us
+            BitBoard potential_defenders = board.getPieceBB(BLACK_PAWN) & knight_outpost_table[WHITE][sq];
+            const Square forward_sq = static_cast<Square>(static_cast<uint8_t>(sq) - 8);
+            if (potential_defenders && getBit(wp_protected, forward_sq)) {
+                score -= BACKWARDS_PAWN;
             }
         }
     }
 
     // Pawn PST
     score += applyPST(board, WHITE_PAWN, BLACK_PAWN);
-
     storePawnEval(board, score);
     return score;
 }
