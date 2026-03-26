@@ -229,11 +229,11 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
         BitBoard valid_moves = attacks & ~board.getOcc(WHITE);
         BitBoard safe_moves = valid_moves & ~bp_attacks;
 
-        if (!safe_moves) {
+        int blocking_pawns = bitCount(attacks & board.getPieceBB(WHITE_PAWN));
+        score += blocking_pawns * BAD_BISHOP;
+
+        if (valid_moves && !safe_moves) {
             score += TRAPPED_BISHOP;
-        } else {
-            int blocking_pawns = bitCount(attacks & board.getPieceBB(WHITE_PAWN));
-            score += blocking_pawns * BAD_BISHOP;
         }
 
         attacks &= ~board.getOcc(WHITE);
@@ -245,11 +245,11 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
         BitBoard valid_moves = attacks & ~board.getOcc(BLACK);
         BitBoard safe_moves = valid_moves & ~wp_attacks;
 
-        if (!safe_moves) {
+        int blocking_pawns = bitCount(attacks & board.getPieceBB(BLACK_PAWN));
+        score -= blocking_pawns * BAD_BISHOP;
+        
+        if (valid_moves && !safe_moves) {
             score -= TRAPPED_BISHOP;
-        } else {
-            int blocking_pawns = bitCount(attacks & board.getPieceBB(BLACK_PAWN));
-            score -= blocking_pawns * BAD_BISHOP;
         }
 
         attacks &= ~board.getOcc(BLACK);
