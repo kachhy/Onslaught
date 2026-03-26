@@ -76,15 +76,15 @@ static inline void storePawnEval(const Board& board, const Score score) {
     pawn_evals[index].eval = score;
 }
 
-static inline Score applyPST(const Board& board, const DefaultPiece piece) {
+static inline Score applyPST(const Board& board, const Piece piece_w, const Piece piece_b) {
     Score score{};
-    BitBoard white_piece_bb = board.getPieceBB(makePiece(piece, WHITE));
-    BitBoard black_piece_bb = board.getPieceBB(makePiece(piece, BLACK));
+    BitBoard white_piece_bb = board.getPieceBB(piece_w);
+    BitBoard black_piece_bb = board.getPieceBB(piece_b);
     while (white_piece_bb) {
-        score += pst[piece][popLSB(white_piece_bb)];
+        score += pst[piece_w][popLSB(white_piece_bb)];
     }
     while (black_piece_bb) {
-        score -= pst[piece][flipRank(popLSB(black_piece_bb))];
+        score -= pst[piece_b][popLSB(black_piece_bb)];
     }
     return score;
 }
@@ -143,18 +143,18 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     }
 
     // Pawn PST
-    score += applyPST(board, PAWN);
+    score += applyPST(board, WHITE_PAWN, BLACK_PAWN);
 
     storePawnEval(board, score);
     return score;
 }
 
 static inline Score applyAllPST(const Board& board) {
-    Score score = applyPST(board, KNIGHT);
-    score += applyPST(board, BISHOP);
-    score += applyPST(board, ROOK);
-    score += applyPST(board, QUEEN);
-    score += applyPST(board, KING);
+    Score score = applyPST(board, WHITE_KNIGHT, BLACK_KNIGHT);
+    score += applyPST(board, WHITE_BISHOP, BLACK_BISHOP);
+    score += applyPST(board, WHITE_ROOK, BLACK_ROOK);
+    score += applyPST(board, WHITE_QUEEN, BLACK_QUEEN);
+    score += applyPST(board, WHITE_KING, BLACK_KING);
     return score;
 }
 

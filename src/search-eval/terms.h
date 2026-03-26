@@ -108,6 +108,6 @@ const Score KING_UNCASTLED_RIGHTS_REMAIN = S(-15, 0);
 
 extern const Score KNIGHT_PAWN_ADJ[9];
 extern const Score ROOK_PAWN_ADJ[9];
-extern const Score pst[6][64];
+extern const Score pst[12][64];
 
 #endif // TERMS_H
