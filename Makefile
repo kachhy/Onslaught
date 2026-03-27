@@ -26,6 +26,10 @@ ifneq ($(filter pg,$(MAKECMDGOALS)),)
 	LDFLAGS += -pg
 	OBJDIR:=$(OBJDIR)/pg
 endif
+ifneq ($(filter tune,$(MAKECMDGOALS)),)
+	CXXFLAGS += -DTUNING -O3 -flto -march=native
+	OBJDIR:=$(OBJDIR)/tune
+endif
 
 OBJ=$(patsubst src/%.cpp,$(OBJDIR)/%.o,$(SRC))
 DEPS=$(OBJ:.o=.d)
@@ -35,6 +39,7 @@ debug: $(BIN)
 release: $(BIN)
 lto: $(BIN)
 pg: $(BIN)
+tune: $(BIN)
 
 $(BIN): $(OBJ)
 	@echo "  LINK $@"
