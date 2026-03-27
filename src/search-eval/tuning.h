@@ -7,6 +7,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <cmath>
 
 constexpr uint16_t MATERIAL_OFFSET = 0;
 constexpr uint16_t TEMPO_OFFSET = 12;
@@ -64,11 +65,17 @@ public:
 
     void loadDataset(const std::string& filename, const uint32_t max);
 private:
+    double reconstructScore(const Trace& tr) const;
+    double sigmoid(double score) const { return 1.0 / (1.0 + std::exp(-K * score / 400.0)); }
+    double computeError() const;
     void initParams();
 
     std::vector<Position> dataset;
     std::vector<Trace> traces;
     std::vector<TunerParam> params;
+
+    // Adam parameters
+    static constexpr double K = 2.5;
 };
 
 #endif // TUNING_H

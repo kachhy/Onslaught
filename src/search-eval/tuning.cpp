@@ -42,6 +42,22 @@ void Tuner::loadDataset(const std::string& filename, const uint32_t max) {
     }
 }
 
+double Tuner::reconstructScore(const Trace& tr) const {
+    // Placeholder
+    return 0.0;
+}
+
+double Tuner::computeError() const {
+    double err = 0.0;
+    for (const Trace& tr : traces) {
+        double score = reconstructScore(tr);
+        double sig = sigmoid(score);
+        double diff = sig - tr.result;
+        err += diff * diff;
+    }
+    return err / traces.size();
+}
+
 void Tuner::initParams() {
     params.clear();
 
