@@ -1,4 +1,6 @@
 #include "tuning.h"
+#include <chrono>
+#include <iomanip>
 #include <iostream>
 
 Tuner::Tuner(const size_t dataset_size) {
@@ -46,13 +48,19 @@ void Tuner::run(const uint32_t epochs) {
     std::cout << "[Tune] Initializing parameters" << std::endl;
     initParams();
     std::cout << "[Tune] Beginning tuning" << std::endl;
+    auto start = std::chrono::high_resolution_clock::now();
     for (uint32_t epoch = 1; epoch <= epochs; epoch++) {
         computeGradients();
         updateAdam(epoch);
 
         if (epoch % 50 == 0) {
             const double error = computeError();
-            std::cout << "\tEpoch " << epoch << " | Error: " << error << "\n";
+            auto stop = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+            int etr = (epochs - epoch) * duration.count() / 1000;
+            std::cout << "\tEpoch " << std::setw(6) << epoch << " | Error: " << std::setw(7) << error << " | Time elapsed (this epoch): " << std::setw(5)
+                      << duration.count() / 1000 << "s | ETR: " << std::setw(7) << etr << "s\n";
+            start = stop;
         }
     }
 }
@@ -68,7 +76,7 @@ void Tuner::dumpParams(std::ofstream& out) const {
 
     // Tempo
     out << "constexpr Score TEMPO = S(" << static_cast<int>(params[TEMPO_OFFSET].value) << ", " << static_cast<int>(params[TEMPO_OFFSET + 1].value) << ");\n";
-    
+
     // Mobility
     out << "constexpr Score MOBILITY[6] = {\n";
     for (int i = 0; i < 5; i++) {
@@ -78,18 +86,22 @@ void Tuner::dumpParams(std::ofstream& out) const {
 
     // Pawn structure
     // Pawn phalanx
-    out << "\nconstexpr Score PAWN_PHALANX = S(" << static_cast<int>(params[PAWN_PHALANX_OFFSET].value) << ", " << static_cast<int>(params[PAWN_PHALANX_OFFSET + 1].value) << ");\n";
+    out << "\nconstexpr Score PAWN_PHALANX = S(" << static_cast<int>(params[PAWN_PHALANX_OFFSET].value) << ", " << static_cast<int>(params[PAWN_PHALANX_OFFSET + 1].value)
+        << ");\n";
 
     // Doubled pawns
-    out << "constexpr Score DOUBLED_PAWNS = S(" << static_cast<int>(params[DOUBLED_PAWNS_OFFSET].value) << ", " << static_cast<int>(params[DOUBLED_PAWNS_OFFSET + 1].value) << ");\n";
-    
+    out << "constexpr Score DOUBLED_PAWNS = S(" << static_cast<int>(params[DOUBLED_PAWNS_OFFSET].value) << ", "
+        << static_cast<int>(params[DOUBLED_PAWNS_OFFSET + 1].value) << ");\n";
+
     // Backwards pawn
-    out << "constexpr Score BACKWARDS_PAWN = S(" << static_cast<int>(params[BACKWARDS_PAWN_OFFSET].value) << ", " << static_cast<int>(params[BACKWARDS_PAWN_OFFSET + 1].value) << ");\n";
+    out << "constexpr Score BACKWARDS_PAWN = S(" << static_cast<int>(params[BACKWARDS_PAWN_OFFSET].value) << ", "
+        << static_cast<int>(params[BACKWARDS_PAWN_OFFSET + 1].value) << ");\n";
 
     // Pawn protection
     out << "constexpr Score PAWN_PROTECTION[8] = {\n";
     for (int p = 0; p < 6; p++) {
-        out << "\tS(" << static_cast<int>(params[PAWN_PROTECTION_OFFSET + 2 * p].value) << ", " << static_cast<int>(params[PAWN_PROTECTION_OFFSET + 2 * p + 1].value) << "),\n";
+        out << "\tS(" << static_cast<int>(params[PAWN_PROTECTION_OFFSET + 2 * p].value) << ", " << static_cast<int>(params[PAWN_PROTECTION_OFFSET + 2 * p + 1].value)
+            << "),\n";
     }
     out << "};\n";
 
@@ -102,64 +114,80 @@ void Tuner::dumpParams(std::ofstream& out) const {
 
     // Knights
     // Knight outpost
-    out << "\nconstexpr Score KNIGHT_OUTPOST = S(" << static_cast<int>(params[KNIGHT_OUTPOST_OFFSET].value) << ", " << static_cast<int>(params[KNIGHT_OUTPOST_OFFSET + 1].value) << ");\n";
-    
+    out << "\nconstexpr Score KNIGHT_OUTPOST = S(" << static_cast<int>(params[KNIGHT_OUTPOST_OFFSET].value) << ", "
+        << static_cast<int>(params[KNIGHT_OUTPOST_OFFSET + 1].value) << ");\n";
+
     // Knight behind pawn
-    out << "constexpr Score KNIGHT_BEHIND_PAWN = S(" << static_cast<int>(params[KNIGHT_BEHIND_PAWN_OFFSET].value) << ", " << static_cast<int>(params[KNIGHT_BEHIND_PAWN_OFFSET + 1].value) << ");\n";
+    out << "constexpr Score KNIGHT_BEHIND_PAWN = S(" << static_cast<int>(params[KNIGHT_BEHIND_PAWN_OFFSET].value) << ", "
+        << static_cast<int>(params[KNIGHT_BEHIND_PAWN_OFFSET + 1].value) << ");\n";
 
     // Knight pawn adjustments
     out << "constexpr Score KNIGHT_PAWN_ADJ[9] = {\n";
     for (int i = 0; i < 9; i++) {
-        out << "\tS(" << static_cast<int>(params[KNIGHT_PAWN_ADJ_OFFSET + 2 * i].value) << ", " << static_cast<int>(params[KNIGHT_PAWN_ADJ_OFFSET + 2 * i + 1].value) << "),\n";
+        out << "\tS(" << static_cast<int>(params[KNIGHT_PAWN_ADJ_OFFSET + 2 * i].value) << ", " << static_cast<int>(params[KNIGHT_PAWN_ADJ_OFFSET + 2 * i + 1].value)
+            << "),\n";
     }
     out << "};\n";
 
     // Bishops
     // Bishop pair
-    out << "\nconstexpr Score BISHOP_PAIR = S(" << static_cast<int>(params[BISHOP_PAIR_OFFSET].value) << ", " << static_cast<int>(params[BISHOP_PAIR_OFFSET + 1].value) << ");\n";
-    
+    out << "\nconstexpr Score BISHOP_PAIR = S(" << static_cast<int>(params[BISHOP_PAIR_OFFSET].value) << ", " << static_cast<int>(params[BISHOP_PAIR_OFFSET + 1].value)
+        << ");\n";
+
     // Bishop control penalty
-    out << "constexpr Score BISHOP_CONTROL_PENALTY = S(" << static_cast<int>(params[BISHOP_CTRL_PENALTY_OFFSET].value) << ", " << static_cast<int>(params[BISHOP_CTRL_PENALTY_OFFSET + 1].value) << ");\n";
+    out << "constexpr Score BISHOP_CONTROL_PENALTY = S(" << static_cast<int>(params[BISHOP_CTRL_PENALTY_OFFSET].value) << ", "
+        << static_cast<int>(params[BISHOP_CTRL_PENALTY_OFFSET + 1].value) << ");\n";
 
     // Bad bishop
-    out << "constexpr Score BAD_BISHOP = S(" << static_cast<int>(params[BAD_BISHOP_OFFSET].value) << ", " << static_cast<int>(params[BAD_BISHOP_OFFSET + 1].value) << ");\n";
+    out << "constexpr Score BAD_BISHOP = S(" << static_cast<int>(params[BAD_BISHOP_OFFSET].value) << ", " << static_cast<int>(params[BAD_BISHOP_OFFSET + 1].value)
+        << ");\n";
 
     // Bishop blocking pawn
-    out << "constexpr Score BISHOP_BLOCKING_PAWN = S(" << static_cast<int>(params[BISHOP_BLOCKING_PAWN_OFFSET].value) << ", " << static_cast<int>(params[BISHOP_BLOCKING_PAWN_OFFSET + 1].value) << ");\n";
+    out << "constexpr Score BISHOP_BLOCKING_PAWN = S(" << static_cast<int>(params[BISHOP_BLOCKING_PAWN_OFFSET].value) << ", "
+        << static_cast<int>(params[BISHOP_BLOCKING_PAWN_OFFSET + 1].value) << ");\n";
 
     // Trapped bishop
-    out << "constexpr Score TRAPPED_BISHOP = S(" << static_cast<int>(params[TRAPPED_BISHOP_OFFSET].value) << ", " << static_cast<int>(static_cast<int>(params[TRAPPED_BISHOP_OFFSET + 1].value)) << ");\n";
+    out << "constexpr Score TRAPPED_BISHOP = S(" << static_cast<int>(params[TRAPPED_BISHOP_OFFSET].value) << ", "
+        << static_cast<int>(static_cast<int>(params[TRAPPED_BISHOP_OFFSET + 1].value)) << ");\n";
 
     // Rooks
     // Rook on seventh
-    out << "\nconstexpr Score ROOK_ON_SEVENTH_RANK = S(" << static_cast<int>(params[ROOK_SEVENTH_OFFSET].value) << ", " << static_cast<int>(params[ROOK_SEVENTH_OFFSET + 1].value) << ");\n";
+    out << "\nconstexpr Score ROOK_ON_SEVENTH_RANK = S(" << static_cast<int>(params[ROOK_SEVENTH_OFFSET].value) << ", "
+        << static_cast<int>(params[ROOK_SEVENTH_OFFSET + 1].value) << ");\n";
 
     // Rook on open file
-    out << "constexpr Score ROOK_ON_OPEN_FILE = S(" << static_cast<int>(params[ROOK_OPEN_FILE_OFFSET].value) << ", " << static_cast<int>(params[ROOK_OPEN_FILE_OFFSET + 1].value) << ");\n";
+    out << "constexpr Score ROOK_ON_OPEN_FILE = S(" << static_cast<int>(params[ROOK_OPEN_FILE_OFFSET].value) << ", "
+        << static_cast<int>(params[ROOK_OPEN_FILE_OFFSET + 1].value) << ");\n";
 
     // Rook on semi open file
-    out << "constexpr Score ROOK_ON_SEMI_OPEN_FILE = S(" << static_cast<int>(params[ROOK_SEMI_OPEN_FILE_OFFSET].value) << ", " << static_cast<int>(params[ROOK_SEMI_OPEN_FILE_OFFSET + 1].value) << ");\n";
+    out << "constexpr Score ROOK_ON_SEMI_OPEN_FILE = S(" << static_cast<int>(params[ROOK_SEMI_OPEN_FILE_OFFSET].value) << ", "
+        << static_cast<int>(params[ROOK_SEMI_OPEN_FILE_OFFSET + 1].value) << ");\n";
 
     // Rook pawn adjustments
     out << "constexpr Score ROOK_PAWN_ADJ[9] = {\n";
     for (int i = 0; i < 9; i++) {
-        out << "\tS(" << static_cast<int>(params[ROOK_PAWN_ADJ_OFFSET + 2 * i].value) << ", " << static_cast<int>(params[ROOK_PAWN_ADJ_OFFSET + 2 * i + 1].value) << "),\n";
+        out << "\tS(" << static_cast<int>(params[ROOK_PAWN_ADJ_OFFSET + 2 * i].value) << ", " << static_cast<int>(params[ROOK_PAWN_ADJ_OFFSET + 2 * i + 1].value)
+            << "),\n";
     }
     out << "};\n";
 
     // Queen
     // Queen rel pin
-    out << "\nconstexpr Score QUEEN_REL_PIN = S(" << static_cast<int>(params[QUEEN_REL_PIN_OFFSET].value) << ", " << static_cast<int>(params[QUEEN_REL_PIN_OFFSET + 1].value) << ");\n";
+    out << "\nconstexpr Score QUEEN_REL_PIN = S(" << static_cast<int>(params[QUEEN_REL_PIN_OFFSET].value) << ", "
+        << static_cast<int>(params[QUEEN_REL_PIN_OFFSET + 1].value) << ");\n";
 
     // No opponent queens
-    out << "constexpr Score NO_OPPONENT_QUEENS = S(" << static_cast<int>(params[NO_OPPONENT_QUEENS_OFFSET].value) << ", " << static_cast<int>(params[NO_OPPONENT_QUEENS_OFFSET + 1].value) << ");\n";
-    
+    out << "constexpr Score NO_OPPONENT_QUEENS = S(" << static_cast<int>(params[NO_OPPONENT_QUEENS_OFFSET].value) << ", "
+        << static_cast<int>(params[NO_OPPONENT_QUEENS_OFFSET + 1].value) << ");\n";
+
     // King
     // King open file
-    out << "\nconstexpr Score KING_ON_OPEN_FILE = S(" << static_cast<int>(params[KING_OPEN_FILE_OFFSET].value) << ", " << static_cast<int>(params[KING_OPEN_FILE_OFFSET + 1].value) << ");\n";
+    out << "\nconstexpr Score KING_ON_OPEN_FILE = S(" << static_cast<int>(params[KING_OPEN_FILE_OFFSET].value) << ", "
+        << static_cast<int>(params[KING_OPEN_FILE_OFFSET + 1].value) << ");\n";
 
     // King semi open file
-    out << "constexpr Score KING_ON_SEMI_OPEN_FILE = S(" << static_cast<int>(params[KING_SEMI_OPEN_FILE_OFFSET].value) << ", " << static_cast<int>(params[KING_SEMI_OPEN_FILE_OFFSET + 1].value) << ");\n";
+    out << "constexpr Score KING_ON_SEMI_OPEN_FILE = S(" << static_cast<int>(params[KING_SEMI_OPEN_FILE_OFFSET].value) << ", "
+        << static_cast<int>(params[KING_SEMI_OPEN_FILE_OFFSET + 1].value) << ");\n";
 
     // King pawn shield
     out << "constexpr Score PAWN_SHIELD[4] = {\n";
@@ -178,15 +206,18 @@ void Tuner::dumpParams(std::ofstream& out) const {
     // King zone attack
     out << "constexpr Score KING_ZONE_ATTACK[4] = {\n";
     for (int i = 0; i < 4; i++) {
-        out << "\tS(" << static_cast<int>(params[KING_ZONE_ATTACK_OFFSET + 2 * i].value) << ", " << static_cast<int>(params[KING_ZONE_ATTACK_OFFSET + 2 * i + 1].value) << "),\n";
+        out << "\tS(" << static_cast<int>(params[KING_ZONE_ATTACK_OFFSET + 2 * i].value) << ", " << static_cast<int>(params[KING_ZONE_ATTACK_OFFSET + 2 * i + 1].value)
+            << "),\n";
     }
     out << "};\n";
 
     // King zone weak square
-    out << "constexpr Score KING_ZONE_WEAK_SQUARE = S(" << static_cast<int>(params[KING_ZONE_WEAK_SQ_OFFSET].value) << ", " << static_cast<int>(params[KING_ZONE_WEAK_SQ_OFFSET + 1].value) << ");\n";
+    out << "constexpr Score KING_ZONE_WEAK_SQUARE = S(" << static_cast<int>(params[KING_ZONE_WEAK_SQ_OFFSET].value) << ", "
+        << static_cast<int>(params[KING_ZONE_WEAK_SQ_OFFSET + 1].value) << ");\n";
 
     // King zone weak square extended
-    out << "constexpr Score KING_ZONE_WEAK_SQUARE_EXTENDED = S(" << static_cast<int>(params[KING_ZONE_WEAK_EXT_OFFSET].value) << ", " << static_cast<int>(params[KING_ZONE_WEAK_EXT_OFFSET + 1].value) << ");\n";
+    out << "constexpr Score KING_ZONE_WEAK_SQUARE_EXTENDED = S(" << static_cast<int>(params[KING_ZONE_WEAK_EXT_OFFSET].value) << ", "
+        << static_cast<int>(params[KING_ZONE_WEAK_EXT_OFFSET + 1].value) << ");\n";
 
     // King castled
     out << "constexpr Score KING_CASTLED[2] = {\n";
@@ -196,17 +227,20 @@ void Tuner::dumpParams(std::ofstream& out) const {
     out << "};\n";
 
     // King lost one CR
-    out << "constexpr Score KING_LOST_ONE_CASTLING_RIGHT = S(" << static_cast<int>(params[KING_LOST_CASTLE_OFFSET].value) << ", " << static_cast<int>(params[KING_LOST_CASTLE_OFFSET + 1].value) << ");\n";
+    out << "constexpr Score KING_LOST_ONE_CASTLING_RIGHT = S(" << static_cast<int>(params[KING_LOST_CASTLE_OFFSET].value) << ", "
+        << static_cast<int>(params[KING_LOST_CASTLE_OFFSET + 1].value) << ");\n";
 
     // King uncastled rights remain
-    out << "constexpr Score KING_UNCASTLED_RIGHTS_REMAIN = S(" << static_cast<int>(params[KING_UNCASTLED_OFFSET].value) << ", " << static_cast<int>(params[KING_UNCASTLED_OFFSET + 1].value) << ");\n";
+    out << "constexpr Score KING_UNCASTLED_RIGHTS_REMAIN = S(" << static_cast<int>(params[KING_UNCASTLED_OFFSET].value) << ", "
+        << static_cast<int>(params[KING_UNCASTLED_OFFSET + 1].value) << ");\n";
 
     // PST
     out << "const Score pst[12][64] = {\n";
     for (int p = 0; p < 12; p++) {
         out << "{\n\t";
         for (int sq = 0; sq < 64; sq++) {
-            out << "S(" << static_cast<int>(params[PST_OFFSET + (p * 128) + (sq * 2)].value) << ", " << static_cast<int>(params[PST_OFFSET + (p * 128) + (sq * 2) + 1].value) << "), ";
+            out << "S(" << static_cast<int>(params[PST_OFFSET + (p * 128) + (sq * 2)].value) << ", "
+                << static_cast<int>(params[PST_OFFSET + (p * 128) + (sq * 2) + 1].value) << "), ";
             if (sq && !(sq % 8)) {
                 out << "\n\t";
             }
