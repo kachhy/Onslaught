@@ -245,7 +245,7 @@ void Tuner::dumpParams(std::ofstream& out) const {
                 out << "\n\t";
             }
         }
-        out << "},\n";
+        out << "\n},\n";
     }
     out << "};\n";
 }
