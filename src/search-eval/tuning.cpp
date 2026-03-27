@@ -468,8 +468,18 @@ void Tuner::computeGradients() {
     }
 
     // Normalize gradients
-    for (auto& p : params) {
+    for (TunerParam& p : params) {
         p.grad /= traces.size();
+    }
+}
+
+void Tuner::updateAdam() { // TODO: Verify this is correct
+    for (TunerParam& param : params) {
+        p.m = BETA1 * p.m + (1.0 - BETA1) * p.grad;
+        p.v = BETA2 * p.v + (1.0 - BETA2) * p.grad * p.grad;
+        double m_h = p.m / (1.0 - pow(BETA1, epoch));
+        double v_h = p.v / (1.0 - pow(BETA2, epoch));
+        p.value -= LEARNING_RATE * m_h / (sqrt(v_h) + EPSILON);
     }
 }
 

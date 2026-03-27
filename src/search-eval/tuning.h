@@ -77,6 +77,10 @@ private:
 
     // Adam parameters
     static constexpr double K = 2.5;
+    static constexpr double BETA1 = 0.9;
+    static constexpr double BETA2 = 0.999;
+    static constexpr double EPSILON = 1e-8;
+    static constexpr double LEARNING_RATE = 0.001;
 };
 
 #endif // TUNING_H
