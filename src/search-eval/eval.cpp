@@ -89,16 +89,18 @@ static inline Score applyPST(const Board& board, const Piece piece_w, const Piec
     while (black_piece_bb) {
         const uint8_t sq = popLSB(black_piece_bb);
         score -= pst[piece_b][sq];
-        TRACE_INC_ONLY(pst[piece_b][flipRank(sq)]);
+        TRACE_INC_ONLY(pst[piece_b][sq]);
     }
     return score;
 }
 
 static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     Score score{};
+#ifndef TUNING
     if (probePawns(board, score)) {
         return score;
     }
+#endif
 
     BitBoard wp = board.getPieceBB(WHITE_PAWN);
     BitBoard bp = board.getPieceBB(BLACK_PAWN);
@@ -513,7 +515,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
                 TRACE_INC(pawn_shield[3], WHITE);
             } else {
                 score += PAWN_SHIELD[0];
-                TRACE_INC(pawn_shield[4], WHITE);
+                TRACE_INC(pawn_shield[0], WHITE);
             }
         }
     }

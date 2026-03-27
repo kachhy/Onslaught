@@ -69,9 +69,11 @@ public:
 private:
     double reconstructScore(const Trace& tr) const;
     void updateGradients(const Trace& tr, double base, double phase);
-    double sigmoid(double score) const { return 1.0 / (1.0 + std::exp(-K * score / 400.0)); }
+    double sigmoid(double score, double k) const { return 1.0 / (1.0 + std::exp(-k * score / 400.0)); }
     double computeError() const;
+    double computeError(double k) const;
     void computeGradients();
+    void findOptimalK();
     void updateAdam(const uint32_t epoch);
     void initParams();
 
@@ -80,7 +82,7 @@ private:
     std::vector<TunerParam> params;
 
     // Adam parameters
-    static constexpr double K = 2.5;
+    double K = 2.5;
     static constexpr double BETA1 = 0.9;
     static constexpr double BETA2 = 0.999;
     static constexpr double EPSILON = 1e-8;

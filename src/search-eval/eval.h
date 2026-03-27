@@ -17,6 +17,7 @@ constexpr int SCORE_MAX = 32000;
 #endif
 
 struct Trace {
+    int8_t stm;                                  // 1 or -1 to flip to white's perspective
     // Material
     int16_t material[6][2];                      // [piece][side] //
 
@@ -80,7 +81,7 @@ struct Trace {
     int32_t phase;
 
     // Result
-    Side result;                                // WHITE, BLACK, BOTH (draw)
+    double result;                                // 1.0, 0.0, 0.5
 };
 
 extern Trace trace;

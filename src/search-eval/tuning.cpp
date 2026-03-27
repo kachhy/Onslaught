@@ -3,27 +3,37 @@
 #include <iomanip>
 #include <iostream>
 
+static float sideToResult(const Side side) {
+    switch (side) {
+        case WHITE: return 1.0f;
+        case BLACK: return 0.0f;
+        default:    return 0.5f;  // draw / BOTH
+    }
+}
+
 Tuner::Tuner(const size_t dataset_size) {
     dataset.reserve(dataset_size);
     traces.reserve(dataset_size);
-    std::cout << "[Tune] Initializing parameters" << std::endl;
-    initParams();
 }
 
 void Tuner::loadDataset(const std::string& filename, const uint32_t max) {
     std::ifstream in(filename);
     std::string line;
     std::cout << "[Tune] Loading positions..." << std::endl;
+    int w = 0, d = 0, b = 0;
     while (std::getline(in, line)) {
         const size_t index = line.find("[");
         const std::string res = line.substr(index + 1, 3);
         Side winner;
         if (res == "0.5") {
             winner = BOTH;
+            d++;
         } else if (res == "1.0") {
             winner = WHITE;
+            w++;
         } else {
             winner = BLACK;
+            b++;
         }
         dataset.emplace_back(line.substr(0, index), winner);
         if (!(dataset.size() % 100000)) {
@@ -34,12 +44,14 @@ void Tuner::loadDataset(const std::string& filename, const uint32_t max) {
             }
         }
     }
+    std::cout << "[Tune] White wins: " << w << ", Black wins: " << b << ", Draws: " << d << std::endl;
     std::cout << "[Tune] Preprocessing evaluation traces..." << std::endl;
     for (const Position& pos : dataset) {
         trace = {};
         eval(pos.board);
         trace.phase = pos.board.phase();
-        trace.result = pos.result;
+        trace.result = sideToResult(pos.result);
+        trace.stm = (pos.board.getSTM() == WHITE) ? 1 : -1;
         traces.emplace_back(trace);
     }
 }
@@ -47,6 +59,9 @@ void Tuner::loadDataset(const std::string& filename, const uint32_t max) {
 void Tuner::run(const uint32_t epochs) {
     std::cout << "[Tune] Initializing parameters" << std::endl;
     initParams();
+    std::cout << "[Tune] Finding optimal K value" << std::endl;
+    findOptimalK();
+    std::cout << "\tFound optimal K at " << K << std::endl;
     std::cout << "[Tune] Beginning tuning" << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
     for (uint32_t epoch = 1; epoch <= epochs; epoch++) {
@@ -62,6 +77,75 @@ void Tuner::run(const uint32_t epochs) {
                       << duration.count() / 1000 << "s | ETR: " << std::setw(7) << etr << "s\n";
             start = stop;
         }
+    }
+}
+
+double Tuner::computeError() const {
+    double err = 0.0;
+    for (const Trace& tr : traces) {
+        double score = reconstructScore(tr);
+        double sig = sigmoid(score, K);
+        double diff = sig - tr.result;
+        err += diff * diff;
+    }
+    return err / traces.size();
+}
+
+double Tuner::computeError(double k) const {
+    double err = 0.0;
+    for (const Trace& tr : traces) {
+        double score = reconstructScore(tr);
+        double sig = sigmoid(score, k);
+        double diff = sig - tr.result;
+        err += diff * diff;
+    }
+    return err / traces.size();
+}
+
+void Tuner::computeGradients() {
+    for (TunerParam& p : params) {
+        p.grad = 0.0;
+    }
+
+    for (const Trace& tr : traces) {
+        double score = reconstructScore(tr);
+        double sig = sigmoid(score, K);
+        double base = 2.0 * (sig - tr.result) * sig * (1.0 - sig) * K / 400.0;
+        double phase = tr.phase / 24.0;
+        updateGradients(tr, base, phase);
+    }
+
+    // Normalize gradients
+    for (TunerParam& p : params) {
+        p.grad /= traces.size();
+    }
+}
+
+void Tuner::findOptimalK() {
+    double low = 0.0;
+    double high = 5.0;
+    double phi = (sqrt(5.0) - 1.0) / 2.0; // golden ratio
+    double c = high - phi * (high - low);
+    double d = low + phi * (high - low);
+    while (fabs(high - low) > 1e-6) {
+        if (computeError(c) < computeError(d)) {
+            high = d;
+        } else {
+            low = c;
+        }
+        c = high - phi * (high - low);
+        d = low + phi * (high - low);
+    }
+    K = (low + high) / 2.0;
+}
+
+void Tuner::updateAdam(const uint32_t epoch) { // TODO: Verify this is correct
+    for (TunerParam& param : params) {
+        param.m = BETA1 * param.m + (1.0 - BETA1) * param.grad;
+        param.v = BETA2 * param.v + (1.0 - BETA2) * param.grad * param.grad;
+        double m_h = param.m / (1.0 - pow(BETA1, epoch));
+        double v_h = param.v / (1.0 - pow(BETA2, epoch));
+        param.value -= LEARNING_RATE * m_h / (sqrt(v_h) + EPSILON);
     }
 }
 
@@ -241,7 +325,7 @@ void Tuner::dumpParams(std::ofstream& out) const {
         for (int sq = 0; sq < 64; sq++) {
             out << "S(" << static_cast<int>(params[PST_OFFSET + (p * 128) + (sq * 2)].value) << ", "
                 << static_cast<int>(params[PST_OFFSET + (p * 128) + (sq * 2) + 1].value) << "), ";
-            if (sq && !(sq % 8)) {
+            if ((sq + 1) % 8 == 0) {
                 out << "\n\t";
             }
         }
@@ -469,8 +553,8 @@ void Tuner::updateGradients(const Trace& tr, double base, double phase) {
     // Mobility
     for (int i = 0; i < 5; i++) {
         int coeff = tr.mobility[i][WHITE] - tr.mobility[i][BLACK];
-        params[MOBILITY_OFFSET + i * 2].grad = base * coeff * phase;
-        params[MOBILITY_OFFSET + i * 2 + 1].grad = base * coeff * (1.0 - phase);
+        params[MOBILITY_OFFSET + i * 2].grad += base * coeff * phase;
+        params[MOBILITY_OFFSET + i * 2 + 1].grad += base * coeff * (1.0 - phase);
     }
 
     // Pawn structure
@@ -486,8 +570,8 @@ void Tuner::updateGradients(const Trace& tr, double base, double phase) {
 
     // Backwards pawn
     int backwards = tr.backwards_pawn[WHITE] - tr.backwards_pawn[BLACK];
-    params[DOUBLED_PAWNS_OFFSET].grad += base * backwards * phase;
-    params[DOUBLED_PAWNS_OFFSET + 1].grad += base * backwards * (1.0 - phase);
+    params[BACKWARDS_PAWN_OFFSET].grad += base * backwards * phase;
+    params[BACKWARDS_PAWN_OFFSET + 1].grad += base * backwards * (1.0 - phase);
 
     // Pawn protection
     for (int p = 0; p < 6; p++) {
@@ -648,46 +732,6 @@ void Tuner::updateGradients(const Trace& tr, double base, double phase) {
             params[PST_OFFSET + (p * 128) + (sq * 2)].grad += base * coeff * phase;
             params[PST_OFFSET + (p * 128) + (sq * 2) + 1].grad += base * coeff * (1.0 - phase);
         }
-    }
-}
-
-double Tuner::computeError() const {
-    double err = 0.0;
-    for (const Trace& tr : traces) {
-        double score = reconstructScore(tr);
-        double sig = sigmoid(score);
-        double diff = sig - tr.result;
-        err += diff * diff;
-    }
-    return err / traces.size();
-}
-
-void Tuner::computeGradients() {
-    for (TunerParam& p : params) {
-        p.grad = 0.0;
-    }
-
-    for (const Trace& tr : traces) {
-        double score = reconstructScore(tr);
-        double sig = sigmoid(score);
-        double base = 2.0 * (sig - tr.result) * sig * (1.0 - sig) * K / 400.0;
-        double phase = tr.phase / 24.0;
-        updateGradients(tr, base, phase);
-    }
-
-    // Normalize gradients
-    for (TunerParam& p : params) {
-        p.grad /= traces.size();
-    }
-}
-
-void Tuner::updateAdam(const uint32_t epoch) { // TODO: Verify this is correct
-    for (TunerParam& param : params) {
-        param.m = BETA1 * param.m + (1.0 - BETA1) * param.grad;
-        param.v = BETA2 * param.v + (1.0 - BETA2) * param.grad * param.grad;
-        double m_h = param.m / (1.0 - pow(BETA1, epoch));
-        double v_h = param.v / (1.0 - pow(BETA2, epoch));
-        param.value -= LEARNING_RATE * m_h / (sqrt(v_h) + EPSILON);
     }
 }
 
