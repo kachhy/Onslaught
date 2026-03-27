@@ -4,6 +4,7 @@
 #include "movegen/movegen.h"
 #include "search-eval/eval.h"
 #include "search-eval/search.h"
+#include "search-eval/tuning.h"
 #include <cassert>
 #include <chrono>
 #include <iomanip>
@@ -331,7 +332,7 @@ void tests() {
     // }
 }
 
-int main() {
+int main(int argc, char** argv) {
     // Populate attacks
     initAttacks();
 
@@ -341,11 +342,24 @@ int main() {
     // Populate eval data
     initEval();
 
+#ifdef TUNING
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " <tuning dataset> <position limit>" << std::endl;
+        return 1;
+    }
+    std::cout << "[Tune] Loading positions..." << std::endl;
+    std::vector<Position> dataset = parseDataset(argv[1], atoi(argv[2]));
+    std::cout << "[Tune] Preprocessing evaluation traces..." << std::endl;
+    std::vector<Trace> traces = precomputeTraces(dataset);
+    std::cout << traces.size() << std::endl;
+
+#else
     // Run tests
     // tests();
     // perftTests();
     // divideTests();
     searchTests();
+#endif
 
     return 0;
 }

@@ -1,18 +1,20 @@
 #ifndef TUNING_H
 #define TUNING_H
 
-#include <fstream>
-#include <vector>
-#include <string>
+#include "search-eval/eval.h"
 #include "core/types.h"
+#include <fstream>
+#include <string>
+#include <vector>
+
 
 struct Position {
-    std::string fen;
+    Board board;
     Side result;
-
-    Position(const std::string& fen, const Side result) : fen(fen), result(result) {}
+    Position(const std::string& fen, const Side result) : board(fen), result(result) {}
 };
 
-std::vector<Position> parseDataset(const std::string& filename);
+std::vector<Position> parseDataset(const std::string& filename, const uint32_t max);
+std::vector<Trace> precomputeTraces(const std::vector<Position>& positions);
 
 #endif // TUNING_H

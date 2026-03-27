@@ -80,7 +80,7 @@ struct Trace {
     int32_t phase;
 
     // Result
-    float result;                                // 0.0, 0.5, 1.0
+    Side result;                                // WHITE, BLACK, BOTH (draw)
 };
 
 extern Trace trace;
