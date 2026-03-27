@@ -316,7 +316,7 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
 
         attacks &= ~board.getOcc(BLACK);
         const uint8_t attack_count = bitCount(attacks);
-        score -= MOBILITY[BISHOP] * bitCount(attacks);
+        score -= MOBILITY[BISHOP] * attack_count;
         TRACE_ADD(mobility[BISHOP], BLACK, attack_count);
     }
     const uint8_t white_bishop_blockers = bitCount(shiftSouth(board.getPieceBB(WHITE_BISHOP)) & board.getPieceBB(WHITE_PAWN));
