@@ -57,7 +57,7 @@ void Tuner::run(const uint32_t epochs) {
             const double error = computeError();
             auto stop = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-            int etr = (epochs - epoch) * duration.count() / 1000;
+            int etr = ((epochs - epoch) * duration.count() / 1000) / 50;
             std::cout << "\tEpoch " << std::setw(6) << epoch << " | Error: " << std::setw(7) << error << " | Time elapsed (this epoch): " << std::setw(5)
                       << duration.count() / 1000 << "s | ETR: " << std::setw(7) << etr << "s\n";
             start = stop;
