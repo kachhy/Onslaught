@@ -245,7 +245,7 @@ double Tuner::reconstructScore(const Trace& tr) const {
     return phase * mg + (1.0 - phase) * eg;
 }
 
-void Tuner::updateGradient(const Trace& tr, double base, double phase) {
+void Tuner::updateGradients(const Trace& tr, double base, double phase) {
     // Material
     for (int p = 0; p < 6; p++) {
         int coeff = tr.material[p][WHITE] - tr.material[p][BLACK];
@@ -452,6 +452,25 @@ double Tuner::computeError() const {
         err += diff * diff;
     }
     return err / traces.size();
+}
+
+void Tuner::computeGradients() {
+    for (TunerParam& p : params) {
+        p.grad = 0.0;
+    }
+
+    for (const Trace& tr : traces) {
+        double score = reconstructScore(t);
+        double sig = sigmoid(score);
+        double base = 2.0 * (sig - tr.result) * sig * (1.0 - sig) * K / 400.0;
+        double phase = tr.phase / 24.0;
+        updateGradients(t, base, phase);
+    }
+
+    // Normalize gradients
+    for (auto& p : params) {
+        p.grad /= traces.size();
+    }
 }
 
 void Tuner::initParams() {
