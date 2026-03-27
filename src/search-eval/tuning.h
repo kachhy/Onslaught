@@ -65,6 +65,7 @@ public:
 
     void loadDataset(const std::string& filename, const uint32_t max);
     void run(const uint32_t epochs);
+    void dumpParams(std::ofstream& out) const;
 private:
     double reconstructScore(const Trace& tr) const;
     void updateGradients(const Trace& tr, double base, double phase);

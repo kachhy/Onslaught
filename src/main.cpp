@@ -343,15 +343,17 @@ int main(int argc, char** argv) {
     initEval();
 
 #ifdef TUNING
-    if (argc < 4) {
-        std::cerr << "Usage: " << argv[0] << " <tuning dataset> <position limit> <epochs>" << std::endl;
+    if (argc < 5) {
+        std::cerr << "Usage: " << argv[0] << " <Tuning dataset> <Position limit> <Epochs> <Output file>" << std::endl;
         return 1;
     }
     
+    std::ofstream tuned_params_out(argv[4]);
     const uint32_t dataset_size = atoi(argv[2]);
     Tuner tuner(dataset_size);
     tuner.loadDataset(argv[1], dataset_size);
     tuner.run(atoi(argv[3]));
+    tuner.dumpParams(tuned_params_out);
 #else
     // Run tests
     // tests();
