@@ -64,11 +64,14 @@ public:
     Tuner(const size_t dataset_size);
 
     void loadDataset(const std::string& filename, const uint32_t max);
+    void run(const uint32_t epochs);
 private:
     double reconstructScore(const Trace& tr) const;
     void updateGradients(const Trace& tr, double base, double phase);
     double sigmoid(double score) const { return 1.0 / (1.0 + std::exp(-K * score / 400.0)); }
     double computeError() const;
+    void computeGradients();
+    void updateAdam(const uint32_t epoch);
     void initParams();
 
     std::vector<Position> dataset;

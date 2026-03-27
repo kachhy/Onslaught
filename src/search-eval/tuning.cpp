@@ -42,6 +42,21 @@ void Tuner::loadDataset(const std::string& filename, const uint32_t max) {
     }
 }
 
+void Tuner::run(const uint32_t epochs) {
+    std::cout << "[Tune] Initializing parameters" << std::endl;
+    initParams();
+    std::cout << "[Tune] Beginning tuning" << std::endl;
+    for (uint32_t epoch = 1; epoch <= epochs; epoch++) {
+        computeGradients();
+        updateAdam(epoch);
+
+        if (epoch % 50 == 0) {
+            const double error = computeError();
+            std::cout << "\tEpoch " << epoch << " | Error: " << error << "\n";
+        }
+    }
+}
+
 double Tuner::reconstructScore(const Trace& tr) const {
     double mg = 0.0, eg = 0.0;
     double phase = tr.phase / 24.0;
@@ -460,11 +475,11 @@ void Tuner::computeGradients() {
     }
 
     for (const Trace& tr : traces) {
-        double score = reconstructScore(t);
+        double score = reconstructScore(tr);
         double sig = sigmoid(score);
         double base = 2.0 * (sig - tr.result) * sig * (1.0 - sig) * K / 400.0;
         double phase = tr.phase / 24.0;
-        updateGradients(t, base, phase);
+        updateGradients(tr, base, phase);
     }
 
     // Normalize gradients
@@ -473,13 +488,13 @@ void Tuner::computeGradients() {
     }
 }
 
-void Tuner::updateAdam() { // TODO: Verify this is correct
+void Tuner::updateAdam(const uint32_t epoch) { // TODO: Verify this is correct
     for (TunerParam& param : params) {
-        p.m = BETA1 * p.m + (1.0 - BETA1) * p.grad;
-        p.v = BETA2 * p.v + (1.0 - BETA2) * p.grad * p.grad;
-        double m_h = p.m / (1.0 - pow(BETA1, epoch));
-        double v_h = p.v / (1.0 - pow(BETA2, epoch));
-        p.value -= LEARNING_RATE * m_h / (sqrt(v_h) + EPSILON);
+        param.m = BETA1 * param.m + (1.0 - BETA1) * param.grad;
+        param.v = BETA2 * param.v + (1.0 - BETA2) * param.grad * param.grad;
+        double m_h = param.m / (1.0 - pow(BETA1, epoch));
+        double v_h = param.v / (1.0 - pow(BETA2, epoch));
+        param.value -= LEARNING_RATE * m_h / (sqrt(v_h) + EPSILON);
     }
 }
 

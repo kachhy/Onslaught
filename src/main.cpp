@@ -351,6 +351,7 @@ int main(int argc, char** argv) {
     const uint32_t dataset_size = atoi(argv[2]);
     Tuner tuner(dataset_size);
     tuner.loadDataset(argv[1], dataset_size);
+    tuner.run(atoi(argv[3]));
 #else
     // Run tests
     // tests();
