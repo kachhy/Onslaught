@@ -14,7 +14,24 @@ struct Position {
     Position(const std::string& fen, const Side result) : board(fen), result(result) {}
 };
 
-std::vector<Position> parseDataset(const std::string& filename, const uint32_t max);
-std::vector<Trace> precomputeTraces(const std::vector<Position>& positions);
+struct TunerParam {
+    double value;
+    double grad;
+
+    // Adam moment values
+    double m;
+    double v;
+};
+
+class Tuner {
+public:
+    Tuner() = delete;
+    Tuner(const size_t dataset_size);
+    
+    void loadDataset(const std::string& filename, const uint32_t max);
+private:
+    std::vector<Position> dataset;
+    std::vector<Trace> traces;
+};
 
 #endif // TUNING_H

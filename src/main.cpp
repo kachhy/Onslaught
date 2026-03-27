@@ -343,16 +343,14 @@ int main(int argc, char** argv) {
     initEval();
 
 #ifdef TUNING
-    if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " <tuning dataset> <position limit>" << std::endl;
+    if (argc < 4) {
+        std::cerr << "Usage: " << argv[0] << " <tuning dataset> <position limit> <epochs>" << std::endl;
         return 1;
     }
-    std::cout << "[Tune] Loading positions..." << std::endl;
-    std::vector<Position> dataset = parseDataset(argv[1], atoi(argv[2]));
-    std::cout << "[Tune] Preprocessing evaluation traces..." << std::endl;
-    std::vector<Trace> traces = precomputeTraces(dataset);
-    std::cout << traces.size() << std::endl;
-
+    
+    const uint32_t dataset_size = atoi(argv[2]);
+    Tuner tuner(dataset_size);
+    tuner.loadDataset(argv[1], dataset_size);
 #else
     // Run tests
     // tests();
