@@ -3,6 +3,7 @@
 
 #include "core/bitboard.h"
 #include "core/move.h"
+#include <algorithm>
 #include <vector>
 #include <cstring>
 
@@ -57,7 +58,7 @@ public:
     uint64_t hash() const { return zobrist_hash; }
     bool inCheck() const { return static_cast<bool>(checkers); }
     uint8_t getFMR() const { return fmr; }
-    int phase() const { return phase_score; }
+    int phase() const { return std::clamp(phase_score, 0, 24); }
     uint64_t pawnHash() const { return pawn_hash; }
 
     // Make and undo move
