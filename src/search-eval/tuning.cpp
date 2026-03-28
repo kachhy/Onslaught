@@ -51,7 +51,6 @@ void Tuner::loadDataset(const std::string& filename, const uint32_t max) {
         eval(pos.board);
         trace.phase = pos.board.phase();
         trace.result = sideToResult(pos.result);
-        trace.stm = (pos.board.getSTM() == WHITE) ? 1 : -1;
         traces.emplace_back(trace);
     }
 }
@@ -162,7 +161,7 @@ void Tuner::dumpParams(std::ofstream& out) const {
     out << "constexpr Score TEMPO = S(" << static_cast<int>(params[TEMPO_OFFSET].value) << ", " << static_cast<int>(params[TEMPO_OFFSET + 1].value) << ");\n";
 
     // Mobility
-    out << "constexpr Score MOBILITY[6] = {\n";
+    out << "constexpr Score MOBILITY[5] = {\n";
     for (int i = 0; i < 5; i++) {
         out << "\tS(" << static_cast<int>(params[MOBILITY_OFFSET + 2 * i].value) << ", " << static_cast<int>(params[MOBILITY_OFFSET + 2 * i + 1].value) << "),\n";
     }
@@ -182,7 +181,7 @@ void Tuner::dumpParams(std::ofstream& out) const {
         << static_cast<int>(params[BACKWARDS_PAWN_OFFSET + 1].value) << ");\n";
 
     // Pawn protection
-    out << "constexpr Score PAWN_PROTECTION[8] = {\n";
+    out << "constexpr Score PAWN_PROTECTION[6] = {\n";
     for (int p = 0; p < 6; p++) {
         out << "\tS(" << static_cast<int>(params[PAWN_PROTECTION_OFFSET + 2 * p].value) << ", " << static_cast<int>(params[PAWN_PROTECTION_OFFSET + 2 * p + 1].value)
             << "),\n";
