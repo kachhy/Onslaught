@@ -4,6 +4,7 @@
 #include "hash/transposition.h"
 #include "movegen/movegen.h"
 #include "terms.h"
+#include <array>
 
 int quiesce(Board& board, int alpha, int beta) {
     int static_eval;
