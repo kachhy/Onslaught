@@ -152,7 +152,7 @@ unsigned long long divide(Board& board, int depth, PerftCache& cache) {
     return nodes;
 }
 
-void runTimePerftTest(int depth, const unsigned long long expected[], std::string fen = "") {
+void runTimePerftTest(int depth, const unsigned long long expected[], const std::string& fen = "") {
     if (fen == "") {
         std::cout << "\nPerft test with standard board:\n";
     } else {
@@ -200,11 +200,18 @@ void divideTests() {
     divide(testing_board_1, depth, cache);
 }
 
-void searchTests() {
-    std::cout << "\nSearch framework tests\n";
-    for (int i = 0; i <= 8; i++) {
+void searchTest(int depth, const std::string& fen = "") {
+    if (fen == "") {
+        std::cout << "\nSearch framework tests with standard board\n";
+    } else {
+        std::cout << "\nSearch framework tests with board: (" << fen <<")\n";
+    }
+    for (int i = 0; i <= depth; i++) {
         auto start = std::chrono::high_resolution_clock::now();
         Board testing_board;
+        if (fen != "") {
+            testing_board.loadFEN(fen);
+        }
         int score;
         Move result = search(testing_board, i, score);
         auto stop = std::chrono::high_resolution_clock::now();
@@ -212,6 +219,11 @@ void searchTests() {
         std::cout << "depth: " << std::setw(2) << i << " | move: " << std::setw(13) << moveToStr(result) << " | score: " << std::setw(13) << score
                   << " | Time: " << std::setw(8) << duration.count() << "ms\n";
     }
+}
+
+void searchTests() {
+    searchTest(7);
+    searchTest(7, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
 }
 
 void initAttacks() {
