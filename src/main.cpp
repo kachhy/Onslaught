@@ -4,6 +4,7 @@
 #include "movegen/movegen.h"
 #include "search-eval/eval.h"
 #include "search-eval/search.h"
+#include "search-eval/tuning.h"
 #include <cassert>
 #include <chrono>
 #include <iomanip>
@@ -343,7 +344,7 @@ void tests() {
     // }
 }
 
-int main() {
+int main(int argc, char** argv) {
     // Populate attacks
     initAttacks();
 
@@ -353,11 +354,25 @@ int main() {
     // Populate eval data
     initEval();
 
+#ifdef TUNING
+    if (argc < 5) {
+        std::cerr << "Usage: " << argv[0] << " <Tuning dataset> <Position limit> <Epochs> <Output file>" << std::endl;
+        return 1;
+    }
+    
+    std::ofstream tuned_params_out(argv[4]);
+    const uint32_t dataset_size = atoi(argv[2]);
+    Tuner tuner(dataset_size);
+    tuner.loadDataset(argv[1], dataset_size);
+    tuner.run(atoi(argv[3]));
+    tuner.dumpParams(tuned_params_out);
+#else
     // Run tests
     // tests();
     // perftTests();
     // divideTests();
     searchTests();
+#endif
 
     return 0;
 }

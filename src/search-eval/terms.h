@@ -54,66 +54,110 @@ constexpr BitBoard A8_B8_C8 = (1ULL << A8) | (1ULL << B8) | (1ULL << C8);
 
 // Eval parameters
 constexpr Score material_values[6] = {
-    S(82, 94),    // PAWN
-    S(337, 281),  // KNIGHT
-    S(365, 297),  // BISHOP
-    S(477, 512),  // ROOK
-    S(1025, 936), // QUEEN
-    S(0, 0),      // KING (shouldn't hit this case ever)
+	S(80, 92),
+	S(337, 281),
+	S(363, 295),
+	S(475, 511),
+	S(1022, 933),
+	S(0, 0),
 };
 constexpr Score TEMPO = S(20, 0);
-constexpr Score MOBILITY[] = { S(7, 6), S(6, 7), S(3, 5), S(4, 2), S(-5, -4) };
+constexpr Score MOBILITY[6] = {
+	S(7, 6),
+	S(5, 6),
+	S(2, 4),
+	S(4, 2),
+	S(-4, -3),
+};
 
-constexpr Score PAWN_PHALANX = S(10, 15);
+constexpr Score PAWN_PHALANX = S(11, 16);
 constexpr Score DOUBLED_PAWNS = S(-10, -40);
-constexpr Score PAWN_CONTROL = S(10, 5);
-constexpr Score PAWN_PROTECTION[] = { S(24, 17), S(5, 20), S(7, 22), S(9, 10), S(-4, 20), S(-30, 25) };
-constexpr Score PASSED_PAWNS[] = { S(0, 0), S(0, 0), S(0, 0), S(10, 12), S(50, 48), S(100, 115), S(285, 205), S(0, 0) };
+constexpr Score BACKWARDS_PAWN = S(-19, -9);
+constexpr Score PAWN_PROTECTION[8] = {
+	S(23, 15),
+	S(5, 20),
+	S(5, 20),
+	S(8, 9),
+	S(-2, 18),
+	S(-29, 23),
+};
+constexpr Score PASSED_PAWNS[8] = {
+	S(0, 0),
+	S(0, 0),
+	S(0, 0),
+	S(10, 12),
+	S(50, 48),
+	S(100, 115),
+	S(285, 205),
+	S(0, 0),
+};
 
-constexpr Score KNIGHT_OUTPOST = S(15, -24);
+constexpr Score KNIGHT_OUTPOST = S(15, -22);
 constexpr Score KNIGHT_BEHIND_PAWN = S(2, 32);
+constexpr Score KNIGHT_PAWN_ADJ[9] = {
+	S(-20, -19),
+	S(-15, -14),
+	S(-10, -10),
+	S(-2, -2),
+	S(0, 0),
+	S(4, 4),
+	S(8, 10),
+	S(12, 13),
+	S(16, 16),
+};
 
-constexpr Score BISHOP_PAIR = S(29, 84);
-constexpr Score BISHOP_CONTROL_PENALTY = S(-2, -2);
+constexpr Score BISHOP_PAIR = S(27, 82);
+constexpr Score BISHOP_CONTROL_PENALTY = S(-1, -2);
 constexpr Score BAD_BISHOP = S(-10, -15);
-constexpr Score BISHOP_BLOCKING_PAWN = S(-20, -1);
-constexpr Score TRAPPED_BISHOP = S(-263, -203);
+constexpr Score BISHOP_BLOCKING_PAWN = S(-18, -1);
+constexpr Score TRAPPED_BISHOP = S(-259, -200);
 
-constexpr Score ROOK_ON_SEVENTH_RANK = S(0, 50);
-constexpr Score ROOK_ON_OPEN_FILE = S(30, 10);
-constexpr Score ROOK_ON_SEMI_OPEN_FILE = S(10, 5);
+constexpr Score ROOK_ON_SEVENTH_RANK = S(0, 48);
+constexpr Score ROOK_ON_OPEN_FILE = S(31, 9);
+constexpr Score ROOK_ON_SEMI_OPEN_FILE = S(8, 5);
+constexpr Score ROOK_PAWN_ADJ[9] = {
+	S(19, 29),
+	S(15, 22),
+	S(10, 14),
+	S(3, 7),
+	S(0, 0),
+	S(-5, -8),
+	S(-10, -13),
+	S(-11, -20),
+	S(-18, -28),
+};
 
-constexpr Score QUEEN_REL_PIN = S(-19, -10);
+constexpr Score QUEEN_REL_PIN = S(-18, -9);
+constexpr Score NO_OPPONENT_QUEENS = S(125, 193);
 
-constexpr Score NO_OPPONENT_QUEENS = S(128, 196);
 constexpr Score KING_ON_OPEN_FILE = S(-36, 0);
 constexpr Score KING_ON_SEMI_OPEN_FILE = S(-20, 0);
 constexpr Score PAWN_SHIELD[4] = {
-    S(-36, 0), // missing pawn on this file
-    S(18, 0),  // pawn on original rank
-    S(12, 0),  // pawn one rank advanced
-    S(5, 0),   // pawn two ranks advanced
+	S(-35, -2),
+	S(18, 0),
+	S(8, 0),
+	S(4, -2),
 };
 constexpr Score PAWN_STORM[3] = {
-    S(-5, 0),  // pawn far away
-    S(-8, 0),  // pawn getting close
-    S(-14, 0), // pawn on 5th rank or closer
+	S(-3, 0),
+	S(-7, 0),
+	S(-13, 0),
 };
-constexpr Score KING_ZONE_ATTACK[4]{
-    S(-20, -10), // Knight
-    S(-20, -10), // Bishop
-    S(-40, -20), // Rook
-    S(-80, -40)  // Queen
+constexpr Score KING_ZONE_ATTACK[4] = {
+	S(-20, -10),
+	S(-18, -6),
+	S(-40, -20),
+	S(-79, -39),
 };
-constexpr Score KING_ZONE_WEAK_SQUARE = S(-10, -5);
-constexpr Score KING_ZONE_WEAK_SQUARE_EXTENDED = S(-5, -3);
-const Score KING_CASTLED[2] = { S(0, 0), S(-50, 0) };
-const Score KING_LOST_ONE_CASTLING_RIGHT = S(-25, 0);
-const Score KING_UNCASTLED_RIGHTS_REMAIN = S(-15, 0);
-
-extern const Score KNIGHT_PAWN_ADJ[9];
-extern const Score ROOK_PAWN_ADJ[9];
-extern const Score pst[6][64];
+constexpr Score KING_ZONE_WEAK_SQUARE = S(-6, -3);
+constexpr Score KING_ZONE_WEAK_SQUARE_EXTENDED = S(-3, -1);
+constexpr Score KING_CASTLED[2] = {
+	S(0, 0),
+	S(-46, 0),
+};
+constexpr Score KING_LOST_ONE_CASTLING_RIGHT = S(-26, 0);
+constexpr Score KING_UNCASTLED_RIGHTS_REMAIN = S(-15, 0);
+extern const Score pst[12][64];
 
 constexpr int MVV_LVA[6][6] = {
     // attacker:P       N       B       R       Q       K
