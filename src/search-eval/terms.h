@@ -27,6 +27,11 @@ struct Score {
 
     constexpr bool operator==(Score b) const { return value == b.value; }
     constexpr bool operator!=(Score b) const { return value != b.value; }
+
+    constexpr bool operator>(Score b) const { return value > b.value; }
+    constexpr bool operator<(Score b) const { return value < b.value; }
+    constexpr bool operator>=(Score b) const { return value >= b.value; }
+    constexpr bool operator<=(Score b) const { return value <= b.value; }
 };
 
 // Construction and extraction
@@ -109,5 +114,15 @@ const Score KING_UNCASTLED_RIGHTS_REMAIN = S(-15, 0);
 extern const Score KNIGHT_PAWN_ADJ[9];
 extern const Score ROOK_PAWN_ADJ[9];
 extern const Score pst[6][64];
+
+constexpr int MVV_LVA[6][6] = {
+    // attacker:P       N       B       R       Q       K
+    { 15, 14, 13, 12, 11, 10 }, // P
+    { 25, 24, 23, 22, 21, 20 }, // N
+    { 35, 34, 33, 32, 31, 30 }, // B
+    { 45, 44, 43, 42, 41, 40 }, // R
+    { 55, 54, 53, 52, 51, 50 }, // Q
+    { 0, 0, 0, 0, 0, 0 },       // K should not reach here hopefully lol
+};
 
 #endif // TERMS_H

@@ -64,6 +64,10 @@ public:
     void makeMove(Move move);
     void undoMove(Move move);
 
+    // Search
+    Move killers[MAX_PLY][2];
+    int score_history[12][64]; // [Piece][to_square]
+
     // Zobrist setup
     void refreshZobrist();
     struct BoardHistory {

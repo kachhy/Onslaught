@@ -221,8 +221,8 @@ void searchTest(int depth, const std::string& fen = "") {
 }
 
 void searchTests() {
-    searchTest(3);
-    searchTest(5, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
+    searchTest(7);
+    searchTest(7, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
 }
 
 void initAttacks() {
