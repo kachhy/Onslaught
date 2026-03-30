@@ -108,6 +108,8 @@ void Board::printBoard() const {
 void Board::clear() {
     memset(piece_bb, 0, sizeof(piece_bb));
     memset(occ, 0, sizeof(occ));
+    memset(killers, 0, sizeof(killers));
+    memset(score_history, 0, sizeof(score_history));
     history.clear();
 
     threatened_by[WHITE] = 0ULL;
