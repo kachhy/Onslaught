@@ -25,14 +25,14 @@ void TTable::insert(const Board& board, Move best_move, int32_t score, TTBound b
     }
 
     // check for duplicates before evicting element 0
-    for (uint8_t i = 0; i < bucket.count; i++) {
-        if (bucket.entries[i].hash == board.hash()) {
-            if (depth >= bucket.entries[i].depth || bound == EXACTBOUND) {
-                bucket.entries[i] = { board.hash(), best_move, score, bound, depth, table_age };
-            }
-            return;
-        }
-    }
+    // for (uint8_t i = 0; i < bucket.count; i++) {
+    //     if (bucket.entries[i].hash == board.hash()) {
+    //         if (depth >= bucket.entries[i].depth || bound == EXACTBOUND) {
+    //             bucket.entries[i] = { board.hash(), best_move, score, bound, depth, table_age };
+    //         }
+    //         return;
+    //     }
+    // }
 
     uint8_t kickout_index = 0;
     int64_t best_kickout_score = bucket.entries[0].depth - (table_age - bucket.entries[0].last_seen);

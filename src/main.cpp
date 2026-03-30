@@ -223,12 +223,13 @@ void searchTest(int depth, const std::string& fen = "") {
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
         std::cout << "depth: " << std::setw(2) << i << " | move: " << std::setw(13) << moveToStr(result) << " | score: " << std::setw(13) << score
                   << " | Time: " << std::setw(8) << duration.count() << "ms\n";
+        std::cout << "hash size: " << tt.size() << "\n";
     }
 }
 
 void searchTests() {
-    searchTest(9);
-    searchTest(9, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
+    searchTest(8);
+    // searchTest(1, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
 }
 
 void initAttacks() {
@@ -451,8 +452,8 @@ int main(int argc, char** argv) {
     // tests();
     // perftTests();
     // divideTests();
-    searchTests();
-    searchTests();
+    // searchTests();
+    // searchTests();
     // playGameInTerminal();
 #endif
     return 0;
