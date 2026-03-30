@@ -50,12 +50,12 @@ struct Position {
 };
 
 struct TunerParam {
-    double value;
-    double grad;
+    double value = 0.0;
+    double grad = 0.0;
 
     // Adam moment values
-    double m;
-    double v;
+    double m = 0.0;
+    double v = 0.0;
 };
 
 class Tuner {
