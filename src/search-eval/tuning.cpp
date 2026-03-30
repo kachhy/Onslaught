@@ -53,6 +53,8 @@ void Tuner::loadDataset(const std::string& filename, const uint32_t max) {
         trace.result = sideToResult(pos.result);
         traces.emplace_back(trace);
     }
+    dataset.clear();
+    dataset.shrink_to_fit();
 }
 
 void Tuner::run(const uint32_t epochs) {
