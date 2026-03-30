@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <optional>
 #include <unordered_map>
 
 constexpr unsigned long long nodes_position_1[] = {
@@ -388,7 +389,7 @@ void playGameInTerminal() {
         play_board.makeMove(best_move);
         play_board.printBoard();
     }
-    MoveList user_moves; 
+    MoveList user_moves;
     do {
         if (isDraw(play_board, 0)) {
             std::cout << "DRAW\n";
@@ -421,8 +422,6 @@ void playGameInTerminal() {
         play_board.makeMove(best_move);
         play_board.printBoard();
     } while (true);
-    
-
 }
 
 int main(int argc, char** argv) {
