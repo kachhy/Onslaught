@@ -1,3 +1,6 @@
+#include "board/rules.h"
+#include "core/move.h"
+#include "core/types.h"
 #include "hash/transposition.h"
 #include "hash/zobrist.h"
 #include "movegen/attacks.h"
@@ -7,6 +10,7 @@
 #include "search-eval/tuning.h"
 #include <cassert>
 #include <chrono>
+#include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <unordered_map>
@@ -204,7 +208,7 @@ void searchTest(int depth, const std::string& fen = "") {
     if (fen == "") {
         std::cout << "\nSearch framework tests with standard board\n";
     } else {
-        std::cout << "\nSearch framework tests with board: (" << fen <<")\n";
+        std::cout << "\nSearch framework tests with board: (" << fen << ")\n";
     }
     for (int i = 0; i <= depth; i++) {
         auto start = std::chrono::high_resolution_clock::now();
@@ -344,6 +348,83 @@ void tests() {
     // }
 }
 
+int getIntFromUser(int lower_bound, int upper_bound) {
+    std::string potential_int;
+    std::cin >> potential_int;
+    std::optional<int> cur_int;
+    do {
+        if (std::cin.eof()) {
+            exit(EXIT_FAILURE);
+        }
+        try {
+            cur_int = std::stoi(potential_int);
+        } catch (const std::exception& e) {
+            std::cout << "Invalid number, please enter a number between [" << lower_bound << "] and [" << upper_bound << "]:\n";
+            std::cin >> potential_int;
+            continue;
+        }
+        if (cur_int < lower_bound || cur_int > upper_bound) {
+            std::cout << "Invalid number, please enter a number between [" << lower_bound << "] and [" << upper_bound << "]:\n";
+            std::cin >> potential_int;
+            cur_int.reset();
+        }
+    } while (!cur_int.has_value());
+    return cur_int.value();
+}
+
+void playGameInTerminal() {
+    std::cout << "Which team do you want?\n  [1] White\n  [2] Black\n";
+    int team = getIntFromUser(1, 2);
+    std::cout << "How much depth should the engine search with? [1-10 | 8+ takes a long time]\n";
+    int max_depth = getIntFromUser(1, 10);
+    Board play_board;
+    play_board.printBoard();
+
+    if (team == 2) {
+        std::cout << "Engine thinking...\n";
+        int best_score;
+        Move best_move = search(play_board, max_depth, best_score);
+        std::cout << "Engine found move: " << moveToStr(best_move) << " and scored it: " << best_score << "\n";
+        play_board.makeMove(best_move);
+        play_board.printBoard();
+    }
+    MoveList user_moves; 
+    do {
+        if (isDraw(play_board, 0)) {
+            std::cout << "DRAW\n";
+            play_board.printBoard();
+            return;
+        }
+        user_moves = getLegalMoves(play_board);
+        std::cout << "Which move do you want to play?\n";
+        if (user_moves.empty()) {
+            std::cout << "Computer wins\n";
+            play_board.printBoard();
+            return;
+        }
+        for (int i = 0; i < user_moves.size(); i++) {
+            std::cout << "  [" << (i + 1) << "] " << moveToStr(user_moves[i]) << "\n";
+        }
+        Move user_move = user_moves[getIntFromUser(1, user_moves.size()) - 1];
+        play_board.makeMove(user_move);
+        if (getLegalMoves(play_board).empty()) {
+            std::cout << "Player wins\n";
+            play_board.printBoard();
+            return;
+        }
+
+        play_board.printBoard();
+        std::cout << "Engine thinking...\n";
+        int best_score;
+        Move best_move = search(play_board, max_depth, best_score);
+        std::cout << "Engine found move: " << moveToStr(best_move) << " and scored it: " << best_score << "\n";
+        play_board.makeMove(best_move);
+        play_board.printBoard();
+    } while (true);
+    
+
+}
+
 int main(int argc, char** argv) {
     // Populate attacks
     initAttacks();
@@ -359,7 +440,7 @@ int main(int argc, char** argv) {
         std::cerr << "Usage: " << argv[0] << " <Tuning dataset> <Position limit> <Epochs> <Output file>" << std::endl;
         return 1;
     }
-    
+
     std::ofstream tuned_params_out(argv[4]);
     const uint32_t dataset_size = atoi(argv[2]);
     Tuner tuner(dataset_size);
@@ -371,8 +452,8 @@ int main(int argc, char** argv) {
     // tests();
     // perftTests();
     // divideTests();
-    searchTests();
+    // searchTests();
+    // playGameInTerminal();
 #endif
-
     return 0;
 }
