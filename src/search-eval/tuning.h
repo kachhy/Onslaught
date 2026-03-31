@@ -64,15 +64,15 @@ public:
     Tuner(const size_t dataset_size);
 
     void loadDataset(const std::string& filename, const uint32_t max);
-    void run(const uint32_t epochs);
+    void run(const uint32_t epochs, const size_t num_threads);
     void dumpParams(std::ofstream& out) const;
 private:
     double reconstructScore(const Trace& tr) const;
-    void updateGradients(const Trace& tr, double base, double phase);
+    void updateGradients(const Trace& tr, double base, double phase, std::vector<double>& local_grads);
     double sigmoid(double score, double k) const { return 1.0 / (1.0 + std::exp(-k * score / 400.0)); }
     double computeError(const std::vector<Trace>& trace_vec) const;
     double computeError(double k) const;
-    void computeGradients();
+    void computeGradients(const size_t num_threads);
     void findOptimalK();
     void updateAdam(const uint32_t epoch);
     void initParams();
