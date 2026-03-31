@@ -437,15 +437,15 @@ int main(int argc, char** argv) {
 
 #ifdef TUNING
     if (argc < 5) {
-        std::cerr << "Usage: " << argv[0] << " <Tuning dataset> <Position limit> <Epochs> <Output file>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <Tuning dataset> <Position limit> <Epochs> <Output file> [Threads = 1]" << std::endl;
         return 1;
     }
 
     std::ofstream tuned_params_out(argv[4]);
-    const uint32_t dataset_size = atoi(argv[2]);
+    const uint32_t dataset_size = atol(argv[2]);
     Tuner tuner(dataset_size);
     tuner.loadDataset(argv[1], dataset_size);
-    tuner.run(atoi(argv[3]));
+    tuner.run(atol(argv[3]), atoll(argv[3]));
     tuner.dumpParams(tuned_params_out);
 #else
     // Run tests
@@ -454,7 +454,7 @@ int main(int argc, char** argv) {
     // divideTests();
     // searchTests();
     // searchTests();
-    // playGameInTerminal();
+    playGameInTerminal();
 #endif
     return 0;
 }

@@ -2,12 +2,13 @@
 #include <chrono>
 #include <iomanip>
 #include <iostream>
+#include <thread>
 
 static float sideToResult(const Side side) {
     switch (side) {
-        case WHITE: return 1.0f;
-        case BLACK: return 0.0f;
-        default:    return 0.5f;  // draw / BOTH
+    case WHITE: return 1.0f;
+    case BLACK: return 0.0f;
+    default: return 0.5f; // draw / BOTH
     }
 }
 
@@ -38,26 +39,32 @@ void Tuner::loadDataset(const std::string& filename, const uint32_t max) {
         dataset.emplace_back(line.substr(0, index), winner);
         if (!(dataset.size() % 100000)) {
             std::cout << "\tLoaded " << dataset.size() << " positions." << std::endl;
-
-            if (dataset.size() >= max) {
-                break;
-            }
+        }
+        if (dataset.size() >= max) {
+            std::cout << "\tLoaded " << dataset.size() << " positions." << std::endl;
+            break;
         }
     }
-    std::cout << "[Tune] White wins: " << w << ", Black wins: " << b << ", Draws: " << d << std::endl;
+    std::cout << "\tWhite wins: " << w << ", Black wins: " << b << ", Draws: " << d << std::endl;
     std::cout << "[Tune] Preprocessing evaluation traces..." << std::endl;
+    size_t pos_loaded = 0, valid_thres = max * 0.9;
     for (const Position& pos : dataset) {
         trace = {};
         eval(pos.board);
         trace.phase = pos.board.phase();
         trace.result = sideToResult(pos.result);
-        traces.emplace_back(trace);
+        if (pos_loaded++ < valid_thres) {
+            traces.emplace_back(trace);
+        } else {
+            validation_traces.emplace_back(trace);
+        }
     }
+    std::cout << "\tTraining traces: " << traces.size() << ", validation traces: " << validation_traces.size() << std::endl;
     dataset.clear();
     dataset.shrink_to_fit();
 }
 
-void Tuner::run(const uint32_t epochs) {
+void Tuner::run(const uint32_t epochs, const size_t num_threads) {
     std::cout << "[Tune] Initializing parameters" << std::endl;
     initParams();
     std::cout << "[Tune] Finding optimal K value" << std::endl;
@@ -66,30 +73,31 @@ void Tuner::run(const uint32_t epochs) {
     std::cout << "[Tune] Beginning tuning" << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
     for (uint32_t epoch = 1; epoch <= epochs; epoch++) {
-        computeGradients();
+        computeGradients(num_threads);
         updateAdam(epoch);
 
         if (epoch % 50 == 0) {
-            const double error = computeError();
+            const double error = computeError(traces);
+            const double valid_error = computeError(validation_traces);
             auto stop = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
             int etr = ((epochs - epoch) * duration.count() / 1000) / 50;
-            std::cout << "\tEpoch " << std::setw(6) << epoch << " | Error: " << std::setw(7) << error << " | Time elapsed (this epoch): " << std::setw(5)
-                      << duration.count() / 1000 << "s | ETR: " << std::setw(7) << etr << "s\n";
+            std::cout << "\tEpoch " << std::setw(6) << epoch << " | Training error: " << std::setw(7) << error << " | Validation error: " << std::setw(7) << valid_error
+                      << " | Time elapsed (this epoch): " << std::setw(5) << duration.count() / 1000 << "s | ETR: " << std::setw(7) << etr << "s\n";
             start = stop;
         }
     }
 }
 
-double Tuner::computeError() const {
+double Tuner::computeError(const std::vector<Trace>& trace_vec) const {
     double err = 0.0;
-    for (const Trace& tr : traces) {
+    for (const Trace& tr : trace_vec) {
         double score = reconstructScore(tr);
         double sig = sigmoid(score, K);
         double diff = sig - tr.result;
         err += diff * diff;
     }
-    return err / traces.size();
+    return err / trace_vec.size();
 }
 
 double Tuner::computeError(double k) const {
@@ -103,17 +111,40 @@ double Tuner::computeError(double k) const {
     return err / traces.size();
 }
 
-void Tuner::computeGradients() {
+void Tuner::computeGradients(const size_t num_threads) {
     for (TunerParam& p : params) {
         p.grad = 0.0;
     }
 
-    for (const Trace& tr : traces) {
-        double score = reconstructScore(tr);
-        double sig = sigmoid(score, K);
-        double base = 2.0 * (sig - tr.result) * sig * (1.0 - sig) * K / 400.0;
-        double phase = tr.phase / 24.0;
-        updateGradients(tr, base, phase);
+    const size_t thread_count = std::min(num_threads, static_cast<size_t>(std::thread::hardware_concurrency()));
+    const size_t chunk_size = traces.size() / thread_count;
+    std::vector<std::thread> threads;
+    std::vector<std::vector<double>> local_grads(thread_count, std::vector<double>(params.size(), 0.0));
+
+    for (size_t i = 0; i < thread_count; i++) {
+        threads.emplace_back([this, i, thread_count, chunk_size, &local_grads]() {
+            const size_t start = i * chunk_size;
+            const size_t end = (i == thread_count - 1) ? traces.size() : start + chunk_size;
+
+            for (size_t j = start; j < end; ++j) {
+                const Trace& tr = traces[j];
+                double score = reconstructScore(tr);
+                double sig = sigmoid(score, K);
+                double base = 2.0 * (sig - tr.result) * sig * (1.0 - sig) * K / 400.0;
+                double phase = tr.phase / 24.0;
+                updateGradients(tr, base, phase, local_grads[i]);
+            }
+        });
+    }
+
+    for (std::thread& t : threads) {
+        t.join();
+    }
+
+    for (size_t i = 0; i < thread_count; ++i) {
+        for (size_t j = 0; j < params.size(); ++j) {
+            params[j].grad += local_grads[i][j];
+        }
     }
 
     // Normalize gradients
@@ -155,24 +186,27 @@ void Tuner::dumpParams(std::ofstream& out) const {
     // Material
     out << "constexpr Score material_values[6] = {\n";
     for (int p = 0; p < 6; p++) {
-        out << "\tS(" << static_cast<int>(std::round(params[MATERIAL_OFFSET + 2 * p].value)) << ", " << static_cast<int>(std::round(params[MATERIAL_OFFSET + 2 * p + 1].value)) << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[MATERIAL_OFFSET + 2 * p].value)) << ", "
+            << static_cast<int>(std::round(params[MATERIAL_OFFSET + 2 * p + 1].value)) << "),\n";
     }
     out << "};\n";
 
     // Tempo
-    out << "constexpr Score TEMPO = S(" << static_cast<int>(std::round(params[TEMPO_OFFSET].value)) << ", " << static_cast<int>(std::round(params[TEMPO_OFFSET + 1].value)) << ");\n";
+    out << "constexpr Score TEMPO = S(" << static_cast<int>(std::round(params[TEMPO_OFFSET].value)) << ", "
+        << static_cast<int>(std::round(params[TEMPO_OFFSET + 1].value)) << ");\n";
 
     // Mobility
     out << "constexpr Score MOBILITY[5] = {\n";
     for (int i = 0; i < 5; i++) {
-        out << "\tS(" << static_cast<int>(std::round(params[MOBILITY_OFFSET + 2 * i].value)) << ", " << static_cast<int>(std::round(params[MOBILITY_OFFSET + 2 * i + 1].value)) << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[MOBILITY_OFFSET + 2 * i].value)) << ", "
+            << static_cast<int>(std::round(params[MOBILITY_OFFSET + 2 * i + 1].value)) << "),\n";
     }
     out << "};\n";
 
     // Pawn structure
     // Pawn phalanx
-    out << "\nconstexpr Score PAWN_PHALANX = S(" << static_cast<int>(std::round(params[PAWN_PHALANX_OFFSET].value)) << ", " << static_cast<int>(std::round(params[PAWN_PHALANX_OFFSET + 1].value))
-        << ");\n";
+    out << "\nconstexpr Score PAWN_PHALANX = S(" << static_cast<int>(std::round(params[PAWN_PHALANX_OFFSET].value)) << ", "
+        << static_cast<int>(std::round(params[PAWN_PHALANX_OFFSET + 1].value)) << ");\n";
 
     // Doubled pawns
     out << "constexpr Score DOUBLED_PAWNS = S(" << static_cast<int>(std::round(params[DOUBLED_PAWNS_OFFSET].value)) << ", "
@@ -185,15 +219,16 @@ void Tuner::dumpParams(std::ofstream& out) const {
     // Pawn protection
     out << "constexpr Score PAWN_PROTECTION[6] = {\n";
     for (int p = 0; p < 6; p++) {
-        out << "\tS(" << static_cast<int>(std::round(params[PAWN_PROTECTION_OFFSET + 2 * p].value)) << ", " << static_cast<int>(std::round(params[PAWN_PROTECTION_OFFSET + 2 * p + 1].value))
-            << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[PAWN_PROTECTION_OFFSET + 2 * p].value)) << ", "
+            << static_cast<int>(std::round(params[PAWN_PROTECTION_OFFSET + 2 * p + 1].value)) << "),\n";
     }
     out << "};\n";
 
     // Passed pawns
     out << "constexpr Score PASSED_PAWNS[8] = {\n";
     for (int r = 0; r < 8; r++) {
-        out << "\tS(" << static_cast<int>(std::round(params[PASSED_PAWNS_OFFSET + 2 * r].value)) << ", " << static_cast<int>(std::round(params[PASSED_PAWNS_OFFSET + 2 * r + 1].value)) << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[PASSED_PAWNS_OFFSET + 2 * r].value)) << ", "
+            << static_cast<int>(std::round(params[PASSED_PAWNS_OFFSET + 2 * r + 1].value)) << "),\n";
     }
     out << "};\n";
 
@@ -209,23 +244,23 @@ void Tuner::dumpParams(std::ofstream& out) const {
     // Knight pawn adjustments
     out << "constexpr Score KNIGHT_PAWN_ADJ[9] = {\n";
     for (int i = 0; i < 9; i++) {
-        out << "\tS(" << static_cast<int>(std::round(params[KNIGHT_PAWN_ADJ_OFFSET + 2 * i].value)) << ", " << static_cast<int>(std::round(params[KNIGHT_PAWN_ADJ_OFFSET + 2 * i + 1].value))
-            << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[KNIGHT_PAWN_ADJ_OFFSET + 2 * i].value)) << ", "
+            << static_cast<int>(std::round(params[KNIGHT_PAWN_ADJ_OFFSET + 2 * i + 1].value)) << "),\n";
     }
     out << "};\n";
 
     // Bishops
     // Bishop pair
-    out << "\nconstexpr Score BISHOP_PAIR = S(" << static_cast<int>(std::round(params[BISHOP_PAIR_OFFSET].value)) << ", " << static_cast<int>(std::round(params[BISHOP_PAIR_OFFSET + 1].value))
-        << ");\n";
+    out << "\nconstexpr Score BISHOP_PAIR = S(" << static_cast<int>(std::round(params[BISHOP_PAIR_OFFSET].value)) << ", "
+        << static_cast<int>(std::round(params[BISHOP_PAIR_OFFSET + 1].value)) << ");\n";
 
     // Bishop control penalty
     out << "constexpr Score BISHOP_CONTROL_PENALTY = S(" << static_cast<int>(std::round(params[BISHOP_CTRL_PENALTY_OFFSET].value)) << ", "
         << static_cast<int>(std::round(params[BISHOP_CTRL_PENALTY_OFFSET + 1].value)) << ");\n";
 
     // Bad bishop
-    out << "constexpr Score BAD_BISHOP = S(" << static_cast<int>(std::round(params[BAD_BISHOP_OFFSET].value)) << ", " << static_cast<int>(std::round(params[BAD_BISHOP_OFFSET + 1].value))
-        << ");\n";
+    out << "constexpr Score BAD_BISHOP = S(" << static_cast<int>(std::round(params[BAD_BISHOP_OFFSET].value)) << ", "
+        << static_cast<int>(std::round(params[BAD_BISHOP_OFFSET + 1].value)) << ");\n";
 
     // Bishop blocking pawn
     out << "constexpr Score BISHOP_BLOCKING_PAWN = S(" << static_cast<int>(std::round(params[BISHOP_BLOCKING_PAWN_OFFSET].value)) << ", "
@@ -251,8 +286,8 @@ void Tuner::dumpParams(std::ofstream& out) const {
     // Rook pawn adjustments
     out << "constexpr Score ROOK_PAWN_ADJ[9] = {\n";
     for (int i = 0; i < 9; i++) {
-        out << "\tS(" << static_cast<int>(std::round(params[ROOK_PAWN_ADJ_OFFSET + 2 * i].value)) << ", " << static_cast<int>(std::round(params[ROOK_PAWN_ADJ_OFFSET + 2 * i + 1].value))
-            << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[ROOK_PAWN_ADJ_OFFSET + 2 * i].value)) << ", "
+            << static_cast<int>(std::round(params[ROOK_PAWN_ADJ_OFFSET + 2 * i + 1].value)) << "),\n";
     }
     out << "};\n";
 
@@ -277,22 +312,24 @@ void Tuner::dumpParams(std::ofstream& out) const {
     // King pawn shield
     out << "constexpr Score PAWN_SHIELD[4] = {\n";
     for (int i = 0; i < 4; i++) {
-        out << "\tS(" << static_cast<int>(std::round(params[PAWN_SHIELD_OFFSET + 2 * i].value)) << ", " << static_cast<int>(std::round(params[PAWN_SHIELD_OFFSET + 2 * i + 1].value)) << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[PAWN_SHIELD_OFFSET + 2 * i].value)) << ", "
+            << static_cast<int>(std::round(params[PAWN_SHIELD_OFFSET + 2 * i + 1].value)) << "),\n";
     }
     out << "};\n";
 
     // Pawn storm
     out << "constexpr Score PAWN_STORM[3] = {\n";
     for (int i = 0; i < 3; i++) {
-        out << "\tS(" << static_cast<int>(std::round(params[PAWN_STORM_OFFSET + 2 * i].value)) << ", " << static_cast<int>(std::round(params[PAWN_STORM_OFFSET + 2 * i + 1].value)) << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[PAWN_STORM_OFFSET + 2 * i].value)) << ", "
+            << static_cast<int>(std::round(params[PAWN_STORM_OFFSET + 2 * i + 1].value)) << "),\n";
     }
     out << "};\n";
 
     // King zone attack
     out << "constexpr Score KING_ZONE_ATTACK[4] = {\n";
     for (int i = 0; i < 4; i++) {
-        out << "\tS(" << static_cast<int>(std::round(params[KING_ZONE_ATTACK_OFFSET + 2 * i].value)) << ", " << static_cast<int>(std::round(params[KING_ZONE_ATTACK_OFFSET + 2 * i + 1].value))
-            << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[KING_ZONE_ATTACK_OFFSET + 2 * i].value)) << ", "
+            << static_cast<int>(std::round(params[KING_ZONE_ATTACK_OFFSET + 2 * i + 1].value)) << "),\n";
     }
     out << "};\n";
 
@@ -307,7 +344,8 @@ void Tuner::dumpParams(std::ofstream& out) const {
     // King castled
     out << "constexpr Score KING_CASTLED[2] = {\n";
     for (int i = 0; i < 2; i++) {
-        out << "\tS(" << static_cast<int>(std::round(params[KING_CASTLED_OFFSET + 2 * i].value)) << ", " << static_cast<int>(std::round(params[KING_CASTLED_OFFSET + 2 * i + 1].value)) << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[KING_CASTLED_OFFSET + 2 * i].value)) << ", "
+            << static_cast<int>(std::round(params[KING_CASTLED_OFFSET + 2 * i + 1].value)) << "),\n";
     }
     out << "};\n";
 
@@ -538,200 +576,200 @@ double Tuner::reconstructScore(const Trace& tr) const {
     return phase * mg + (1.0 - phase) * eg;
 }
 
-void Tuner::updateGradients(const Trace& tr, double base, double phase) {
+void Tuner::updateGradients(const Trace& tr, double base, double phase, std::vector<double>& local_grads) {
     // Material
     for (int p = 0; p < 6; p++) {
         int coeff = tr.material[p][WHITE] - tr.material[p][BLACK];
-        params[MATERIAL_OFFSET + p * 2].grad += base * coeff * phase;
-        params[MATERIAL_OFFSET + p * 2 + 1].grad += base * coeff * (1.0 - phase);
+        local_grads[MATERIAL_OFFSET + p * 2] += base * coeff * phase;
+        local_grads[MATERIAL_OFFSET + p * 2 + 1] += base * coeff * (1.0 - phase);
     }
 
     // Tempo
     int tempo = tr.tempo[WHITE] - tr.tempo[BLACK];
-    params[TEMPO_OFFSET].grad += base * tempo * phase;
-    params[TEMPO_OFFSET + 1].grad += base * tempo * (1.0 - phase);
+    local_grads[TEMPO_OFFSET] += base * tempo * phase;
+    local_grads[TEMPO_OFFSET + 1] += base * tempo * (1.0 - phase);
 
     // Mobility
     for (int i = 0; i < 5; i++) {
         int coeff = tr.mobility[i][WHITE] - tr.mobility[i][BLACK];
-        params[MOBILITY_OFFSET + i * 2].grad += base * coeff * phase;
-        params[MOBILITY_OFFSET + i * 2 + 1].grad += base * coeff * (1.0 - phase);
+        local_grads[MOBILITY_OFFSET + i * 2] += base * coeff * phase;
+        local_grads[MOBILITY_OFFSET + i * 2 + 1] += base * coeff * (1.0 - phase);
     }
 
     // Pawn structure
     // Pawn phalanx
     int phal = tr.pawn_phalanx[WHITE] - tr.pawn_phalanx[BLACK];
-    params[PAWN_PHALANX_OFFSET].grad += base * phal * phase;
-    params[PAWN_PHALANX_OFFSET + 1].grad += base * phal * (1.0 - phase);
+    local_grads[PAWN_PHALANX_OFFSET] += base * phal * phase;
+    local_grads[PAWN_PHALANX_OFFSET + 1] += base * phal * (1.0 - phase);
 
     // Doubled pawns
     int dp = tr.doubled_pawns[WHITE] - tr.doubled_pawns[BLACK];
-    params[DOUBLED_PAWNS_OFFSET].grad += base * dp * phase;
-    params[DOUBLED_PAWNS_OFFSET + 1].grad += base * dp * (1.0 - phase);
+    local_grads[DOUBLED_PAWNS_OFFSET] += base * dp * phase;
+    local_grads[DOUBLED_PAWNS_OFFSET + 1] += base * dp * (1.0 - phase);
 
     // Backwards pawn
     int backwards = tr.backwards_pawn[WHITE] - tr.backwards_pawn[BLACK];
-    params[BACKWARDS_PAWN_OFFSET].grad += base * backwards * phase;
-    params[BACKWARDS_PAWN_OFFSET + 1].grad += base * backwards * (1.0 - phase);
+    local_grads[BACKWARDS_PAWN_OFFSET] += base * backwards * phase;
+    local_grads[BACKWARDS_PAWN_OFFSET + 1] += base * backwards * (1.0 - phase);
 
     // Pawn protection
     for (int p = 0; p < 6; p++) {
         int coeff = tr.pawn_protection[p][WHITE] - tr.pawn_protection[p][BLACK];
-        params[PAWN_PROTECTION_OFFSET + 2 * p].grad += base * coeff * phase;
-        params[PAWN_PROTECTION_OFFSET + 2 * p + 1].grad += base * coeff * (1.0 - phase);
+        local_grads[PAWN_PROTECTION_OFFSET + 2 * p] += base * coeff * phase;
+        local_grads[PAWN_PROTECTION_OFFSET + 2 * p + 1] += base * coeff * (1.0 - phase);
     }
 
     // Passed pawns
     for (int r = 0; r < 8; r++) {
         int coeff = tr.passed_pawns[r][WHITE] - tr.passed_pawns[r][BLACK];
-        params[PASSED_PAWNS_OFFSET + 2 * r].grad += base * coeff * phase;
-        params[PASSED_PAWNS_OFFSET + 2 * r + 1].grad += base * coeff * (1.0 - phase);
+        local_grads[PASSED_PAWNS_OFFSET + 2 * r] += base * coeff * phase;
+        local_grads[PASSED_PAWNS_OFFSET + 2 * r + 1] += base * coeff * (1.0 - phase);
     }
 
     // Knights
     // Knight outpost
     int outpost = tr.knight_outpost[WHITE] - tr.knight_outpost[BLACK];
-    params[KNIGHT_OUTPOST_OFFSET].grad += base * outpost * phase;
-    params[KNIGHT_OUTPOST_OFFSET + 1].grad += base * outpost * (1.0 - phase);
+    local_grads[KNIGHT_OUTPOST_OFFSET] += base * outpost * phase;
+    local_grads[KNIGHT_OUTPOST_OFFSET + 1] += base * outpost * (1.0 - phase);
 
     // Knight behind pawn
     int behind_pawn = tr.knight_behind_pawn[WHITE] - tr.knight_behind_pawn[BLACK];
-    params[KNIGHT_BEHIND_PAWN_OFFSET].grad += base * behind_pawn * phase;
-    params[KNIGHT_BEHIND_PAWN_OFFSET + 1].grad += base * behind_pawn * (1.0 - phase);
+    local_grads[KNIGHT_BEHIND_PAWN_OFFSET] += base * behind_pawn * phase;
+    local_grads[KNIGHT_BEHIND_PAWN_OFFSET + 1] += base * behind_pawn * (1.0 - phase);
 
     // Knight pawn adjustments
     for (int i = 0; i < 9; i++) {
         int coeff = tr.knight_pawn_adj[i][WHITE] - tr.knight_pawn_adj[i][BLACK];
-        params[KNIGHT_PAWN_ADJ_OFFSET + 2 * i].grad += base * coeff * phase;
-        params[KNIGHT_PAWN_ADJ_OFFSET + 2 * i + 1].grad += base * coeff * (1.0 - phase);
+        local_grads[KNIGHT_PAWN_ADJ_OFFSET + 2 * i] += base * coeff * phase;
+        local_grads[KNIGHT_PAWN_ADJ_OFFSET + 2 * i + 1] += base * coeff * (1.0 - phase);
     }
 
     // Bishops
     // Bishop pair
     int bishop_pair = tr.bishop_pair[WHITE] - tr.bishop_pair[BLACK];
-    params[BISHOP_PAIR_OFFSET].grad += base * bishop_pair * phase;
-    params[BISHOP_PAIR_OFFSET + 1].grad += base * bishop_pair * (1.0 - phase);
+    local_grads[BISHOP_PAIR_OFFSET] += base * bishop_pair * phase;
+    local_grads[BISHOP_PAIR_OFFSET + 1] += base * bishop_pair * (1.0 - phase);
 
     // Bishop control penalty
     int bcp = tr.bishop_control_penalty[WHITE] - tr.bishop_control_penalty[BLACK];
-    params[BISHOP_CTRL_PENALTY_OFFSET].grad += base * bcp * phase;
-    params[BISHOP_CTRL_PENALTY_OFFSET + 1].grad += base * bcp * (1.0 - phase);
+    local_grads[BISHOP_CTRL_PENALTY_OFFSET] += base * bcp * phase;
+    local_grads[BISHOP_CTRL_PENALTY_OFFSET + 1] += base * bcp * (1.0 - phase);
 
     // Bad bishop
     int bad_bishop = tr.bad_bishop[WHITE] - tr.bad_bishop[BLACK];
-    params[BAD_BISHOP_OFFSET].grad += base * bad_bishop * phase;
-    params[BAD_BISHOP_OFFSET + 1].grad += base * bad_bishop * (1.0 - phase);
+    local_grads[BAD_BISHOP_OFFSET] += base * bad_bishop * phase;
+    local_grads[BAD_BISHOP_OFFSET + 1] += base * bad_bishop * (1.0 - phase);
 
     // Bishop blocking pawn
     int bbp = tr.bishop_blocking_pawn[WHITE] - tr.bishop_blocking_pawn[BLACK];
-    params[BISHOP_BLOCKING_PAWN_OFFSET].grad += base * bbp * phase;
-    params[BISHOP_BLOCKING_PAWN_OFFSET + 1].grad += base * bbp * (1.0 - phase);
+    local_grads[BISHOP_BLOCKING_PAWN_OFFSET] += base * bbp * phase;
+    local_grads[BISHOP_BLOCKING_PAWN_OFFSET + 1] += base * bbp * (1.0 - phase);
 
     // Trapped bishop
     int trapped_bishop = tr.trapped_bishop[WHITE] - tr.trapped_bishop[BLACK];
-    params[TRAPPED_BISHOP_OFFSET].grad += base * trapped_bishop * phase;
-    params[TRAPPED_BISHOP_OFFSET + 1].grad += base * trapped_bishop * (1.0 - phase);
+    local_grads[TRAPPED_BISHOP_OFFSET] += base * trapped_bishop * phase;
+    local_grads[TRAPPED_BISHOP_OFFSET + 1] += base * trapped_bishop * (1.0 - phase);
 
     // Rooks
     // Rook on seventh
     int rook_seventh = tr.rook_on_seventh_rank[WHITE] - tr.rook_on_seventh_rank[BLACK];
-    params[ROOK_SEVENTH_OFFSET].grad += base * rook_seventh * phase;
-    params[ROOK_SEVENTH_OFFSET + 1].grad += base * rook_seventh * (1.0 - phase);
+    local_grads[ROOK_SEVENTH_OFFSET] += base * rook_seventh * phase;
+    local_grads[ROOK_SEVENTH_OFFSET + 1] += base * rook_seventh * (1.0 - phase);
 
     // Rook on open file
     int rook_open = tr.rook_on_open_file[WHITE] - tr.rook_on_open_file[BLACK];
-    params[ROOK_OPEN_FILE_OFFSET].grad += base * rook_open * phase;
-    params[ROOK_OPEN_FILE_OFFSET + 1].grad += base * rook_open * (1.0 - phase);
+    local_grads[ROOK_OPEN_FILE_OFFSET] += base * rook_open * phase;
+    local_grads[ROOK_OPEN_FILE_OFFSET + 1] += base * rook_open * (1.0 - phase);
 
     // Rook on semi open file
     int rook_semi = tr.rook_on_semi_open_file[WHITE] - tr.rook_on_semi_open_file[BLACK];
-    params[ROOK_SEMI_OPEN_FILE_OFFSET].grad += base * rook_semi * phase;
-    params[ROOK_SEMI_OPEN_FILE_OFFSET + 1].grad += base * rook_semi * (1.0 - phase);
+    local_grads[ROOK_SEMI_OPEN_FILE_OFFSET] += base * rook_semi * phase;
+    local_grads[ROOK_SEMI_OPEN_FILE_OFFSET + 1] += base * rook_semi * (1.0 - phase);
 
     // Rook pawn adjustments
     for (int i = 0; i < 9; i++) {
         int coeff = tr.rook_pawn_adj[i][WHITE] - tr.rook_pawn_adj[i][BLACK];
-        params[ROOK_PAWN_ADJ_OFFSET + 2 * i].grad += base * coeff * phase;
-        params[ROOK_PAWN_ADJ_OFFSET + 2 * i + 1].grad += base * coeff * (1.0 - phase);
+        local_grads[ROOK_PAWN_ADJ_OFFSET + 2 * i] += base * coeff * phase;
+        local_grads[ROOK_PAWN_ADJ_OFFSET + 2 * i + 1] += base * coeff * (1.0 - phase);
     }
 
     // Queen
     // Queen rel pin
     int qrp = tr.queen_rel_pin[WHITE] - tr.queen_rel_pin[BLACK];
-    params[QUEEN_REL_PIN_OFFSET].grad += base * qrp * phase;
-    params[QUEEN_REL_PIN_OFFSET + 1].grad += base * qrp * (1.0 - phase);
+    local_grads[QUEEN_REL_PIN_OFFSET] += base * qrp * phase;
+    local_grads[QUEEN_REL_PIN_OFFSET + 1] += base * qrp * (1.0 - phase);
 
     // No opponent queens
     int noq = tr.no_opponent_queens[WHITE] - tr.no_opponent_queens[BLACK];
-    params[NO_OPPONENT_QUEENS_OFFSET].grad += base * noq * phase;
-    params[NO_OPPONENT_QUEENS_OFFSET + 1].grad += base * noq * (1.0 - phase);
+    local_grads[NO_OPPONENT_QUEENS_OFFSET] += base * noq * phase;
+    local_grads[NO_OPPONENT_QUEENS_OFFSET + 1] += base * noq * (1.0 - phase);
 
     // King
     // King open file
     int k_open = tr.king_on_open_file[WHITE] - tr.king_on_open_file[BLACK];
-    params[KING_OPEN_FILE_OFFSET].grad += base * k_open * phase;
-    params[KING_OPEN_FILE_OFFSET + 1].grad += base * k_open * (1.0 - phase);
+    local_grads[KING_OPEN_FILE_OFFSET] += base * k_open * phase;
+    local_grads[KING_OPEN_FILE_OFFSET + 1] += base * k_open * (1.0 - phase);
 
     // King semi open file
     int k_semi = tr.king_on_semi_open_file[WHITE] - tr.king_on_semi_open_file[BLACK];
-    params[KING_SEMI_OPEN_FILE_OFFSET].grad += base * k_semi * phase;
-    params[KING_SEMI_OPEN_FILE_OFFSET + 1].grad += base * k_semi * (1.0 - phase);
+    local_grads[KING_SEMI_OPEN_FILE_OFFSET] += base * k_semi * phase;
+    local_grads[KING_SEMI_OPEN_FILE_OFFSET + 1] += base * k_semi * (1.0 - phase);
 
     // King pawn shield
     for (int i = 0; i < 4; i++) {
         int coeff = tr.pawn_shield[i][WHITE] - tr.pawn_shield[i][BLACK];
-        params[PAWN_SHIELD_OFFSET + 2 * i].grad += base * coeff * phase;
-        params[PAWN_SHIELD_OFFSET + 2 * i + 1].grad += base * coeff * (1.0 - phase);
+        local_grads[PAWN_SHIELD_OFFSET + 2 * i] += base * coeff * phase;
+        local_grads[PAWN_SHIELD_OFFSET + 2 * i + 1] += base * coeff * (1.0 - phase);
     }
 
     // Pawn storm
     for (int i = 0; i < 3; i++) {
         int coeff = tr.pawn_storm[i][WHITE] - tr.pawn_storm[i][BLACK];
-        params[PAWN_STORM_OFFSET + 2 * i].grad += base * coeff * phase;
-        params[PAWN_STORM_OFFSET + 2 * i + 1].grad += base * coeff * (1.0 - phase);
+        local_grads[PAWN_STORM_OFFSET + 2 * i] += base * coeff * phase;
+        local_grads[PAWN_STORM_OFFSET + 2 * i + 1] += base * coeff * (1.0 - phase);
     }
 
     // King zone attack
     for (int i = 0; i < 4; i++) {
         int coeff = tr.king_zone_attack[i][WHITE] - tr.king_zone_attack[i][BLACK];
-        params[KING_ZONE_ATTACK_OFFSET + 2 * i].grad += base * coeff * phase;
-        params[KING_ZONE_ATTACK_OFFSET + 2 * i + 1].grad += base * coeff * (1.0 - phase);
+        local_grads[KING_ZONE_ATTACK_OFFSET + 2 * i] += base * coeff * phase;
+        local_grads[KING_ZONE_ATTACK_OFFSET + 2 * i + 1] += base * coeff * (1.0 - phase);
     }
 
     // King zone weak square
     int kzws = tr.king_zone_weak_square[WHITE] - tr.king_zone_weak_square[BLACK];
-    params[KING_ZONE_WEAK_SQ_OFFSET].grad += base * kzws * phase;
-    params[KING_ZONE_WEAK_SQ_OFFSET + 1].grad += base * kzws * (1.0 - phase);
+    local_grads[KING_ZONE_WEAK_SQ_OFFSET] += base * kzws * phase;
+    local_grads[KING_ZONE_WEAK_SQ_OFFSET + 1] += base * kzws * (1.0 - phase);
 
     // King zone weak square extended
     int kzwse = tr.king_zone_weak_square_extended[WHITE] - tr.king_zone_weak_square_extended[BLACK];
-    params[KING_ZONE_WEAK_EXT_OFFSET].grad += base * kzwse * phase;
-    params[KING_ZONE_WEAK_EXT_OFFSET + 1].grad += base * kzwse * (1.0 - phase);
+    local_grads[KING_ZONE_WEAK_EXT_OFFSET] += base * kzwse * phase;
+    local_grads[KING_ZONE_WEAK_EXT_OFFSET + 1] += base * kzwse * (1.0 - phase);
 
     // King castled
     for (int i = 0; i < 2; i++) {
         int coeff = tr.king_castled[i][WHITE] - tr.king_castled[i][BLACK];
-        params[KING_CASTLED_OFFSET + 2 * i].grad += base * coeff * phase;
-        params[KING_CASTLED_OFFSET + 2 * i + 1].grad += base * coeff * (1.0 - phase);
+        local_grads[KING_CASTLED_OFFSET + 2 * i] += base * coeff * phase;
+        local_grads[KING_CASTLED_OFFSET + 2 * i + 1] += base * coeff * (1.0 - phase);
     }
 
     // King lost one CR
     int kl1cr = tr.king_lost_one_castling_right[WHITE] - tr.king_lost_one_castling_right[BLACK];
-    params[KING_LOST_CASTLE_OFFSET].grad += base * kl1cr * phase;
-    params[KING_LOST_CASTLE_OFFSET + 1].grad += base * kl1cr * (1.0 - phase);
+    local_grads[KING_LOST_CASTLE_OFFSET] += base * kl1cr * phase;
+    local_grads[KING_LOST_CASTLE_OFFSET + 1] += base * kl1cr * (1.0 - phase);
 
     // King uncastled rights remain
     int kucr = tr.king_uncastled_rights_remain[WHITE] - tr.king_uncastled_rights_remain[BLACK];
-    params[KING_UNCASTLED_OFFSET].grad += base * kucr * phase;
-    params[KING_UNCASTLED_OFFSET + 1].grad += base * kucr * (1.0 - phase);
+    local_grads[KING_UNCASTLED_OFFSET] += base * kucr * phase;
+    local_grads[KING_UNCASTLED_OFFSET + 1] += base * kucr * (1.0 - phase);
 
     // PST
     for (int p = 0; p < 12; p++) {
         for (int sq = 0; sq < 64; sq++) {
             // white pieces positive, black pieces negative
             int coeff = (p < 6) ? tr.pst[p][sq] : -tr.pst[p][sq];
-            params[PST_OFFSET + (p * 128) + (sq * 2)].grad += base * coeff * phase;
-            params[PST_OFFSET + (p * 128) + (sq * 2) + 1].grad += base * coeff * (1.0 - phase);
+            local_grads[PST_OFFSET + (p * 128) + (sq * 2)] += base * coeff * phase;
+            local_grads[PST_OFFSET + (p * 128) + (sq * 2) + 1] += base * coeff * (1.0 - phase);
         }
     }
 }
