@@ -465,7 +465,7 @@ static inline int zoneWeakSquares(const Board& board, const BitBoard w_king_zone
 static inline Score getPieceKingZoneAttacks(const Board& board, const BitBoard king_zone, const Piece piece, const EvalInfo& info) {
     Score score{};
     BitBoard bb = board.getPieceBB(piece);
-    const DefaultPiece pc = makeDefaultPiece(piece) - 1; // Left by 1 since we start at KNIGHT
+    const DefaultPiece pc = static_cast<DefaultPiece>(makeDefaultPiece(piece) - 1); // Left by 1 since we start at KNIGHT
     while (bb) {
         const uint8_t count = bitCount(info.piece_attacks[popLSB(bb)] & king_zone);
         score += count * KING_ZONE_ATTACK[pc];
