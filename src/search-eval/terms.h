@@ -55,109 +55,109 @@ constexpr BitBoard A8_B8_C8 = (1ULL << A8) | (1ULL << B8) | (1ULL << C8);
 
 // Eval parameters
 constexpr Score material_values[6] = {
-	S(93, 106),
-	S(337, 289),
-	S(362, 305),
-	S(489, 525),
-	S(1013, 925),
+	S(94, 107),
+	S(338, 290),
+	S(361, 304),
+	S(489, 527),
+	S(1014, 926),
 	S(0, 0),
 };
-constexpr Score TEMPO = S(14, 10);
+constexpr Score TEMPO = S(13, 9);
 constexpr Score MOBILITY[5] = {
 	S(7, 6),
-	S(2, 10),
-	S(7, 10),
-	S(7, 13),
-	S(2, 5),
+	S(3, 11),
+	S(6, 9),
+	S(6, 12),
+	S(3, 6),
 };
 
-constexpr Score PAWN_PHALANX = S(12, 27);
-constexpr Score DOUBLED_PAWNS = S(1, -27);
-constexpr Score BACKWARDS_PAWN = S(-5, -5);
+constexpr Score PAWN_PHALANX = S(12, 26);
+constexpr Score DOUBLED_PAWNS = S(2, -25);
+constexpr Score BACKWARDS_PAWN = S(-4, -4);
 constexpr Score PAWN_PROTECTION[6] = {
-	S(20, 28),
-	S(-4, 27),
-	S(7, 29),
-	S(12, 22),
-	S(-11, 28),
-	S(-17, 35),
+	S(19, 29),
+	S(-4, 28),
+	S(6, 28),
+	S(11, 23),
+	S(-10, 29),
+	S(-16, 36),
 };
 constexpr Score PASSED_PAWNS[8] = {
-	S(14, 14),
-	S(12, 14),
-	S(2, 12),
-	S(-1, 20),
+	S(15, 15),
+	S(13, 15),
+	S(0, 13),
+	S(-3, 18),
 	S(50, 48),
 	S(100, 115),
 	S(285, 205),
 	S(0, 0),
 };
 
-constexpr Score KNIGHT_OUTPOST = S(30, -8);
-constexpr Score KNIGHT_BEHIND_PAWN = S(12, 25);
+constexpr Score KNIGHT_OUTPOST = S(31, -7);
+constexpr Score KNIGHT_BEHIND_PAWN = S(10, 24);
 constexpr Score KNIGHT_PAWN_ADJ[9] = {
-	S(-31, -31),
-	S(-22, -24),
-	S(-15, -21),
-	S(-6, -6),
-	S(-4, 5),
-	S(2, 15),
-	S(16, 25),
-	S(18, 30),
-	S(15, 30),
+	S(-31, -30),
+	S(-21, -23),
+	S(-14, -20),
+	S(-5, -5),
+	S(-3, 6),
+	S(3, 16),
+	S(15, 26),
+	S(19, 31),
+	S(15, 31),
 };
 
-constexpr Score BISHOP_PAIR = S(20, 75);
-constexpr Score BISHOP_CONTROL_PENALTY = S(-1, 0);
-constexpr Score BAD_BISHOP = S(-3, -3);
-constexpr Score BISHOP_BLOCKING_PAWN = S(-17, 7);
-constexpr Score TRAPPED_BISHOP = S(-242, -185);
+constexpr Score BISHOP_PAIR = S(19, 74);
+constexpr Score BISHOP_CONTROL_PENALTY = S(-2, -1);
+constexpr Score BAD_BISHOP = S(-2, -3);
+constexpr Score BISHOP_BLOCKING_PAWN = S(-15, 6);
+constexpr Score TRAPPED_BISHOP = S(-241, -184);
 
-constexpr Score ROOK_ON_SEVENTH_RANK = S(8, 56);
-constexpr Score ROOK_ON_OPEN_FILE = S(26, 15);
-constexpr Score ROOK_ON_SEMI_OPEN_FILE = S(16, -6);
+constexpr Score ROOK_ON_SEVENTH_RANK = S(6, 55);
+constexpr Score ROOK_ON_OPEN_FILE = S(24, 14);
+constexpr Score ROOK_ON_SEMI_OPEN_FILE = S(17, -7);
 constexpr Score ROOK_PAWN_ADJ[9] = {
-	S(5, 15),
-	S(2, 9),
-	S(0, 21),
-	S(-3, 21),
-	S(10, 13),
-	S(9, 6),
-	S(3, 1),
-	S(3, -5),
-	S(-6, -14),
+	S(4, 14),
+	S(1, 8),
+	S(-1, 20),
+	S(-4, 20),
+	S(9, 15),
+	S(10, 7),
+	S(5, 2),
+	S(4, -4),
+	S(-5, -13),
 };
 
-constexpr Score QUEEN_REL_PIN = S(-15, 2);
-constexpr Score NO_OPPONENT_QUEENS = S(115, 185);
+constexpr Score QUEEN_REL_PIN = S(-14, 1);
+constexpr Score NO_OPPONENT_QUEENS = S(116, 186);
 
-constexpr Score KING_ON_OPEN_FILE = S(-50, -14);
-constexpr Score KING_ON_SEMI_OPEN_FILE = S(-25, -7);
+constexpr Score KING_ON_OPEN_FILE = S(-51, -16);
+constexpr Score KING_ON_SEMI_OPEN_FILE = S(-26, -5);
 constexpr Score PAWN_SHIELD[4] = {
-	S(-22, -7),
-	S(5, 9),
-	S(0, 5),
-	S(6, -19),
+	S(-23, -8),
+	S(4, 8),
+	S(-1, 4),
+	S(5, -20),
 };
 constexpr Score PAWN_STORM[3] = {
-	S(15, -8),
-	S(-10, -9),
+	S(14, -9),
+	S(-10, -10),
 	S(-14, -1),
 };
 constexpr Score KING_ZONE_ATTACK[4] = {
-	S(-20, -10),
-	S(-4, 6),
-	S(-27, -7),
-	S(-64, -25),
+	S(-19, -9),
+	S(-5, 5),
+	S(-25, -5),
+	S(-63, -24),
 };
-constexpr Score KING_ZONE_WEAK_SQUARE = S(5, -5);
-constexpr Score KING_ZONE_WEAK_SQUARE_EXTENDED = S(-8, -1);
+constexpr Score KING_ZONE_WEAK_SQUARE = S(4, -4);
+constexpr Score KING_ZONE_WEAK_SQUARE_EXTENDED = S(-8, 0);
 constexpr Score KING_CASTLED[2] = {
-	S(7, 7),
-	S(-41, -3),
+	S(6, 6),
+	S(-40, -2),
 };
-constexpr Score KING_LOST_ONE_CASTLING_RIGHT = S(-36, -8);
-constexpr Score KING_UNCASTLED_RIGHTS_REMAIN = S(-9, -6);
+constexpr Score KING_LOST_ONE_CASTLING_RIGHT = S(-35, -7);
+constexpr Score KING_UNCASTLED_RIGHTS_REMAIN = S(-7, -5);
 extern const Score pst[12][64];
 
 constexpr int MVV_LVA[6][6] = {
