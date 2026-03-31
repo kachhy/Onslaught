@@ -13,7 +13,7 @@ struct Score {
     // Arithmetic operators
     constexpr Score operator+(Score b) const { return Score(value + b.value); }
     constexpr Score operator-(Score b) const { return Score(value - b.value); }
-    constexpr Score operator-() const { return Score(-value); }
+    constexpr Score operator-() const { return S(-MG(*this), -EG(*this)); }
 
     // Compound assignment
     constexpr Score& operator+=(Score b) {

@@ -148,7 +148,7 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
             // Backwards pawns
             // We can re-use knight outpost table because it will cover pawns that can potentially cover us
             BitBoard potential_defenders = board.getPieceBB(WHITE_PAWN) & knight_outpost_table[BLACK][sq];
-            const Square forward_sq = static_cast<Square>(static_cast<uint8_t>(sq) + 8);
+            const Square forward_sq = static_cast<Square>(static_cast<uint8_t>(sq) - 8);
             if (potential_defenders && getBit(bp_protected, forward_sq)) {
                 score += BACKWARDS_PAWN;
                 TRACE_INC(backwards_pawn, WHITE);
@@ -167,7 +167,7 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
             // Backwards pawns
             // We can re-use knight outpost table because it will cover pawns that can potentially cover us
             BitBoard potential_defenders = board.getPieceBB(BLACK_PAWN) & knight_outpost_table[WHITE][sq];
-            const Square forward_sq = static_cast<Square>(static_cast<uint8_t>(sq) - 8);
+            const Square forward_sq = static_cast<Square>(static_cast<uint8_t>(sq) + 8);
             if (potential_defenders && getBit(wp_protected, forward_sq)) {
                 score -= BACKWARDS_PAWN;
                 TRACE_INC(backwards_pawn, BLACK);
@@ -313,7 +313,7 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
 
         if (valid_moves && !safe_moves) {
             score -= TRAPPED_BISHOP;
-            TRACE_INC(trapped_bishop, WHITE);
+            TRACE_INC(trapped_bishop, BLACK);
         }
 
         attacks &= ~board.getOcc(BLACK);

@@ -66,6 +66,6 @@ constexpr int MAX_PHASE = 24;
 // Type helper functions
 Piece makePiece(DefaultPiece piece, Side color);
 DefaultPiece makeDefaultPiece(Piece piece);
-constexpr inline Side extractColor(Piece piece) { return static_cast<Side>(static_cast<uint8_t>(piece) / static_cast<uint8_t>(WHITE_KING)); };
+constexpr inline Side extractColor(Piece piece) { return piece >= BLACK_PAWN ? BLACK : WHITE; };
 
 #endif // TYPES_H
