@@ -5,9 +5,9 @@
 
 static float sideToResult(const Side side) {
     switch (side) {
-        case WHITE: return 1.0f;
-        case BLACK: return 0.0f;
-        default:    return 0.5f;  // draw / BOTH
+    case WHITE: return 1.0f;
+    case BLACK: return 0.0f;
+    default: return 0.5f; // draw / BOTH
     }
 }
 
@@ -38,21 +38,27 @@ void Tuner::loadDataset(const std::string& filename, const uint32_t max) {
         dataset.emplace_back(line.substr(0, index), winner);
         if (!(dataset.size() % 100000)) {
             std::cout << "\tLoaded " << dataset.size() << " positions." << std::endl;
-
-            if (dataset.size() >= max) {
-                break;
-            }
+        }
+        if (dataset.size() >= max) {
+            std::cout << "\tLoaded " << dataset.size() << " positions." << std::endl;
+            break;
         }
     }
     std::cout << "[Tune] White wins: " << w << ", Black wins: " << b << ", Draws: " << d << std::endl;
     std::cout << "[Tune] Preprocessing evaluation traces..." << std::endl;
+    size_t pos_loaded = 0, valid_thres = max * 0.9;
     for (const Position& pos : dataset) {
         trace = {};
         eval(pos.board);
         trace.phase = pos.board.phase();
         trace.result = sideToResult(pos.result);
-        traces.emplace_back(trace);
+        if (pos_loaded++ < valid_thres) {
+            traces.emplace_back(trace);
+        } else {
+            validation_traces.emplace_back(trace);
+        }
     }
+    std::cout << "[Tune] Training traces: " << traces.size() << ", validation traces: " << validation_traces.size() << std::endl;
     dataset.clear();
     dataset.shrink_to_fit();
 }
@@ -70,26 +76,27 @@ void Tuner::run(const uint32_t epochs) {
         updateAdam(epoch);
 
         if (epoch % 50 == 0) {
-            const double error = computeError();
+            const double error = computeError(traces);
+            const double valid_error = computeError(validation_traces);
             auto stop = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
             int etr = ((epochs - epoch) * duration.count() / 1000) / 50;
-            std::cout << "\tEpoch " << std::setw(6) << epoch << " | Error: " << std::setw(7) << error << " | Time elapsed (this epoch): " << std::setw(5)
-                      << duration.count() / 1000 << "s | ETR: " << std::setw(7) << etr << "s\n";
+            std::cout << "\tEpoch " << std::setw(6) << epoch << " | Training error: " << std::setw(7) << error << " | Validation error: " << std::setw(7) << valid_error
+                      << " | Time elapsed (this epoch): " << std::setw(5) << duration.count() / 1000 << "s | ETR: " << std::setw(7) << etr << "s\n";
             start = stop;
         }
     }
 }
 
-double Tuner::computeError() const {
+double Tuner::computeError(const std::vector<Trace>& trace_vec) const {
     double err = 0.0;
-    for (const Trace& tr : traces) {
+    for (const Trace& tr : trace_vec) {
         double score = reconstructScore(tr);
         double sig = sigmoid(score, K);
         double diff = sig - tr.result;
         err += diff * diff;
     }
-    return err / traces.size();
+    return err / trace_vec.size();
 }
 
 double Tuner::computeError(double k) const {
@@ -155,24 +162,27 @@ void Tuner::dumpParams(std::ofstream& out) const {
     // Material
     out << "constexpr Score material_values[6] = {\n";
     for (int p = 0; p < 6; p++) {
-        out << "\tS(" << static_cast<int>(std::round(params[MATERIAL_OFFSET + 2 * p].value)) << ", " << static_cast<int>(std::round(params[MATERIAL_OFFSET + 2 * p + 1].value)) << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[MATERIAL_OFFSET + 2 * p].value)) << ", "
+            << static_cast<int>(std::round(params[MATERIAL_OFFSET + 2 * p + 1].value)) << "),\n";
     }
     out << "};\n";
 
     // Tempo
-    out << "constexpr Score TEMPO = S(" << static_cast<int>(std::round(params[TEMPO_OFFSET].value)) << ", " << static_cast<int>(std::round(params[TEMPO_OFFSET + 1].value)) << ");\n";
+    out << "constexpr Score TEMPO = S(" << static_cast<int>(std::round(params[TEMPO_OFFSET].value)) << ", "
+        << static_cast<int>(std::round(params[TEMPO_OFFSET + 1].value)) << ");\n";
 
     // Mobility
     out << "constexpr Score MOBILITY[5] = {\n";
     for (int i = 0; i < 5; i++) {
-        out << "\tS(" << static_cast<int>(std::round(params[MOBILITY_OFFSET + 2 * i].value)) << ", " << static_cast<int>(std::round(params[MOBILITY_OFFSET + 2 * i + 1].value)) << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[MOBILITY_OFFSET + 2 * i].value)) << ", "
+            << static_cast<int>(std::round(params[MOBILITY_OFFSET + 2 * i + 1].value)) << "),\n";
     }
     out << "};\n";
 
     // Pawn structure
     // Pawn phalanx
-    out << "\nconstexpr Score PAWN_PHALANX = S(" << static_cast<int>(std::round(params[PAWN_PHALANX_OFFSET].value)) << ", " << static_cast<int>(std::round(params[PAWN_PHALANX_OFFSET + 1].value))
-        << ");\n";
+    out << "\nconstexpr Score PAWN_PHALANX = S(" << static_cast<int>(std::round(params[PAWN_PHALANX_OFFSET].value)) << ", "
+        << static_cast<int>(std::round(params[PAWN_PHALANX_OFFSET + 1].value)) << ");\n";
 
     // Doubled pawns
     out << "constexpr Score DOUBLED_PAWNS = S(" << static_cast<int>(std::round(params[DOUBLED_PAWNS_OFFSET].value)) << ", "
@@ -185,15 +195,16 @@ void Tuner::dumpParams(std::ofstream& out) const {
     // Pawn protection
     out << "constexpr Score PAWN_PROTECTION[6] = {\n";
     for (int p = 0; p < 6; p++) {
-        out << "\tS(" << static_cast<int>(std::round(params[PAWN_PROTECTION_OFFSET + 2 * p].value)) << ", " << static_cast<int>(std::round(params[PAWN_PROTECTION_OFFSET + 2 * p + 1].value))
-            << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[PAWN_PROTECTION_OFFSET + 2 * p].value)) << ", "
+            << static_cast<int>(std::round(params[PAWN_PROTECTION_OFFSET + 2 * p + 1].value)) << "),\n";
     }
     out << "};\n";
 
     // Passed pawns
     out << "constexpr Score PASSED_PAWNS[8] = {\n";
     for (int r = 0; r < 8; r++) {
-        out << "\tS(" << static_cast<int>(std::round(params[PASSED_PAWNS_OFFSET + 2 * r].value)) << ", " << static_cast<int>(std::round(params[PASSED_PAWNS_OFFSET + 2 * r + 1].value)) << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[PASSED_PAWNS_OFFSET + 2 * r].value)) << ", "
+            << static_cast<int>(std::round(params[PASSED_PAWNS_OFFSET + 2 * r + 1].value)) << "),\n";
     }
     out << "};\n";
 
@@ -209,23 +220,23 @@ void Tuner::dumpParams(std::ofstream& out) const {
     // Knight pawn adjustments
     out << "constexpr Score KNIGHT_PAWN_ADJ[9] = {\n";
     for (int i = 0; i < 9; i++) {
-        out << "\tS(" << static_cast<int>(std::round(params[KNIGHT_PAWN_ADJ_OFFSET + 2 * i].value)) << ", " << static_cast<int>(std::round(params[KNIGHT_PAWN_ADJ_OFFSET + 2 * i + 1].value))
-            << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[KNIGHT_PAWN_ADJ_OFFSET + 2 * i].value)) << ", "
+            << static_cast<int>(std::round(params[KNIGHT_PAWN_ADJ_OFFSET + 2 * i + 1].value)) << "),\n";
     }
     out << "};\n";
 
     // Bishops
     // Bishop pair
-    out << "\nconstexpr Score BISHOP_PAIR = S(" << static_cast<int>(std::round(params[BISHOP_PAIR_OFFSET].value)) << ", " << static_cast<int>(std::round(params[BISHOP_PAIR_OFFSET + 1].value))
-        << ");\n";
+    out << "\nconstexpr Score BISHOP_PAIR = S(" << static_cast<int>(std::round(params[BISHOP_PAIR_OFFSET].value)) << ", "
+        << static_cast<int>(std::round(params[BISHOP_PAIR_OFFSET + 1].value)) << ");\n";
 
     // Bishop control penalty
     out << "constexpr Score BISHOP_CONTROL_PENALTY = S(" << static_cast<int>(std::round(params[BISHOP_CTRL_PENALTY_OFFSET].value)) << ", "
         << static_cast<int>(std::round(params[BISHOP_CTRL_PENALTY_OFFSET + 1].value)) << ");\n";
 
     // Bad bishop
-    out << "constexpr Score BAD_BISHOP = S(" << static_cast<int>(std::round(params[BAD_BISHOP_OFFSET].value)) << ", " << static_cast<int>(std::round(params[BAD_BISHOP_OFFSET + 1].value))
-        << ");\n";
+    out << "constexpr Score BAD_BISHOP = S(" << static_cast<int>(std::round(params[BAD_BISHOP_OFFSET].value)) << ", "
+        << static_cast<int>(std::round(params[BAD_BISHOP_OFFSET + 1].value)) << ");\n";
 
     // Bishop blocking pawn
     out << "constexpr Score BISHOP_BLOCKING_PAWN = S(" << static_cast<int>(std::round(params[BISHOP_BLOCKING_PAWN_OFFSET].value)) << ", "
@@ -251,8 +262,8 @@ void Tuner::dumpParams(std::ofstream& out) const {
     // Rook pawn adjustments
     out << "constexpr Score ROOK_PAWN_ADJ[9] = {\n";
     for (int i = 0; i < 9; i++) {
-        out << "\tS(" << static_cast<int>(std::round(params[ROOK_PAWN_ADJ_OFFSET + 2 * i].value)) << ", " << static_cast<int>(std::round(params[ROOK_PAWN_ADJ_OFFSET + 2 * i + 1].value))
-            << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[ROOK_PAWN_ADJ_OFFSET + 2 * i].value)) << ", "
+            << static_cast<int>(std::round(params[ROOK_PAWN_ADJ_OFFSET + 2 * i + 1].value)) << "),\n";
     }
     out << "};\n";
 
@@ -277,22 +288,24 @@ void Tuner::dumpParams(std::ofstream& out) const {
     // King pawn shield
     out << "constexpr Score PAWN_SHIELD[4] = {\n";
     for (int i = 0; i < 4; i++) {
-        out << "\tS(" << static_cast<int>(std::round(params[PAWN_SHIELD_OFFSET + 2 * i].value)) << ", " << static_cast<int>(std::round(params[PAWN_SHIELD_OFFSET + 2 * i + 1].value)) << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[PAWN_SHIELD_OFFSET + 2 * i].value)) << ", "
+            << static_cast<int>(std::round(params[PAWN_SHIELD_OFFSET + 2 * i + 1].value)) << "),\n";
     }
     out << "};\n";
 
     // Pawn storm
     out << "constexpr Score PAWN_STORM[3] = {\n";
     for (int i = 0; i < 3; i++) {
-        out << "\tS(" << static_cast<int>(std::round(params[PAWN_STORM_OFFSET + 2 * i].value)) << ", " << static_cast<int>(std::round(params[PAWN_STORM_OFFSET + 2 * i + 1].value)) << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[PAWN_STORM_OFFSET + 2 * i].value)) << ", "
+            << static_cast<int>(std::round(params[PAWN_STORM_OFFSET + 2 * i + 1].value)) << "),\n";
     }
     out << "};\n";
 
     // King zone attack
     out << "constexpr Score KING_ZONE_ATTACK[4] = {\n";
     for (int i = 0; i < 4; i++) {
-        out << "\tS(" << static_cast<int>(std::round(params[KING_ZONE_ATTACK_OFFSET + 2 * i].value)) << ", " << static_cast<int>(std::round(params[KING_ZONE_ATTACK_OFFSET + 2 * i + 1].value))
-            << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[KING_ZONE_ATTACK_OFFSET + 2 * i].value)) << ", "
+            << static_cast<int>(std::round(params[KING_ZONE_ATTACK_OFFSET + 2 * i + 1].value)) << "),\n";
     }
     out << "};\n";
 
@@ -307,7 +320,8 @@ void Tuner::dumpParams(std::ofstream& out) const {
     // King castled
     out << "constexpr Score KING_CASTLED[2] = {\n";
     for (int i = 0; i < 2; i++) {
-        out << "\tS(" << static_cast<int>(std::round(params[KING_CASTLED_OFFSET + 2 * i].value)) << ", " << static_cast<int>(std::round(params[KING_CASTLED_OFFSET + 2 * i + 1].value)) << "),\n";
+        out << "\tS(" << static_cast<int>(std::round(params[KING_CASTLED_OFFSET + 2 * i].value)) << ", "
+            << static_cast<int>(std::round(params[KING_CASTLED_OFFSET + 2 * i + 1].value)) << "),\n";
     }
     out << "};\n";
 

@@ -70,7 +70,7 @@ private:
     double reconstructScore(const Trace& tr) const;
     void updateGradients(const Trace& tr, double base, double phase);
     double sigmoid(double score, double k) const { return 1.0 / (1.0 + std::exp(-k * score / 400.0)); }
-    double computeError() const;
+    double computeError(const std::vector<Trace>& trace_vec) const;
     double computeError(double k) const;
     void computeGradients();
     void findOptimalK();
@@ -79,6 +79,7 @@ private:
 
     std::vector<Position> dataset;
     std::vector<Trace> traces;
+    std::vector<Trace> validation_traces;
     std::vector<TunerParam> params;
 
     // Adam parameters
