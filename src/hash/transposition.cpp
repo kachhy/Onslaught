@@ -23,21 +23,18 @@ void TTable::insert(const Board& board, Move best_move, int32_t score, TTBound b
         table_size++; // We added a new entry
         return;
     }
-
-    // check for duplicates before evicting element 0
-    // for (uint8_t i = 0; i < bucket.count; i++) {
-    //     if (bucket.entries[i].hash == board.hash()) {
-    //         if (depth >= bucket.entries[i].depth || bound == EXACTBOUND) {
-    //             bucket.entries[i] = { board.hash(), best_move, score, bound, depth, table_age };
-    //         }
-    //         return;
-    //     }
-    // }
+    
+    if (bucket.entries[0].hash == board.hash()) {
+        return;
+    }
 
     uint8_t kickout_index = 0;
     int64_t best_kickout_score = bucket.entries[0].depth - (table_age - bucket.entries[0].last_seen);
 
     for (uint8_t i = 1; i < bucket.count; i++) {
+        if (bucket.entries[i].hash == board.hash()) {
+            return;
+        }
         const int64_t this_kickout_score = bucket.entries[i].depth - (table_age - bucket.entries[i].last_seen);
         if (this_kickout_score < best_kickout_score) {
             kickout_index = i;

@@ -94,7 +94,7 @@ public:
             threatened_by[BLACK] = black_threats;
         }
     };
-    std::vector<BoardHistory> getBoardHistory() const { return history; }
+    const std::vector<BoardHistory>& getBoardHistory() const { return history; }
 private:
 
     // Private member functions
