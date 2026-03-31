@@ -624,7 +624,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
     CastlingRights cr = board.getCastlingRights();
     const bool w_lost_both_cr = !(cr & (WHITE_KS | WHITE_QS));
     const bool w_lost_one_cr = !w_lost_both_cr && (cr & (WHITE_KS | WHITE_QS)) != (WHITE_KS | WHITE_QS);
-    const bool w_king_non_castled_sq = !((1ULL << w_king_sq) & (G1 | H1 | A1_B1_C1));
+    const bool w_king_non_castled_sq = !((1ULL << w_king_sq) & (G1_H1 | A1_B1_C1));
 
     if (w_lost_both_cr) {
         score += KING_CASTLED[w_king_non_castled_sq];
@@ -639,7 +639,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
 
     const bool b_lost_both_cr = !(cr & (BLACK_KS | BLACK_QS));
     const bool b_lost_one_cr = !b_lost_both_cr && (cr & (BLACK_KS | BLACK_QS)) != (BLACK_KS | BLACK_QS);
-    const bool b_king_non_castled_sq = !((1ULL << b_king_sq) & (G8 | H8 | A8_B8_C8));
+    const bool b_king_non_castled_sq = !((1ULL << b_king_sq) & (G8_H8 | A8_B8_C8));
 
     if (b_lost_both_cr) {
         score -= KING_CASTLED[b_king_non_castled_sq];
