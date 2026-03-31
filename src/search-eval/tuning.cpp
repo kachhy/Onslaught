@@ -45,7 +45,7 @@ void Tuner::loadDataset(const std::string& filename, const uint32_t max) {
             break;
         }
     }
-    std::cout << "[Tune] White wins: " << w << ", Black wins: " << b << ", Draws: " << d << std::endl;
+    std::cout << "\tWhite wins: " << w << ", Black wins: " << b << ", Draws: " << d << std::endl;
     std::cout << "[Tune] Preprocessing evaluation traces..." << std::endl;
     size_t pos_loaded = 0, valid_thres = max * 0.9;
     for (const Position& pos : dataset) {
@@ -59,7 +59,7 @@ void Tuner::loadDataset(const std::string& filename, const uint32_t max) {
             validation_traces.emplace_back(trace);
         }
     }
-    std::cout << "[Tune] Training traces: " << traces.size() << ", validation traces: " << validation_traces.size() << std::endl;
+    std::cout << "\tTraining traces: " << traces.size() << ", validation traces: " << validation_traces.size() << std::endl;
     dataset.clear();
     dataset.shrink_to_fit();
 }
