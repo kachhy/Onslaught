@@ -228,7 +228,7 @@ void searchTest(int depth, const std::string& fen = "") {
 }
 
 void searchTests() {
-    searchTest(8);
+    searchTest(10);
     // searchTest(1, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
 }
 
@@ -445,7 +445,7 @@ int main(int argc, char** argv) {
     const uint32_t dataset_size = atol(argv[2]);
     Tuner tuner(dataset_size);
     tuner.loadDataset(argv[1], dataset_size);
-    tuner.run(atol(argv[3]), atoll(argv[3]));
+    tuner.run(atol(argv[3]), argc < 6 ? 1 : atoll(argv[5]));
     tuner.dumpParams(tuned_params_out);
 #else
     // Run tests
@@ -453,7 +453,7 @@ int main(int argc, char** argv) {
     // perftTests();
     // divideTests();
     // searchTests();
-    // searchTests();
+    searchTests();
     playGameInTerminal();
 #endif
     return 0;
