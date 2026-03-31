@@ -13,7 +13,7 @@ struct Score {
     // Arithmetic operators
     constexpr Score operator+(Score b) const { return Score(value + b.value); }
     constexpr Score operator-(Score b) const { return Score(value - b.value); }
-    constexpr Score operator-() const { return S(-MG(*this), -EG(*this)); }
+    constexpr Score operator-() const;
 
     // Compound assignment
     constexpr Score& operator+=(Score b) {
@@ -42,6 +42,7 @@ constexpr int16_t T(const Score score, const int phase) { return (MG(score) * ph
 
 constexpr Score operator*(Score s, int n) { return S(MG(s) * n, EG(s) * n); }
 constexpr Score operator*(int n, Score s) { return S(MG(s) * n, EG(s) * n); }
+constexpr Score Score::operator-() const { return S(-MG(*this), -EG(*this)); }
 
 // Eval masks
 constexpr BitBoard WHITE_OUTPOST_RANKS = RANK_4 | RANK_5 | RANK_6;
