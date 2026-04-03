@@ -10,38 +10,39 @@
 #include <cmath>
 
 constexpr uint16_t MATERIAL_OFFSET = 0;
-constexpr uint16_t TEMPO_OFFSET = 12;
-constexpr uint16_t MOBILITY_OFFSET = 14;
-constexpr uint16_t PAWN_PHALANX_OFFSET = 24;
-constexpr uint16_t DOUBLED_PAWNS_OFFSET = 26;
-constexpr uint16_t BACKWARDS_PAWN_OFFSET = 28;
-constexpr uint16_t PAWN_PROTECTION_OFFSET = 30;
-constexpr uint16_t PASSED_PAWNS_OFFSET = 42;
-constexpr uint16_t KNIGHT_OUTPOST_OFFSET = 58;
-constexpr uint16_t KNIGHT_BEHIND_PAWN_OFFSET = 60;
-constexpr uint16_t KNIGHT_PAWN_ADJ_OFFSET = 62;
-constexpr uint16_t BISHOP_PAIR_OFFSET = 80;
-constexpr uint16_t BISHOP_CTRL_PENALTY_OFFSET = 82;
-constexpr uint16_t BAD_BISHOP_OFFSET = 84;
-constexpr uint16_t BISHOP_BLOCKING_PAWN_OFFSET = 86;
-constexpr uint16_t TRAPPED_BISHOP_OFFSET = 88;
-constexpr uint16_t ROOK_SEVENTH_OFFSET = 90;
-constexpr uint16_t ROOK_OPEN_FILE_OFFSET = 92;
-constexpr uint16_t ROOK_SEMI_OPEN_FILE_OFFSET = 94;
-constexpr uint16_t ROOK_PAWN_ADJ_OFFSET = 96;
-constexpr uint16_t QUEEN_REL_PIN_OFFSET = 114;
-constexpr uint16_t NO_OPPONENT_QUEENS_OFFSET = 116;
-constexpr uint16_t KING_OPEN_FILE_OFFSET = 118;
-constexpr uint16_t KING_SEMI_OPEN_FILE_OFFSET = 120;
-constexpr uint16_t PAWN_SHIELD_OFFSET = 122;
-constexpr uint16_t PAWN_STORM_OFFSET = 130;
-constexpr uint16_t KING_ZONE_ATTACK_OFFSET = 136;
-constexpr uint16_t KING_ZONE_WEAK_SQ_OFFSET = 144;
-constexpr uint16_t KING_ZONE_WEAK_EXT_OFFSET = 146;
-constexpr uint16_t KING_CASTLED_OFFSET = 148;
-constexpr uint16_t KING_LOST_CASTLE_OFFSET = 152;
-constexpr uint16_t KING_UNCASTLED_OFFSET = 154;
-constexpr uint16_t PST_OFFSET = 156;
+constexpr uint16_t TEMPO_OFFSET = MATERIAL_OFFSET + 12;
+constexpr uint16_t MOBILITY_OFFSET = TEMPO_OFFSET + 2;
+constexpr uint16_t PAWN_PHALANX_OFFSET = MOBILITY_OFFSET + 10;
+constexpr uint16_t DOUBLED_PAWNS_OFFSET = PAWN_PHALANX_OFFSET + 2;
+constexpr uint16_t BACKWARDS_PAWN_OFFSET = DOUBLED_PAWNS_OFFSET + 2;
+constexpr uint16_t PAWN_PROTECTION_OFFSET = BACKWARDS_PAWN_OFFSET + 2;
+constexpr uint16_t PASSED_PAWNS_OFFSET = PAWN_PROTECTION_OFFSET + 12;
+constexpr uint16_t KNIGHT_OUTPOST_OFFSET = PASSED_PAWNS_OFFSET + 16;
+constexpr uint16_t KNIGHT_BEHIND_PAWN_OFFSET = KNIGHT_OUTPOST_OFFSET + 2;
+constexpr uint16_t KNIGHT_PAWN_ADJ_OFFSET = KNIGHT_BEHIND_PAWN_OFFSET + 2;
+constexpr uint16_t BISHOP_PAIR_OFFSET = KNIGHT_PAWN_ADJ_OFFSET + 18;
+constexpr uint16_t BISHOP_CTRL_PENALTY_OFFSET = BISHOP_PAIR_OFFSET + 2;
+constexpr uint16_t BAD_BISHOP_OFFSET = BISHOP_CTRL_PENALTY_OFFSET + 2;
+constexpr uint16_t BISHOP_BLOCKING_PAWN_OFFSET = BAD_BISHOP_OFFSET + 2;
+constexpr uint16_t TRAPPED_BISHOP_OFFSET = BISHOP_BLOCKING_PAWN_OFFSET + 2;
+constexpr uint16_t ROOK_SEVENTH_OFFSET = TRAPPED_BISHOP_OFFSET + 2;
+constexpr uint16_t ROOK_OPEN_FILE_OFFSET = ROOK_SEVENTH_OFFSET + 2;
+constexpr uint16_t ROOK_SEMI_OPEN_FILE_OFFSET = ROOK_OPEN_FILE_OFFSET + 2;
+constexpr uint16_t ROOK_PAWN_ADJ_OFFSET = ROOK_SEMI_OPEN_FILE_OFFSET + 2;
+constexpr uint16_t QUEEN_REL_PIN_OFFSET = ROOK_PAWN_ADJ_OFFSET + 18;
+constexpr uint16_t NO_OPPONENT_QUEENS_OFFSET = QUEEN_REL_PIN_OFFSET + 2;
+constexpr uint16_t KING_OPEN_FILE_OFFSET = NO_OPPONENT_QUEENS_OFFSET + 2;
+constexpr uint16_t KING_SEMI_OPEN_FILE_OFFSET = KING_OPEN_FILE_OFFSET + 2;
+constexpr uint16_t PAWN_SHIELD_OFFSET = KING_SEMI_OPEN_FILE_OFFSET + 2;
+constexpr uint16_t PAWN_STORM_OFFSET = PAWN_SHIELD_OFFSET + 8;
+constexpr uint16_t KING_ZONE_ATTACK_OFFSET = PAWN_STORM_OFFSET + 6;
+constexpr uint16_t KING_CASTLED_OFFSET = KING_ZONE_ATTACK_OFFSET + 8;
+constexpr uint16_t KING_LOST_CASTLE_OFFSET = KING_CASTLED_OFFSET + 4;
+constexpr uint16_t KING_UNCASTLED_OFFSET = KING_LOST_CASTLE_OFFSET + 2;
+constexpr uint16_t PST_OFFSET = KING_UNCASTLED_OFFSET + 2;
+
+// Minibatching parameters
+constexpr static uint16_t BATCH_SIZE = 16384;
 
 struct Position {
     Board board;
@@ -72,7 +73,7 @@ private:
     double sigmoid(double score, double k) const { return 1.0 / (1.0 + std::exp(-k * score / 400.0)); }
     double computeError(const std::vector<Trace>& trace_vec) const;
     double computeError(double k) const;
-    void computeGradients(const size_t num_threads);
+    void computeGradients(const size_t batch_start, const size_t batch_end, const size_t num_threads);
     void findOptimalK();
     void updateAdam(const uint32_t epoch);
     void initParams();
@@ -82,12 +83,15 @@ private:
     std::vector<Trace> validation_traces;
     std::vector<TunerParam> params;
 
+    size_t adam_step = 0;
+
     // Adam parameters
     double K = 2.5;
     static constexpr double BETA1 = 0.9;
     static constexpr double BETA2 = 0.999;
     static constexpr double EPSILON = 1e-8;
-    static constexpr double LEARNING_RATE = 0.001;
+    static constexpr double LEARNING_RATE = 0.1;
+    static constexpr double WEIGHT_DECAY = 1e-4;
 };
 
 #endif // TUNING_H

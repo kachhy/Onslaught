@@ -429,47 +429,14 @@ static inline Score evaluatePawnAdjustments(const PieceCounts& pc) {
     return score;
 }
 
-template <bool Extended>
-static inline int zoneWeakSquares(const Board& board, const BitBoard w_king_zone, const BitBoard b_king_zone, const EvalInfo& info) {
-    int count = 0;
-    BitBoard w_defended = 0ULL;
-    BitBoard b_defended = 0ULL;
-    w_defended |= info.pawn_attacks[WHITE];
-    b_defended |= info.pawn_attacks[BLACK];
-    for (uint8_t pc = KNIGHT; pc <= QUEEN; pc++) {
-        const Piece wpc = makePiece(static_cast<DefaultPiece>(pc), WHITE);
-        const Piece bpc = makePiece(static_cast<DefaultPiece>(pc), BLACK);
-        BitBoard wbb = board.getPieceBB(wpc);
-        BitBoard bbb = board.getPieceBB(bpc);
-        while (wbb) {
-            w_defended |= info.piece_attacks[popLSB(wbb)];
-        }
-        while (bbb) {
-            b_defended |= info.piece_attacks[popLSB(bbb)];
-        }
-    }
-    const uint8_t white_count = bitCount(w_king_zone & ~w_defended);
-    const uint8_t black_count = bitCount(b_king_zone & ~b_defended);
-    count += white_count;
-    count -= black_count;
-    if constexpr (Extended) {
-        TRACE_ADD(king_zone_weak_square_extended, WHITE, white_count);
-        TRACE_ADD(king_zone_weak_square_extended, BLACK, black_count);
-    } else {
-        TRACE_ADD(king_zone_weak_square, WHITE, white_count);
-        TRACE_ADD(king_zone_weak_square, BLACK, black_count);
-    }
-    return count;
-}
-
-static inline Score getPieceKingZoneAttacks(const Board& board, const BitBoard king_zone, const Piece piece, const EvalInfo& info) {
+static inline Score getPieceKingZoneAttacks(const Board& board, const BitBoard king_zone, const Piece piece, const EvalInfo& info, const Side attacked_side) {
     Score score{};
     BitBoard bb = board.getPieceBB(piece);
     const DefaultPiece pc = static_cast<DefaultPiece>(makeDefaultPiece(piece) - 1); // Left by 1 since we start at KNIGHT
     while (bb) {
         const uint8_t count = bitCount(info.piece_attacks[popLSB(bb)] & king_zone);
         score += count * KING_ZONE_ATTACK[pc];
-        TRACE_ADD(king_zone_attack[pc], extractColor(piece), count);
+        TRACE_ADD(king_zone_attack[pc], attacked_side, count);
     }
     return score;
 }
@@ -503,7 +470,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
             }
         }
     } else if (getBit(A1_B1_C1, w_king_sq)) {
-        for (const uint8_t sq : { A2, B2, C2, D2 }) {
+        for (const uint8_t sq : { B2, C2, D2 }) {
             if (getBit(wp, sq)) {
                 score += PAWN_SHIELD[1];
                 TRACE_INC(pawn_shield[1], WHITE);
@@ -536,7 +503,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
             }
         }
     } else if (getBit(A8_B8_C8, b_king_sq)) {
-        for (const uint8_t sq : { A7, B7, C7, D7 }) {
+        for (const uint8_t sq : { B7, C7, D7 }) {
             if (getBit(bp, sq)) {
                 score -= PAWN_SHIELD[1];
                 TRACE_INC(pawn_shield[1], BLACK);
@@ -606,20 +573,17 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
     const BitBoard b_king_zone = king_zones[BLACK][0][b_king_sq];
 
     if (board.getThreatenedBy(BLACK) & w_king_zone) {
-        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_KNIGHT, info);
-        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_BISHOP, info);
-        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_ROOK, info);
-        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_QUEEN, info);
+        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_KNIGHT, info, WHITE);
+        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_BISHOP, info, WHITE);
+        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_ROOK, info, WHITE);
+        score += getPieceKingZoneAttacks(board, w_king_zone, BLACK_QUEEN, info, WHITE);
     }
     if (board.getThreatenedBy(WHITE) & b_king_zone) {
-        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_KNIGHT, info);
-        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_BISHOP, info);
-        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_ROOK, info);
-        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_QUEEN, info);
+        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_KNIGHT, info, BLACK);
+        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_BISHOP, info, BLACK);
+        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_ROOK, info, BLACK);
+        score -= getPieceKingZoneAttacks(board, b_king_zone, WHITE_QUEEN, info, BLACK);
     }
-
-    score += zoneWeakSquares<false>(board, w_king_zone, b_king_zone, info) * KING_ZONE_WEAK_SQUARE;
-    score += zoneWeakSquares<true>(board, king_zones[WHITE][1][w_king_sq], king_zones[BLACK][1][b_king_sq], info) * KING_ZONE_WEAK_SQUARE_EXTENDED;
 
     CastlingRights cr = board.getCastlingRights();
     const bool w_lost_both_cr = !(cr & (WHITE_KS | WHITE_QS));
@@ -719,9 +683,15 @@ void initEval() {
         b_ext_king_zone |= shiftNorth(b_ext_king_zone) | shiftSouth(b_ext_king_zone);
         b_ext_king_zone &= ~b_king_zone;
 
+        BitBoard tight_zone = 1ULL << sq;
+        tight_zone |= shiftEast(tight_zone) | shiftWest(tight_zone);
+        tight_zone |= shiftNorth(tight_zone) | shiftSouth(tight_zone);
+
         king_zones[WHITE][0][sq] = w_king_zone;
         king_zones[WHITE][1][sq] = w_ext_king_zone;
         king_zones[BLACK][0][sq] = b_king_zone;
         king_zones[BLACK][1][sq] = b_ext_king_zone;
+        king_zones[WHITE][2][sq] = tight_zone;
+        king_zones[BLACK][2][sq] = tight_zone;
     }
 }
