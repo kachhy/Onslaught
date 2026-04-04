@@ -75,6 +75,8 @@ void Tuner::run(const uint32_t epochs, const size_t num_threads) {
     auto start = std::chrono::high_resolution_clock::now();
     const size_t num_batches = (traces.size() + BATCH_SIZE - 1) / BATCH_SIZE;
     std::mt19937 rng{ std::random_device{}() };
+    double best_valid = std::numeric_limits<double>::max();
+    uint32_t stagnant_epochs = 0;
     for (uint32_t epoch = 1; epoch <= epochs; epoch++) {
         if ((epoch % 500) == 1) {
             findOptimalK();
@@ -88,9 +90,9 @@ void Tuner::run(const uint32_t epochs, const size_t num_threads) {
             computeGradients(batch_start, batch_end, num_threads);
             updateAdam(epoch);
         }
+        const double valid_error = computeError(validation_traces);
         if (epoch % 5 == 0) {
             const double error = computeError(traces);
-            const double valid_error = computeError(validation_traces);
             auto stop = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
             int etr = ((epochs - epoch) * duration.count() / 1000) / 5;
@@ -98,6 +100,17 @@ void Tuner::run(const uint32_t epochs, const size_t num_threads) {
                       << " | Validation error: " << std::setw(7) << valid_error << " | Time elapsed (this epoch): " << std::setw(5) << duration.count() / 1000
                       << "s | ETR: " << std::setw(7) << etr << "s\n";
             start = stop;
+        }
+        if (valid_error < best_valid - 1e-6) {
+            best_valid = valid_error;
+            stagnant_epochs = 0;
+        } else {
+            stagnant_epochs++;
+            if (stagnant_epochs >= 100) {
+                LEARNING_RATE *= 0.5;
+                stagnant_epochs = 0;
+                std::cout << "\tDecaying LR to " << LEARNING_RATE << "\n";
+            }
         }
     }
 }

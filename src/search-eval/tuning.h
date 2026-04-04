@@ -87,10 +87,10 @@ private:
 
     // Adam parameters
     double K = 2.5;
+    double LEARNING_RATE = 0.1;
     static constexpr double BETA1 = 0.9;
     static constexpr double BETA2 = 0.999;
     static constexpr double EPSILON = 1e-8;
-    static constexpr double LEARNING_RATE = 0.1;
     static constexpr double WEIGHT_DECAY = 1e-4;
 };
 

@@ -141,9 +141,9 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
         const Square sq = static_cast<Square>(popLSB(temp_wp));
         const int rank = getRank(sq);
         const BitBoard forward_ray = H_FILE >> (63 - sq);
-        if (rank > 2 && !(forward_ray & (bp | bp_protected))) {
-            score += PASSED_PAWNS[rank - 3];
-            TRACE_INC(passed_pawns[rank - 3], WHITE);
+        if (rank >= 1 && rank <= 6 && !(forward_ray & (bp | bp_protected))) {
+            score += PASSED_PAWNS[rank - 1];
+            TRACE_INC(passed_pawns[rank - 1], WHITE);
         } else if (sq < 56) {
             // Backwards pawns
             // We can re-use knight outpost table because it will cover pawns that can potentially cover us
@@ -160,9 +160,9 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
         const Square sq = static_cast<Square>(popLSB(temp_bp));
         const int rank = getRank(sq);
         const BitBoard forward_ray = A_FILE << sq;
-        if (rank < 5 && !(forward_ray & (wp | wp_protected))) {
-            score -= PASSED_PAWNS[4 - rank];
-            TRACE_INC(passed_pawns[4 - rank], BLACK);
+        if (rank >= 1 && rank <= 6 && !(forward_ray & (wp | wp_protected))) {
+            score -= PASSED_PAWNS[6 - rank];
+            TRACE_INC(passed_pawns[6 - rank], BLACK);
         } else if (sq >= 8) {
             // Backwards pawns
             // We can re-use knight outpost table because it will cover pawns that can potentially cover us
