@@ -4,6 +4,7 @@
 #include "movegen/movegen.h"
 #include "search-eval/eval.h"
 #include "search-eval/search.h"
+#include "uci/uci.h"
 #include <cassert>
 #include <chrono>
 #include <iomanip>
@@ -332,6 +333,7 @@ void tests() {
 }
 
 int main() {
+
     // Populate attacks
     initAttacks();
 
@@ -345,7 +347,9 @@ int main() {
     // tests();
     // perftTests();
     // divideTests();
-    searchTests();
+    // searchTests();
+
+    uci();
 
     return 0;
 }
