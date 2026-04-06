@@ -197,6 +197,8 @@ Move search(Board& board, int max_depth, int& best_score) {
             pv_table[i].cur_move = 0;
         }
 
+        tt.incAge();
+
         int alpha = -SCORE_MAX;
         int beta = SCORE_MAX;
         Move cur_iteration_best = NO_MOVE;

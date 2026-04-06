@@ -27,7 +27,7 @@ struct EvalInfo {
 };
 
 static BitBoard knight_outpost_table[2][64];
-static BitBoard king_zones[2][2][64]; // SIDE -> REG(0) or EXTENDED(1) -> SQUARE
+static BitBoard king_zones[2][3][64]; // SIDE -> REG(0) or EXTENDED(1) -> SQUARE
 static BitBoard king_critical_files[8];
 
 static inline PieceCounts getPieceCounts(const Board& board) {
@@ -149,7 +149,7 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
             // We can re-use knight outpost table because it will cover pawns that can potentially cover us
             BitBoard potential_defenders = board.getPieceBB(WHITE_PAWN) & knight_outpost_table[BLACK][sq];
             const Square forward_sq = static_cast<Square>(static_cast<uint8_t>(sq) - 8);
-            if (potential_defenders && getBit(bp_protected, forward_sq)) {
+            if (!potential_defenders && getBit(bp_protected, forward_sq)) {
                 score += BACKWARDS_PAWN;
                 TRACE_INC(backwards_pawn, WHITE);
             }
@@ -168,7 +168,7 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
             // We can re-use knight outpost table because it will cover pawns that can potentially cover us
             BitBoard potential_defenders = board.getPieceBB(BLACK_PAWN) & knight_outpost_table[WHITE][sq];
             const Square forward_sq = static_cast<Square>(static_cast<uint8_t>(sq) + 8);
-            if (potential_defenders && getBit(wp_protected, forward_sq)) {
+            if (!potential_defenders && getBit(wp_protected, forward_sq)) {
                 score -= BACKWARDS_PAWN;
                 TRACE_INC(backwards_pawn, BLACK);
             }
@@ -177,7 +177,9 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
 
     // Pawn PST
     score += applyPST(board, WHITE_PAWN, BLACK_PAWN);
+#ifndef TUNING
     storePawnEval(board, score);
+#endif
     return score;
 }
 
@@ -522,11 +524,11 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
 
     BitBoard bp_storm = bp & king_critical_files[getFile(w_king_sq)];
     while (bp_storm) {
-        const int dist = getRank(popLSB(bp_storm)) - w_king_rank;
-        if (dist < 5) {
+        const int dist = w_king_rank - getRank(popLSB(bp_storm));
+        if (dist < 3) {
             score += PAWN_STORM[0];
             TRACE_INC(pawn_storm[0], WHITE);
-        } else if (dist < 6) {
+        } else if (dist < 5) {
             score += PAWN_STORM[1];
             TRACE_INC(pawn_storm[1], WHITE);
         } else {
@@ -536,11 +538,11 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
     }
     BitBoard wp_storm = wp & king_critical_files[getFile(b_king_sq)];
     while (wp_storm) {
-        const int dist = b_king_rank - getRank(popLSB(wp_storm));
-        if (dist < 5) {
+        const int dist = getRank(popLSB(wp_storm)) - b_king_rank;
+        if (dist < 3) {
             score -= PAWN_STORM[0];
             TRACE_INC(pawn_storm[0], BLACK);
-        } else if (dist < 6) {
+        } else if (dist < 5) {
             score -= PAWN_STORM[1];
             TRACE_INC(pawn_storm[1], BLACK);
         } else {
