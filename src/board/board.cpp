@@ -571,7 +571,7 @@ void Board::setSpecials() {
 
         if (!blockers) {
             setBit(checkers, sq);
-        } else if (bitCount(blockers) == 1) {
+        } else if (!multipleActiveBits(blockers)) {
             pinned |= blockers & occ[stm];
         }
     }
