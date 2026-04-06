@@ -223,12 +223,17 @@ void searchTest(int depth, const std::string& fen = "") {
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
         std::cout << "depth: " << std::setw(2) << i << " | move: " << std::setw(13) << moveToStr(result) << " | score: " << std::setw(13) << score
                   << " | Time: " << std::setw(8) << duration.count() << "ms\n";
-        std::cout << "hash size: " << tt.size() << "\n";
+        // std::cout << "hash size: " << tt.size() << "\n";
     }
 }
 
 void searchTests() {
-    searchTest(10);
+    searchTest(9, "2k5/pp4R1/2b2P1p/8/8/1P5P/1r4PK/8 w - - 0 1");
+    searchTest(9);
+    searchTest(9, "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
+    searchTest(9, "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1");
+    searchTest(9, "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2");
+    searchTest(9, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
     // searchTest(1, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
 }
 
@@ -398,16 +403,16 @@ void playGameInTerminal() {
             return;
         }
         user_moves = getLegalMoves(play_board);
-        std::cout << "Which move do you want to play?\n";
         if (user_moves.empty()) {
             std::cout << "Computer wins\n";
             play_board.printBoard();
             return;
         }
-        for (int i = 0; i < user_moves.size(); i++) {
-            std::cout << "  [" << (i + 1) << "] " << moveToStr(user_moves[i]) << "\n";
-        }
-        Move user_move = user_moves[getIntFromUser(1, user_moves.size()) - 1];
+
+        std::cout << "Which move do you want to play?\n";
+        std::string move;
+        std::cin >> move;
+        Move user_move = strToMove(move, play_board);
         play_board.makeMove(user_move);
         if (getLegalMoves(play_board).empty()) {
             std::cout << "Player wins\n";
@@ -453,7 +458,7 @@ int main(int argc, char** argv) {
     // perftTests();
     // divideTests();
     // searchTests();
-    searchTests();
+    // searchTests();
     playGameInTerminal();
 #endif
     return 0;
