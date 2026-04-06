@@ -30,6 +30,7 @@ public:
     bool fetch(const Board& board, Entry& entry);
     void clear();
     inline size_t size() const { return table_size; }
+    inline void incAge() { table_age++; }
 };
 
 extern TTable tt;

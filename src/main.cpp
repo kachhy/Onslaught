@@ -455,7 +455,7 @@ int main(int argc, char** argv) {
 #else
     // Run tests
     // tests();
-    perftTests();
+    // perftTests();
     // divideTests();
     // searchTests();
     searchTests();

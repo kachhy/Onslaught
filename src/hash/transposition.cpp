@@ -48,7 +48,6 @@ void TTable::insert(const Board& board, Move best_move, int32_t score, TTBound b
 bool TTable::fetch(const Board& board, Entry& entry) {
     const uint64_t hash = board.hash() % TABLE_SIZE;
     EntryTriple& bucket = table[hash];
-    table_age++;
 
     if (!bucket.count) {
         return false;
