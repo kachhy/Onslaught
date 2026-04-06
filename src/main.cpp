@@ -163,8 +163,8 @@ void runTimePerftTest(int depth, const unsigned long long expected[], const std:
     } else {
         std::cout << "\nPerft test with board (" << fen << "):\n";
     }
-    std::locale us_locale("en_US.UTF-8");
-    std::cout.imbue(us_locale);
+    // std::locale us_locale("en_US.UTF-8");
+    // std::cout.imbue(us_locale);
     for (int i = 0; i <= depth; i++) {
         auto start = std::chrono::high_resolution_clock::now();
         Board testing_board_1;
@@ -211,7 +211,7 @@ void searchTest(int depth, const std::string& fen = "") {
     } else {
         std::cout << "\nSearch framework tests with board: (" << fen << ")\n";
     }
-    for (int i = 0; i <= depth; i++) {
+    for (int i = 1; i <= depth; i++) {
         auto start = std::chrono::high_resolution_clock::now();
         Board testing_board;
         if (fen != "") {
@@ -228,12 +228,12 @@ void searchTest(int depth, const std::string& fen = "") {
 }
 
 void searchTests() {
-    searchTest(9, "2k5/pp4R1/2b2P1p/8/8/1P5P/1r4PK/8 w - - 0 1");
-    searchTest(9);
-    searchTest(9, "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
-    searchTest(9, "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1");
-    searchTest(9, "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2");
-    searchTest(9, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+    searchTest(7, "2k5/pp4R1/2b2P1p/8/8/1P5P/1r4PK/8 w - - 0 1");
+    searchTest(7);
+    searchTest(7, "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
+    searchTest(7, "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1");
+    searchTest(7, "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2");
+    searchTest(6, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
     // searchTest(1, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
 }
 
@@ -455,11 +455,11 @@ int main(int argc, char** argv) {
 #else
     // Run tests
     // tests();
-    // perftTests();
+    perftTests();
     // divideTests();
     // searchTests();
-    // searchTests();
-    playGameInTerminal();
+    searchTests();
+    // playGameInTerminal();
 #endif
     return 0;
 }

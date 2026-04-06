@@ -5,6 +5,16 @@
 #include "movegen/movegen.h"
 #include "terms.h"
 #include <array>
+#include <chrono>
+#include <iostream>
+
+uint16_t seldepth;
+uint64_t nodes;
+
+struct PVLine {
+    uint16_t cur_move;
+    Move moves[256];
+};
 
 int quiesce(Board& board, int alpha, int beta) {
     int static_eval;
@@ -89,12 +99,18 @@ static int scoreMove(Board& board, Move move, Move tt_move, int ply) {
     return board.score_history[MovePiece(move)][To(move)];
 }
 
-int search(Board& board, int depth, int alpha, int beta, int ply) {
+int search(Board& board, int depth, int alpha, int beta, int ply, PVLine pv_table[], int max_ply) {
     if (depth == 0) {
+        pv_table[ply].cur_move = 0;
         return quiesce(board, alpha, beta);
     }
 
-    // Transposition table
+    nodes++;
+
+    if (ply > seldepth) {
+        seldepth = ply;
+    }
+
     Entry tt_entry;
     bool tt_hit = tt.fetch(board, tt_entry);
 
@@ -105,10 +121,16 @@ int search(Board& board, int depth, int alpha, int beta, int ply) {
     }
 
     MoveList moves = getLegalMoves(board);
+    if (moves.size() == 0) {
+        pv_table[ply].cur_move = 0;
+        return board.inCheck() ? -SCORE_MAX + ply : 0; // checkmate or stalemate
+    }
+
     std::array<int, MAX_MOVES> scores;
     for (uint8_t i = 0; i < moves.size(); i++) {
         scores[i] = scoreMove(board, moves[i], tt_hit ? tt_entry.best_move : NO_MOVE, ply);
     }
+
     int original_alpha = alpha;
     int best_score = -SCORE_MAX;
     Move best_move = NO_MOVE;
@@ -122,9 +144,10 @@ int search(Board& board, int depth, int alpha, int beta, int ply) {
         }
         moves.sort_item(best_move_index);
         std::swap(scores[i], scores[best_move_index]);
+
         Move move = moves[i];
         board.makeMove(move);
-        int score = -search(board, depth - 1, -beta, -alpha, ply + 1);
+        int score = -search(board, depth - 1, -beta, -alpha, ply + 1, pv_table, max_ply);
         board.undoMove(move);
 
         if (score > best_score) {
@@ -132,6 +155,10 @@ int search(Board& board, int depth, int alpha, int beta, int ply) {
             best_move = move;
             if (score > alpha) {
                 alpha = score;
+                // Update PV for this ply from the pre-allocated table
+                pv_table[ply].moves[0] = move;
+                memcpy(pv_table[ply].moves + 1, pv_table[ply + 1].moves, pv_table[ply + 1].cur_move * sizeof(Move));
+                pv_table[ply].cur_move = pv_table[ply + 1].cur_move + 1;
             }
         }
         if (score >= beta) {
@@ -141,26 +168,35 @@ int search(Board& board, int depth, int alpha, int beta, int ply) {
                 board.killers[ply][0] = best_move;
                 board.score_history[MovePiece(best_move)][To(best_move)] += depth * depth;
             }
-            return best_score; // Fail-soft beta
+            return best_score;
         }
     }
 
     TTBound bound = (best_score > original_alpha) ? EXACTBOUND : UPPERBOUND;
     tt.insert(board, best_move, best_score, bound, depth);
-
     return best_score;
 }
 
 Move search(Board& board, int max_depth, int& best_score) {
     Move best_move = NO_MOVE;
+    const int MAX_PLY = 128;
+    PVLine pv_table[MAX_PLY + 1]; // pre-allocated, indexed by ply
+    nodes = 0;
+
     for (int depth = 1; depth <= max_depth; depth++) {
+        seldepth = 0;
         best_score = -SCORE_MAX;
         for (int (&history_piece)[64] : board.score_history) {
             for (int& score : history_piece) {
                 score /= 2;
             }
         }
-        int score = -SCORE_MAX;
+
+        // Clear PV table for this iteration
+        for (int i = 0; i <= MAX_PLY; i++) {
+            pv_table[i].cur_move = 0;
+        }
+
         int alpha = -SCORE_MAX;
         int beta = SCORE_MAX;
         Move cur_iteration_best = NO_MOVE;
@@ -168,8 +204,10 @@ Move search(Board& board, int max_depth, int& best_score) {
         MoveList moves = getLegalMoves(board);
         std::array<int, MAX_MOVES> scores;
         for (uint8_t i = 0; i < moves.size(); i++) {
-            scores[i] = scoreMove(board, moves[i], NO_MOVE, 0);
+            scores[i] = scoreMove(board, moves[i], best_move, 0);
         }
+
+        auto start = std::chrono::high_resolution_clock::now();
         for (uint8_t i = 0; i < moves.size(); i++) {
             uint8_t best_move_index = i;
             for (uint8_t j = i + 1; j < moves.size(); j++) {
@@ -179,14 +217,20 @@ Move search(Board& board, int max_depth, int& best_score) {
             }
             moves.sort_item(best_move_index);
             std::swap(scores[i], scores[best_move_index]);
+
             Move move = moves[i];
             board.makeMove(move);
-            score = -search(board, depth - 1, -beta, -alpha, 1);
+            int score = -search(board, depth - 1, -beta, -alpha, 1, pv_table, MAX_PLY);
             board.undoMove(move);
 
             if (score > best_score) {
                 best_score = score;
                 cur_iteration_best = move;
+                // Root is ply 0, build PV the same way
+                pv_table[0].moves[0] = move;
+                memcpy(pv_table[0].moves + 1, pv_table[1].moves, pv_table[1].cur_move * sizeof(Move));
+                pv_table[0].cur_move = pv_table[1].cur_move + 1;
+
                 if (score > alpha) {
                     alpha = score;
                 }
@@ -195,9 +239,19 @@ Move search(Board& board, int max_depth, int& best_score) {
                 break;
             }
         }
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
         if (cur_iteration_best != NO_MOVE) {
             best_move = cur_iteration_best;
         }
+
+        std::cout << "info depth " << depth << " seldepth " << seldepth << " score " << best_score << " nodes " << nodes << " nps "
+                  << (!duration.count() ? 0 : (static_cast<double>(nodes) / (static_cast<double>(duration.count()) / 1000))) << " pv ";
+        for (uint16_t i = 0; i < pv_table[0].cur_move; i++) {
+            std::cout << moveToStr(pv_table[0].moves[i]) << ' ';
+        }
+        std::cout << std::endl;
     }
 
     return best_move;
