@@ -101,14 +101,19 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
 
     BitBoard wp_protected = info.pawn_attacks[WHITE];
     BitBoard bp_protected = info.pawn_attacks[BLACK];
-
-    for (uint8_t piece = PAWN; piece <= KING; piece++) {
-        const uint8_t pprot_white = bitCount(board.getPieceBB(makePiece(static_cast<DefaultPiece>(piece), WHITE)) & wp_protected);
-        const uint8_t pprot_black = bitCount(board.getPieceBB(makePiece(static_cast<DefaultPiece>(piece), BLACK)) & bp_protected);
-        score += PAWN_PROTECTION[piece] * pprot_white;
-        score -= PAWN_PROTECTION[piece] * pprot_black;
-        TRACE_ADD(pawn_protection[piece], WHITE, pprot_white);
-        TRACE_ADD(pawn_protection[piece], BLACK, pprot_black);
+    while (wp_protected) {
+        uint8_t sq = popLSB(wp_protected);
+        if (getBit(board.getOcc(WHITE), sq)) {
+            score += PAWN_PROTECTION[makeDefaultPiece(board.pieceAt(sq))];
+            TRACE_ADD(pawn_protection[piece], WHITE, pprot_white);
+        }
+    }
+    while (bp_protected) {
+        uint8_t sq = popLSB(bp_protected);
+        if (getBit(board.getOcc(BLACK), sq)) {
+            score -= PAWN_PROTECTION[makeDefaultPiece(board.pieceAt(sq))];
+            TRACE_ADD(pawn_protection[piece], BLACK, pprot_white);
+        }
     }
 
     // Passed pawns & backwards pawns
@@ -192,28 +197,21 @@ static inline Score applyMaterial(const PieceCounts& pc) {
 
 static inline Score evaluateKnights(const Board& board, const EvalInfo& info) {
     Score score{};
-    BitBoard wn_candidates = board.getPieceBB(WHITE_KNIGHT) & WHITE_OUTPOST_RANKS;
-    while (wn_candidates) {
-        BitBoard potential_attackers = knight_outpost_table[WHITE][popLSB(wn_candidates)] & board.getPieceBB(BLACK_PAWN);
-        score += (!potential_attackers) * KNIGHT_OUTPOST;
-        TRACE_ADD(knight_outpost, WHITE, (!potential_attackers));
-    }
-    BitBoard bn_candidates = board.getPieceBB(BLACK_KNIGHT) & BLACK_OUTPOST_RANKS;
-    while (bn_candidates) {
-        BitBoard potential_attackers = knight_outpost_table[BLACK][popLSB(bn_candidates)] & board.getPieceBB(WHITE_PAWN);
-        score -= (!potential_attackers) * KNIGHT_OUTPOST;
-        TRACE_ADD(knight_outpost, BLACK, (!potential_attackers));
-    }
     const uint8_t wn_behind_pawn = bitCount(shiftNorth(board.getPieceBB(WHITE_KNIGHT)) & board.getPieceBB(WHITE_PAWN));
     const uint8_t bn_behind_pawn = bitCount(shiftSouth(board.getPieceBB(BLACK_KNIGHT)) & board.getPieceBB(BLACK_PAWN));
     score += wn_behind_pawn * KNIGHT_BEHIND_PAWN;
     score -= bn_behind_pawn * KNIGHT_BEHIND_PAWN;
     TRACE_ADD(knight_behind_pawn, WHITE, wn_behind_pawn);
     TRACE_ADD(knight_behind_pawn, BLACK, bn_behind_pawn);
-
     BitBoard wn = board.getPieceBB(WHITE_KNIGHT);
     while (wn) {
-        BitBoard attacks = info.piece_attacks[popLSB(wn)];
+        uint8_t sq = popLSB(wn);
+        if (getBit(WHITE_OUTPOST_RANKS, sq)) {
+            BitBoard potential_attackers = knight_outpost_table[WHITE][sq] & board.getPieceBB(BLACK_PAWN);
+            score += (!potential_attackers) * KNIGHT_OUTPOST;
+            TRACE_ADD(knight_outpost, WHITE, (!potential_attackers));
+        }
+        BitBoard attacks = info.piece_attacks[sq];
         attacks &= ~board.getOcc(WHITE);
         const uint8_t attack_count = bitCount(attacks);
         score += MOBILITY[KNIGHT] * attack_count;
@@ -221,7 +219,13 @@ static inline Score evaluateKnights(const Board& board, const EvalInfo& info) {
     }
     BitBoard bn = board.getPieceBB(BLACK_KNIGHT);
     while (bn) {
-        BitBoard attacks = info.piece_attacks[popLSB(bn)];
+        uint8_t sq = popLSB(bn);
+        if (getBit(BLACK_OUTPOST_RANKS, sq)) {
+            BitBoard potential_attackers = knight_outpost_table[BLACK][sq] & board.getPieceBB(WHITE_PAWN);
+            score -= (!potential_attackers) * KNIGHT_OUTPOST;
+            TRACE_ADD(knight_outpost, BLACK, (!potential_attackers));
+        }
+        BitBoard attacks = info.piece_attacks[sq];
         attacks &= ~board.getOcc(BLACK);
         const uint8_t attack_count = bitCount(attacks);
         score -= MOBILITY[KNIGHT] * attack_count;
@@ -613,12 +617,12 @@ int eval(const Board& board) {
     Score score = board.getMaterialPST();
 #endif
     score += evaluateKnights(board, info);
-    score += evaluateBishops(pc, board, info);
-    score += evaluateRooks(board, info);
-    score += evaluateQueens(board, info);
-    score += evaluatePawnAdjustments(pc);
-    score += evaluatePawns(board, info);
-    score += kingSafety(pc, board, info);
+    score += evaluateBishops(pc, board, info); // - 0.26 MNPS
+    score += evaluateRooks(board, info); // - .198 MNPS
+    score += evaluateQueens(board, info); // - 0.284 MNPS
+    score += evaluatePawnAdjustments(pc); // inacc
+    score += evaluatePawns(board, info); // - 0.322 MNPS
+    score += kingSafety(pc, board, info); // inacc
 
     // Tempo bonus
     score += (board.getSTM() == WHITE) ? TEMPO : -TEMPO;

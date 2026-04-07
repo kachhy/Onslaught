@@ -100,16 +100,16 @@ static int scoreMove(Board& board, Move move, Move tt_move, int ply) {
 }
 
 int search(Board& board, int depth, int alpha, int beta, int ply, PVLine pv_table[], int max_ply) {
+    if (ply >= seldepth) {
+        seldepth = ply;
+    }
+    
     if (depth == 0) {
         pv_table[ply].cur_move = 0;
         return quiesce(board, alpha, beta);
     }
 
     nodes++;
-
-    if (ply > seldepth) {
-        seldepth = ply;
-    }
 
     Entry tt_entry;
     bool tt_hit = tt.fetch(board, tt_entry);
@@ -248,7 +248,7 @@ Move search(Board& board, int max_depth, int& best_score) {
             best_move = cur_iteration_best;
         }
 
-        std::cout << "info depth " << depth << " seldepth " << seldepth << " score " << best_score << " nodes " << nodes << " nps "
+        std::cout << "info depth " << depth << " seldepth " << seldepth << " score cp " << best_score << " nodes " << nodes << " nps "
                   << (!duration.count() ? 0 : static_cast<int>(static_cast<double>(nodes) / (static_cast<double>(duration.count()) / 1000))) << " pv ";
         for (uint16_t i = 0; i < pv_table[0].cur_move; i++) {
             std::cout << moveToStr(pv_table[0].moves[i]) << ' ';
