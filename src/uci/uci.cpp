@@ -1,4 +1,9 @@
 #include "uci.h"
+#include "hash/transposition.h"
+#include "search-eval/search.h"
+#include <sstream>
+
+Board board;
 
 // All the different things we can change about the engine
 static inline void options() {
@@ -15,45 +20,43 @@ static inline void changeOptions() {
 }
 
 // called when a new game is started, resets the bot to its original state
-static inline void newGame(Board* board) {
+static inline void newGame(Board& board) {
     // reset the board to the starting position
-    board->clear();
-    board->loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    board.clear();
+    board.loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 }
 
-static inline void position(Board* board) {
-    std::string buffer;
-    std::string arg;
-    std::getline(std::cin, buffer);
+static inline void position(Board& board) {
+    std::string line;
+    std::getline(std::cin, line);
+    std::istringstream ss(line);
+    std::string token;
 
-    arg = buffer.substr(0, buffer.find(" "));
-    buffer = buffer.substr(buffer.find(" ") + 1);
+    ss >> token;
 
-    if (arg == "startpos") {
+    if (token == "startpos") {
         newGame(board);
-    } else if (arg == "fen") {
-        arg = buffer.substr(0, buffer.find(" "));
-        buffer = buffer.substr(buffer.find(" ") + 1);
-        board->loadFEN(arg);
+        ss >> token; // consume "moves" if present
+    } else if (token == "fen") {
+        std::string fen;
+        while (ss >> token) {
+            if (token == "moves") break;
+            if (!fen.empty()) fen += " ";
+            fen += token;
+        }
+        board.loadFEN(fen);
     }
 
-    arg = buffer.substr(0, buffer.find(" "));
-    buffer = buffer.substr(buffer.find(" ") + 1);
-    buffer = buffer + " ";
-
-    if (arg == "moves") {
-        while (buffer.size() > 0) {
-            arg = buffer.substr(0, buffer.find(" "));
-            buffer = buffer.substr(buffer.find(" ") + 1);
-
-            // Move *move = strToMove(arg);
-            // board->makeMove(*move);
+    if (token == "moves") {
+        while (ss >> token) {
+            Move move = strToMove(token, board);
+            board.makeMove(move);
         }
     }
 }
 
 // not yet implemented,
-static inline void go(Board* board) {
+static inline void go(Board& board) {
     std::string buffer;
     std::string arg;
     GoParams params = GoParams();
@@ -106,9 +109,9 @@ static inline void go(Board* board) {
         }
     }
 
-    // for now just print the params to make sure we are parsing them correctly
-    // Move bestMove = earch(&params);
-    // board->makeMove(bestMove);
+    int best_score;
+    Move best_move = search(board, params.depth, best_score);
+    std::cout << "bestmove " << moveToStr(best_move) << std::endl;
 }
 
 int uciStartup() {
@@ -143,7 +146,6 @@ void uci() {
     if (uciStartup() != 1) {
         return; // quit command received
     }
-    Board* board = new Board();
     std::cout << "readyok\n";
 
     std::string buffer;
@@ -159,10 +161,10 @@ void uci() {
             position(board);
         } else if (buffer == "ucinewgame") {
             newGame(board);
+            tt.clear();
         } else if (buffer == "isready") {
             std::cout << "readyok\n";
         } else if (buffer == "quit") {
-            delete board;
             return; // quit the engine
         }
     }
