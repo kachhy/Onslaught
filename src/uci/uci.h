@@ -6,12 +6,10 @@
 #include <iostream>
 #include <string>
 
-
-
 int uciStartup();
 void uci();
 
-//structs
+// structs
 struct GoParams {
     int wtime = -1, btime = -1;
     int winc = 0, binc = 0;
@@ -23,4 +21,5 @@ struct GoParams {
     bool ponder = false;
     std::vector<std::string> searchmoves;
 };
+
 #endif // UCI_H
