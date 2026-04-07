@@ -3,6 +3,7 @@
 
 #include "core/bitboard.h"
 #include "core/move.h"
+#include "search-eval/terms.h"
 #include <algorithm>
 #include <vector>
 #include <cstring>
@@ -27,6 +28,11 @@ constexpr uint16_t MAX_PLY = 256;
 
 constexpr inline Side getPieceSide(Piece piece) { return piece <= WHITE_KING ? WHITE : BLACK; }
 
+struct EvalInfo {
+    BitBoard pawn_attacks[2];
+    BitBoard piece_attacks[64];
+};
+
 class Board {
 public:
     Board(); // Initializes board to default starting state
@@ -36,7 +42,7 @@ public:
     void clear();
 
     // Observers
-    Piece pieceAt(uint8_t sq) const;
+    Piece pieceAt(uint8_t sq, bool reset = false) const;
     BitBoard getOcc(Side side) const;
     BitBoard getDiscoveryAttacks(const Square sq, const Side side) const;
     std::string getCastlingString() const;
@@ -60,6 +66,8 @@ public:
     uint8_t getFMR() const { return fmr; }
     int phase() const { return std::clamp(phase_score, 0, 24); }
     uint64_t pawnHash() const { return pawn_hash; }
+    Score getMaterialPST() const { return material_pst_score; }
+    const EvalInfo& getEvalInfo() const { return eval_info; }
 
     // Make and undo move
     void makeMove(Move move);
@@ -83,15 +91,18 @@ public:
         BitBoard pinned;
         uint64_t zobrist_hash;
         uint64_t pawn_hash;
+        Score material_pst_score;
+        EvalInfo eval_info;
 
         BoardHistory(
             CastlingRights castling, Square ep_square, uint32_t null_move_number, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard legal_mask,
-            BitBoard white_threats, BitBoard black_threats, BitBoard pinned, uint64_t zobrist_hash, uint64_t pawn_hash
+            BitBoard white_threats, BitBoard black_threats, BitBoard pinned, uint64_t zobrist_hash, uint64_t pawn_hash, Score material_pst_score, const EvalInfo& eval_info
         ) :
             castling(castling), ep_square(ep_square), null_move_number(null_move_number), fmr(fmr), captured_piece(captured_piece), checkers(checkers),
-            legal_mask(legal_mask), pinned(pinned), zobrist_hash(zobrist_hash), pawn_hash(pawn_hash) {
+            legal_mask(legal_mask), pinned(pinned), zobrist_hash(zobrist_hash), pawn_hash(pawn_hash), material_pst_score(material_pst_score) {
             threatened_by[WHITE] = white_threats;
             threatened_by[BLACK] = black_threats;
+            memcpy(&this->eval_info, &eval_info, sizeof(EvalInfo));
         }
     };
     const std::vector<BoardHistory>& getBoardHistory() const { return history; }
@@ -103,6 +114,7 @@ private:
     void setPieceBoard();
     void setOcc();
     void setPhase();
+    void refreshMaterialPST();
 
     // Note: 0 is white side, 64 is black side
     BitBoard piece_bb[12];
@@ -118,6 +130,8 @@ private:
     Side stm;  // Side to move
     Side xstm; // Not side to move
     int phase_score;
+    Score material_pst_score;
+    EvalInfo eval_info;
 
     // Move counting
     uint32_t move_number;

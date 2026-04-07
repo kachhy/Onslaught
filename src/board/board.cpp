@@ -18,7 +18,7 @@ void Board::setPieceBoard() {
     memset(piece_board, 0, sizeof(piece_board)); // TODO: unclear if we need this -> test
 
     for (uint8_t i = 0; i < 64; i++) {
-        piece_board[i] = pieceAt(i);
+        piece_board[i] = pieceAt(i, true);
     }
 }
 
@@ -36,17 +36,21 @@ void Board::setOcc() {
     }
 }
 
-Piece Board::pieceAt(uint8_t sq) const {
-    if (!getBit(occ[BOTH], sq)) {
-        return NO_PIECE;
-    }
-    for (uint8_t p = WHITE_PAWN; p <= BLACK_KING; p++) {
-        if (getBit(piece_bb[p], sq)) {
-            return static_cast<Piece>(p);
+Piece Board::pieceAt(uint8_t sq, bool reset) const {
+    if (reset) {
+        if (!getBit(occ[BOTH], sq)) {
+            return NO_PIECE;
         }
+        for (uint8_t p = WHITE_PAWN; p <= BLACK_KING; p++) {
+            if (getBit(piece_bb[p], sq)) {
+                return static_cast<Piece>(p);
+            }
+        }
+
+        return NO_PIECE; // Exceptional state
     }
 
-    return NO_PIECE; // Exceptional state
+    return piece_board[sq];
 }
 
 std::string Board::getCastlingString() const {
@@ -114,6 +118,7 @@ void Board::clear() {
 
     threatened_by[WHITE] = 0ULL;
     threatened_by[BLACK] = 0ULL;
+    material_pst_score = Score();
 
     // Turns
     stm = WHITE;
@@ -253,6 +258,7 @@ bool Board::loadFEN(const std::string& fen) {
     setPieceBoard();
     setSpecials();
     setPhase();
+    refreshMaterialPST();
     refreshZobrist();
 
     return true;
@@ -277,7 +283,8 @@ void Board::makeMove(Move move) {
     Piece captured = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
 
     history.emplace_back(
-        castling, ep_square, null_move_number, fmr, captured, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash
+        castling, ep_square, null_move_number, fmr, captured, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash,
+        material_pst_score, eval_info
     );
 
     fmr++;
@@ -289,6 +296,13 @@ void Board::makeMove(Move move) {
 
     piece_board[from] = NO_PIECE;
     piece_board[to] = piece;
+
+    Score pst_delta = pst[piece][to] - pst[piece][from];
+    if (stm == WHITE) {
+        material_pst_score += pst_delta;
+    } else {
+        material_pst_score -= pst_delta;
+    }
 
     zobrist_hash ^= piece_keys[piece][from];
 
@@ -307,6 +321,7 @@ void Board::makeMove(Move move) {
             piece_board[F1] = WHITE_ROOK;
             zobrist_hash ^= piece_keys[WHITE_ROOK][H1];
             zobrist_hash ^= piece_keys[WHITE_ROOK][F1];
+            material_pst_score += pst[WHITE_ROOK][F1] - pst[WHITE_ROOK][H1];
             break;
         // Q
         case C1:
@@ -321,6 +336,7 @@ void Board::makeMove(Move move) {
             piece_board[D1] = WHITE_ROOK;
             zobrist_hash ^= piece_keys[WHITE_ROOK][A1];
             zobrist_hash ^= piece_keys[WHITE_ROOK][D1];
+            material_pst_score += pst[WHITE_ROOK][D1] - pst[WHITE_ROOK][A1];
             break;
         // k
         case G8:
@@ -334,6 +350,7 @@ void Board::makeMove(Move move) {
             piece_board[F8] = BLACK_ROOK;
             zobrist_hash ^= piece_keys[BLACK_ROOK][H8];
             zobrist_hash ^= piece_keys[BLACK_ROOK][F8];
+            material_pst_score -= pst[BLACK_ROOK][F8] - pst[BLACK_ROOK][H8];
             break;
         // q
         case C8:
@@ -347,6 +364,7 @@ void Board::makeMove(Move move) {
             piece_board[D8] = BLACK_ROOK;
             zobrist_hash ^= piece_keys[BLACK_ROOK][A8];
             zobrist_hash ^= piece_keys[BLACK_ROOK][D8];
+            material_pst_score -= pst[BLACK_ROOK][D8] - pst[BLACK_ROOK][A8];
             break;
         default: // should never get here, removing warning
             break;
@@ -364,6 +382,13 @@ void Board::makeMove(Move move) {
 
         zobrist_hash ^= piece_keys[captured][sq];
         phase_score -= phase_weights[makeDefaultPiece(captured)];
+
+        Score captured_val = material_values[makeDefaultPiece(captured)] + pst[captured][sq];
+        if (stm == WHITE) {
+            material_pst_score += captured_val; // removing black piece adds to score
+        } else {
+            material_pst_score -= captured_val; // removing white piece subtracts from score
+        }
 
         if (captured == makePiece(PAWN, xstm)) {
             pawn_hash ^= piece_keys[makePiece(PAWN, xstm)][sq]; // Remove captured pawn
@@ -406,6 +431,13 @@ void Board::makeMove(Move move) {
             zobrist_hash ^= piece_keys[prom_piece][to] ^ piece_keys[piece][to];
             phase_score += phase_weights[makeDefaultPiece(prom_piece)];
 
+            Score prom_delta = (material_values[makeDefaultPiece(prom_piece)] + pst[prom_piece][to]) - (material_values[PAWN] + pst[piece][to]);
+            if (stm == WHITE) {
+                material_pst_score += prom_delta;
+            } else {
+                material_pst_score -= prom_delta;
+            }
+
             pawn_hash ^= piece_keys[piece][to]; // Undo to hash- pawn no longer exists
         }
 
@@ -438,6 +470,8 @@ void Board::undoMove(Move move) {
     pinned = hist_data.pinned;
     zobrist_hash = hist_data.zobrist_hash;
     pawn_hash = hist_data.pawn_hash;
+    material_pst_score = hist_data.material_pst_score;
+    memcpy(&eval_info, &hist_data.eval_info, sizeof(EvalInfo));
 
     move_number -= (stm == BLACK);
     stm = xstm;
@@ -598,21 +632,45 @@ void Board::setPhase() {
     phase_score += phase_weights[QUEEN] * bitCount(piece_bb[WHITE_QUEEN] | piece_bb[BLACK_QUEEN]);
 }
 
+void Board::refreshMaterialPST() {
+    material_pst_score = Score();
+    for (uint8_t pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
+        BitBoard bb = piece_bb[pc];
+        Score piece_mat = material_values[makeDefaultPiece(static_cast<Piece>(pc))];
+        bool is_white = (pc <= WHITE_KING);
+        while (bb) {
+            uint8_t sq = popLSB(bb);
+            Score val = piece_mat + pst[pc][sq];
+            if (is_white) {
+                material_pst_score += val;
+            } else {
+                material_pst_score -= val;
+            }
+        }
+    }
+}
+
 void Board::setThreatened() {
     threatened_by[WHITE] = BitBoard(0);
     threatened_by[BLACK] = BitBoard(0);
-    threatened_by[WHITE] |= shiftPawnAttacks(piece_bb[WHITE_PAWN], WHITE);
-    threatened_by[BLACK] |= shiftPawnAttacks(piece_bb[BLACK_PAWN], BLACK);
+    eval_info.pawn_attacks[WHITE] = shiftPawnAttacks(piece_bb[WHITE_PAWN], WHITE);
+    eval_info.pawn_attacks[BLACK] = shiftPawnAttacks(piece_bb[BLACK_PAWN], BLACK);
+    threatened_by[WHITE] |= eval_info.pawn_attacks[WHITE];
+    threatened_by[BLACK] |= eval_info.pawn_attacks[BLACK];
     for (int white_index = WHITE_PAWN + 1, black_index = BLACK_PAWN + 1; white_index <= WHITE_KING; white_index++, black_index++) {
         BitBoard cur_piece_bb = piece_bb[white_index];
         while (cur_piece_bb) {
             Square cur_square = static_cast<Square>(popLSB(cur_piece_bb));
-            threatened_by[WHITE] |= getPieceAttacks(static_cast<Piece>(white_index), cur_square, occ[BOTH]);
+            const BitBoard attacks = getPieceAttacks(static_cast<Piece>(white_index), cur_square, occ[BOTH]);
+            threatened_by[WHITE] |= attacks;
+            eval_info.piece_attacks[cur_square] = attacks;
         }
         cur_piece_bb = piece_bb[black_index];
         while (cur_piece_bb) {
             Square cur_square = static_cast<Square>(popLSB(cur_piece_bb));
-            threatened_by[BLACK] |= getPieceAttacks(static_cast<Piece>(black_index), cur_square, occ[BOTH]);
+            const BitBoard attacks = getPieceAttacks(static_cast<Piece>(black_index), cur_square, occ[BOTH]);
+            threatened_by[BLACK] |= attacks;
+            eval_info.piece_attacks[cur_square] = attacks;
         }
     }
 }

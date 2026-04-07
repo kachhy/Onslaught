@@ -21,11 +21,6 @@ struct PieceCounts {
     int wp, bp, wn, bn, wb, bb, wr, br, wq, bq;
 };
 
-struct EvalInfo {
-    BitBoard pawn_attacks[2];
-    BitBoard piece_attacks[64]; // Since there can only ever be one type of piece per square, we can just get their attacks.
-};
-
 static BitBoard knight_outpost_table[2][64];
 static BitBoard king_zones[2][3][64]; // SIDE -> REG(0) or EXTENDED(1) -> SQUARE
 static BitBoard king_critical_files[8];
@@ -37,29 +32,6 @@ static inline PieceCounts getPieceCounts(const Board& board) {
         bitCount(board.getPieceBB(WHITE_ROOK)),   bitCount(board.getPieceBB(BLACK_ROOK)),   bitCount(board.getPieceBB(WHITE_QUEEN)),
         bitCount(board.getPieceBB(BLACK_QUEEN)),
     };
-}
-
-static inline EvalInfo precomputeEvalInfo(const Board& board) {
-    EvalInfo info;
-    info.pawn_attacks[WHITE] = shiftPawnAttacks(board.getPieceBB(WHITE_PAWN), WHITE);
-    info.pawn_attacks[BLACK] = shiftPawnAttacks(board.getPieceBB(BLACK_PAWN), BLACK);
-
-    for (uint8_t piece = KNIGHT; piece <= QUEEN; ++piece) {
-        const Piece wpc = makePiece(static_cast<DefaultPiece>(piece), WHITE);
-        const Piece bpc = makePiece(static_cast<DefaultPiece>(piece), BLACK);
-        BitBoard temp = board.getPieceBB(wpc);
-        while (temp) {
-            const uint8_t sq = popLSB(temp);
-            info.piece_attacks[sq] = getPieceAttacks(wpc, static_cast<Square>(sq), board.getOcc(BOTH));
-        }
-        temp = board.getPieceBB(bpc);
-        while (temp) {
-            const uint8_t sq = popLSB(temp);
-            info.piece_attacks[sq] = getPieceAttacks(bpc, static_cast<Square>(sq), board.getOcc(BOTH));
-        }
-    }
-
-    return info;
 }
 
 static inline bool probePawns(const Board& board, Score& score) {
@@ -112,12 +84,16 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     TRACE_ADD(pawn_phalanx, WHITE, wp_phalanx);
     TRACE_ADD(pawn_phalanx, BLACK, bp_phalanx);
 
-    const uint8_t dpw = std::max(bitCount(A_FILE & wp) - 1, 0) + std::max(bitCount(B_FILE & wp) - 1, 0) + std::max(bitCount(C_FILE & wp) - 1, 0) +
-                        std::max(bitCount(D_FILE & wp) - 1, 0) + std::max(bitCount(E_FILE & wp) - 1, 0) + std::max(bitCount(F_FILE & wp) - 1, 0) +
-                        std::max(bitCount(G_FILE & wp) - 1, 0) + std::max(bitCount(H_FILE & wp) - 1, 0);
-    const uint8_t dpb = std::max(bitCount(A_FILE & bp) - 1, 0) + std::max(bitCount(B_FILE & bp) - 1, 0) + std::max(bitCount(C_FILE & bp) - 1, 0) +
-                        std::max(bitCount(D_FILE & bp) - 1, 0) + std::max(bitCount(E_FILE & bp) - 1, 0) + std::max(bitCount(F_FILE & bp) - 1, 0) +
-                        std::max(bitCount(G_FILE & bp) - 1, 0) + std::max(bitCount(H_FILE & bp) - 1, 0);
+    BitBoard wp_ff = wp;
+    wp_ff |= wp_ff >> 8;
+    wp_ff |= wp_ff >> 16;
+    wp_ff |= wp_ff >> 32;
+    const uint8_t dpw = bitCount(wp) - bitCount(wp_ff & RANK_1);
+    BitBoard bp_ff = bp;
+    bp_ff |= bp_ff >> 8;
+    bp_ff |= bp_ff >> 16;
+    bp_ff |= bp_ff >> 32;
+    const uint8_t dpb = bitCount(bp) - bitCount(bp_ff & RANK_1);
 
     score += (dpw - dpb) * DOUBLED_PAWNS;
     TRACE_ADD(doubled_pawns, WHITE, dpw);
@@ -176,7 +152,9 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     }
 
     // Pawn PST
+#ifdef TUNING
     score += applyPST(board, WHITE_PAWN, BLACK_PAWN);
+#endif
 #ifndef TUNING
     storePawnEval(board, score);
 #endif
@@ -626,10 +604,14 @@ int eval(const Board& board) {
         return 0;
     }
 
-    EvalInfo info = precomputeEvalInfo(board);
+    EvalInfo info = board.getEvalInfo();
     PieceCounts pc = getPieceCounts(board);
+#ifdef TUNING
     Score score = applyMaterial(pc);
     score += applyAllPST(board);
+#else
+    Score score = board.getMaterialPST();
+#endif
     score += evaluateKnights(board, info);
     score += evaluateBishops(pc, board, info);
     score += evaluateRooks(board, info);
