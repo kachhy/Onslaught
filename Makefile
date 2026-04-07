@@ -18,7 +18,7 @@ ifneq ($(filter release,$(MAKECMDGOALS)),)
 endif
 ifneq ($(filter lto,$(MAKECMDGOALS)),)
 	CXXFLAGS += -O3 -flto
-	LDFLAGS += -flto
+	LDFLAGS += -flto -static
 	OBJDIR:=$(OBJDIR)/lto
 endif
 ifneq ($(filter pg,$(MAKECMDGOALS)),)
