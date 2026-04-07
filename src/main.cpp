@@ -7,6 +7,7 @@
 #include "movegen/movegen.h"
 #include "search-eval/eval.h"
 #include "search-eval/search.h"
+#include "uci/uci.h"
 #include "search-eval/tuning.h"
 #include <cassert>
 #include <chrono>
@@ -458,6 +459,9 @@ int main(int argc, char** argv) {
     // perftTests();
     // divideTests();
     // searchTests();
+
+    uci();
+
     searchTests();
     // playGameInTerminal();
 #endif
