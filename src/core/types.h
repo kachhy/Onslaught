@@ -64,8 +64,19 @@ extern const int phase_weights[];
 constexpr int MAX_PHASE = 24;
 
 // Type helper functions
-Piece makePiece(DefaultPiece piece, Side color);
-DefaultPiece makeDefaultPiece(Piece piece);
-constexpr inline Side extractColor(Piece piece) { return static_cast<Side>(static_cast<uint8_t>(piece) / static_cast<uint8_t>(WHITE_KING)); };
+constexpr inline Piece makePiece(DefaultPiece piece, Side color) {
+    if (color == WHITE) {
+        return static_cast<Piece>(piece);
+    }
+    return static_cast<Piece>(static_cast<int>(piece) + static_cast<int>(BLACK_PAWN));
+}
+
+constexpr inline DefaultPiece makeDefaultPiece(Piece piece) {
+    if (piece <= static_cast<int>(WHITE_KING)) {
+        return static_cast<DefaultPiece>(piece);
+    }
+    return static_cast<DefaultPiece>(static_cast<int>(piece) - static_cast<int>(BLACK_PAWN));
+}
+constexpr inline Side extractColor(Piece piece) { return piece >= BLACK_PAWN ? BLACK : WHITE; };
 
 #endif // TYPES_H

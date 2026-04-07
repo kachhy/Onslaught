@@ -20,17 +20,3 @@ const int phase_weights[6] = {
     4,  // queen
     0,  // king
 };
-
-Piece makePiece(DefaultPiece piece, Side color) {
-    if (color == WHITE) {
-        return static_cast<Piece>(piece);
-    }
-    return static_cast<Piece>(static_cast<int>(piece) + static_cast<int>(BLACK_PAWN));
-}
-
-DefaultPiece makeDefaultPiece(Piece piece) {
-    if (piece <= static_cast<int>(WHITE_KING)) {
-        return static_cast<DefaultPiece>(piece);
-    }
-    return static_cast<DefaultPiece>(static_cast<int>(piece) - static_cast<int>(BLACK_PAWN));
-}

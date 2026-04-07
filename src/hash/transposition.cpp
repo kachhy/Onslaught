@@ -23,26 +23,31 @@ void TTable::insert(const Board& board, Move best_move, int32_t score, TTBound b
         table_size++; // We added a new entry
         return;
     }
+    
+    if (bucket.entries[0].hash == board.hash()) {
+        return;
+    }
 
-    // Eviction policy
-    Entry& best_kickout = bucket.entries[0];
+    uint8_t kickout_index = 0;
     int64_t best_kickout_score = bucket.entries[0].depth - (table_age - bucket.entries[0].last_seen);
 
     for (uint8_t i = 1; i < bucket.count; i++) {
+        if (bucket.entries[i].hash == board.hash()) {
+            return;
+        }
         const int64_t this_kickout_score = bucket.entries[i].depth - (table_age - bucket.entries[i].last_seen);
         if (this_kickout_score < best_kickout_score) {
-            best_kickout = bucket.entries[i];
+            kickout_index = i;
             best_kickout_score = this_kickout_score;
         }
     }
 
-    best_kickout = { board.hash(), best_move, score, bound, depth, table_age };
+    bucket.entries[kickout_index] = { board.hash(), best_move, score, bound, depth, table_age };
 }
 
 bool TTable::fetch(const Board& board, Entry& entry) {
     const uint64_t hash = board.hash() % TABLE_SIZE;
     EntryTriple& bucket = table[hash];
-    table_age++;
 
     if (!bucket.count) {
         return false;
@@ -52,7 +57,10 @@ bool TTable::fetch(const Board& board, Entry& entry) {
     bool found = false;
     for (uint8_t i = 0; i < bucket.count; i++) {
         if (bucket.entries[i].hash == board.hash()) {
-            entry = bucket.entries[i];
+            // keep largest depth
+            if (!found || bucket.entries[i].depth > entry.depth) {
+                entry = bucket.entries[i];
+            }
             bucket.entries[i].last_seen = table_age;
             found = true;
         }

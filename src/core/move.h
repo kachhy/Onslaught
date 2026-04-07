@@ -30,7 +30,9 @@ constexpr inline bool Capture(Move move) { return (Flags(move) & CAPTURE_FLAG) !
 constexpr inline bool IsEP(Move move) { return Flags(move) == EP_FLAG; }
 constexpr inline bool Castle(Move move) { return Flags(move) == CASTLE_FLAG; }
 constexpr inline bool Prom(Move move) { return (Flags(move) & PROMO_FLAG) != 0; }
+class Board;
 std::string moveToStr(Move move);
+Move strToMove(const std::string& str, const Board& board);
 DefaultPiece promPiece(Move move);
 
 #endif

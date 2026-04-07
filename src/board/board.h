@@ -3,6 +3,7 @@
 
 #include "core/bitboard.h"
 #include "core/move.h"
+#include <algorithm>
 #include <vector>
 #include <cstring>
 
@@ -57,12 +58,16 @@ public:
     uint64_t hash() const { return zobrist_hash; }
     bool inCheck() const { return static_cast<bool>(checkers); }
     uint8_t getFMR() const { return fmr; }
-    int phase() const { return phase_score; }
+    int phase() const { return std::clamp(phase_score, 0, 24); }
     uint64_t pawnHash() const { return pawn_hash; }
 
     // Make and undo move
     void makeMove(Move move);
     void undoMove(Move move);
+
+    // Search
+    Move killers[MAX_PLY][2];
+    int score_history[12][64]; // [Piece][to_square]
 
     // Zobrist setup
     void refreshZobrist();
@@ -89,7 +94,7 @@ public:
             threatened_by[BLACK] = black_threats;
         }
     };
-    std::vector<BoardHistory> getBoardHistory() const { return history; }
+    const std::vector<BoardHistory>& getBoardHistory() const { return history; }
 private:
 
     // Private member functions

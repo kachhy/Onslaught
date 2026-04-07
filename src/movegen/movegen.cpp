@@ -3,7 +3,7 @@
 
 MoveList getQuietMoves(const Board& board) {
     MoveList out;
-    if (bitCount(board.getCheckersMask()) > 1) {
+    if (multipleActiveBits(board.getCheckersMask())) {
         addLegalKingMoves(out, board, QUIET_MOVE_MOVEGEN);
         return out;
     }
@@ -15,7 +15,7 @@ MoveList getQuietMoves(const Board& board) {
 
 MoveList getNoisyMoves(const Board& board) {
     MoveList out;
-    if (bitCount(board.getCheckersMask()) > 1) {
+    if (multipleActiveBits(board.getCheckersMask())) {
         addLegalKingMoves(out, board, NOISY_MOVE_MOVEGEN);
         return out;
     }
@@ -28,7 +28,7 @@ MoveList getNoisyMoves(const Board& board) {
 
 MoveList getLegalMoves(const Board& board) {
     MoveList out;
-    if (bitCount(board.getCheckersMask()) > 1) {
+    if (multipleActiveBits(board.getCheckersMask())) {
         addLegalKingMoves(out, board, LEGAL_MOVE_MOVEGEN);
         return out;
     }
