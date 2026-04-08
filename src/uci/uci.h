@@ -8,6 +8,9 @@
 
 int uciStartup();
 void uci();
+void checkStdin();
+
+extern bool searching;
 
 // structs
 struct GoParams {

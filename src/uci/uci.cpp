@@ -3,7 +3,15 @@
 #include "search-eval/search.h"
 #include <sstream>
 
+#ifdef _WIN32
+    #include <windows.h>
+#else
+    #include <sys/select.h>
+    #include <unistd.h>
+#endif
+
 Board board;
+bool searching = false;
 
 // All the different things we can change about the engine
 static inline void options() {
@@ -109,8 +117,9 @@ static inline void go(Board& board) {
         }
     }
 
+    searching = true;
     int best_score;
-    Move best_move = search(board, params.depth, best_score);
+    Move best_move = search(board, params.infinite ? 256 : params.depth, best_score);
     std::cout << "bestmove " << moveToStr(best_move) << std::endl;
 }
 
@@ -166,6 +175,34 @@ void uci() {
             std::cout << "readyok\n";
         } else if (buffer == "quit") {
             return; // quit the engine
+        }
+    }
+}
+
+static bool stdinHasData() {
+#ifdef _WIN32
+    DWORD n = 0;
+    PeekNamedPipe(GetStdHandle(STD_INPUT_HANDLE), nullptr, 0, nullptr, &n, nullptr);
+    return n > 0;
+#else
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
+    timeval tv{0, 0};
+    return select(STDIN_FILENO + 1, &fds, nullptr, nullptr, &tv) > 0;
+#endif
+}
+
+void checkStdin() {
+    if (!stdinHasData()) {
+        return;
+    }
+    std::string line;
+    if (std::getline(std::cin, line)) {
+        if (line == "stop") {
+            searching = false;
+        } else if (line == "quit") {
+            exit(0);
         }
     }
 }

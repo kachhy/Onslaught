@@ -104,15 +104,19 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     while (wp_protected) {
         uint8_t sq = popLSB(wp_protected);
         if (getBit(board.getOcc(WHITE), sq)) {
-            score += PAWN_PROTECTION[makeDefaultPiece(board.pieceAt(sq))];
-            TRACE_ADD(pawn_protection[piece], WHITE, pprot_white);
+            const Piece pc = board.pieceAt(sq);
+            const int dpc = makeDefaultPiece(pc);
+            score += PAWN_PROTECTION[dpc];
+            TRACE_INC(pawn_protection[dpc], WHITE);
         }
     }
     while (bp_protected) {
         uint8_t sq = popLSB(bp_protected);
         if (getBit(board.getOcc(BLACK), sq)) {
-            score -= PAWN_PROTECTION[makeDefaultPiece(board.pieceAt(sq))];
-            TRACE_ADD(pawn_protection[piece], BLACK, pprot_white);
+            const Piece pc = board.pieceAt(sq);
+            const int dpc = makeDefaultPiece(pc);
+            score -= PAWN_PROTECTION[dpc];
+            TRACE_INC(pawn_protection[dpc], BLACK);
         }
     }
 
