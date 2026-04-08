@@ -5,12 +5,10 @@
 #include <sstream>
 
 Board::Board() {
-    history.reserve(MAX_PLY);
     loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 }
 
 Board::Board(const std::string& fen) {
-    history.reserve(MAX_PLY);
     loadFEN(fen);
 }
 
@@ -114,7 +112,7 @@ void Board::clear() {
     memset(occ, 0, sizeof(occ));
     memset(killers, 0, sizeof(killers));
     memset(score_history, 0, sizeof(score_history));
-    history.clear();
+    history_ply = 0;
 
     threatened_by[WHITE] = 0ULL;
     threatened_by[BLACK] = 0ULL;
@@ -282,7 +280,7 @@ void Board::makeMove(Move move) {
     Piece piece = MovePiece(move);
     Piece captured = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
 
-    history.emplace_back(
+    history[history_ply++] = BoardHistory(
         castling, ep_square, null_move_number, fmr, captured, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash,
         material_pst_score, eval_info
     );
@@ -458,7 +456,8 @@ void Board::undoMove(Move move) {
     Square to = To(move);
     Piece piece = MovePiece(move);
 
-    BoardHistory& hist_data = history.back();
+    history_ply--;
+    BoardHistory& hist_data = history[history_ply];
     castling = hist_data.castling;
     ep_square = hist_data.ep_square;
     null_move_number = hist_data.null_move_number;
@@ -557,8 +556,6 @@ void Board::undoMove(Move move) {
         piece_board[sq] = captured;
         phase_score += phase_weights[makeDefaultPiece(captured)];
     }
-
-    history.pop_back();
 }
 
 void Board::refreshZobrist() {

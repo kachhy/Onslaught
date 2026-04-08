@@ -56,6 +56,7 @@ public:
     BitBoard getThreatenedByXSTM() const { return threatened_by[xstm]; }
     BitBoard getLegalMask() const { return legal_mask; }
     uint32_t getNullMoveNumber() const { return null_move_number; }
+    int getHistPly() const { return history_ply; }
     Side getSTM() const { return stm; }
     Side getXSTM() const { return xstm; }
     BitBoard getPieceBB(Piece p) const { return piece_bb[p]; }
@@ -72,10 +73,6 @@ public:
     // Make and undo move
     void makeMove(Move move);
     void undoMove(Move move);
-
-    // Search
-    Move killers[MAX_PLY][2];
-    int score_history[12][64]; // [Piece][to_square]
 
     // Zobrist setup
     void refreshZobrist();
@@ -94,6 +91,16 @@ public:
         Score material_pst_score;
         EvalInfo eval_info;
 
+        BoardHistory() 
+            : castling(0), ep_square(NO_SQUARE), null_move_number(0), fmr(0), 
+            captured_piece(NO_PIECE), checkers(0), legal_mask(0), pinned(0), 
+            zobrist_hash(0), pawn_hash(0), material_pst_score(0) 
+        {
+            threatened_by[0] = 0;
+            threatened_by[1] = 0;
+            memset(&eval_info, 0, sizeof(EvalInfo));
+        }
+
         BoardHistory(
             CastlingRights castling, Square ep_square, uint32_t null_move_number, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard legal_mask,
             BitBoard white_threats, BitBoard black_threats, BitBoard pinned, uint64_t zobrist_hash, uint64_t pawn_hash, Score material_pst_score, const EvalInfo& eval_info
@@ -105,7 +112,11 @@ public:
             memcpy(&this->eval_info, &eval_info, sizeof(EvalInfo));
         }
     };
-    const std::vector<BoardHistory>& getBoardHistory() const { return history; }
+    const BoardHistory* getBoardHistory() const { return history; }
+
+    // Search
+    Move killers[MAX_PLY][2];
+    int score_history[64][12]; // [Piece][to_square]
 private:
 
     // Private member functions
@@ -116,34 +127,35 @@ private:
     void setPhase();
     void refreshMaterialPST();
 
+    uint64_t zobrist_hash;
+    uint64_t pawn_hash;
+    BitBoard checkers;
+    BitBoard legal_mask;
+    BitBoard pinned;
+    Side stm;  // Side to move
+    Side xstm; // Not side to move
+    Square ep_square;
+    CastlingRights castling; // castling mask (i.e. 1111 = KQkq)
+    uint8_t fmr;               // For fifty-move rule draw
+
     // Note: 0 is white side, 64 is black side
     BitBoard piece_bb[12];
     BitBoard occ[3];
-    Piece piece_board[64];
-    int castling_rights[64];
-    BitBoard checkers;
-    BitBoard legal_mask;
     BitBoard threatened_by[2];
-    BitBoard pinned;
-    CastlingRights castling; // castling mask (i.e. 1111 = KQkq)
-    Square ep_square;
-    Side stm;  // Side to move
-    Side xstm; // Not side to move
+    Piece piece_board[64];
+    uint8_t castling_rights[64];
+
     int phase_score;
     Score material_pst_score;
     EvalInfo eval_info;
 
+    // History
+    BoardHistory history[MAX_PLY + MAX_GAME_MOVES];
+    int history_ply;
+
     // Move counting
     uint32_t move_number;
     uint32_t null_move_number; // For repetition checking
-    uint8_t fmr;               // For fifty-move rule draw
-
-    // History
-    std::vector<BoardHistory> history;
-
-    // Hashing
-    uint64_t zobrist_hash;
-    uint64_t pawn_hash;
 };
 
 #endif // BOARD_H

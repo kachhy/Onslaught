@@ -98,7 +98,7 @@ static int scoreMove(Board& board, Move move, Move tt_move, int ply) {
     if (move == board.killers[ply][1]) {
         return 100000;
     }
-    return board.score_history[MovePiece(move)][To(move)];
+    return board.score_history[To(move)][MovePiece(move)];
 }
 
 int search(Board& board, int depth, int alpha, int beta, int ply, PVLine pv_table[], int max_ply) {
@@ -175,7 +175,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, PVLine pv_tabl
             if (!Capture(best_move) && !Prom(best_move)) {
                 board.killers[ply][1] = board.killers[ply][0];
                 board.killers[ply][0] = best_move;
-                board.score_history[MovePiece(best_move)][To(best_move)] += depth * depth;
+                board.score_history[To(best_move)][MovePiece(best_move)] += depth * depth;
             }
             return best_score;
         }
@@ -198,8 +198,9 @@ Move search(Board& board, int max_depth, int& best_score) {
         }
         seldepth = 0;
         best_score = -SCORE_MAX;
-        for (int (&history_piece)[64] : board.score_history) {
-            for (int& score : history_piece) {
+
+        for (int (&history_score)[12] : board.score_history) {
+            for (int& score : history_score) {
                 score /= 2;
             }
         }
@@ -236,6 +237,9 @@ Move search(Board& board, int max_depth, int& best_score) {
             board.makeMove(move);
             int score = -search(board, depth - 1, -beta, -alpha, 1, pv_table, MAX_PLY);
             board.undoMove(move);
+            if (!searching) {
+                break;
+            }
 
             if (score > best_score) {
                 best_score = score;
@@ -252,6 +256,9 @@ Move search(Board& board, int max_depth, int& best_score) {
             if (score >= beta) {
                 break;
             }
+        }
+        if (!searching) {
+            break;
         }
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
