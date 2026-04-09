@@ -8,6 +8,7 @@
 #include "terms.h"
 #include "uci/uci.h"
 #include <array>
+#include <cmath>
 #include <chrono>
 #include <iostream>
 
