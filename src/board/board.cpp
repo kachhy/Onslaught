@@ -1,16 +1,13 @@
 #include "board.h"
+#include "core/types.h"
 #include "hash/zobrist.h"
 #include "movegen/attacks.h"
 #include <iostream>
 #include <sstream>
 
-Board::Board() {
-    loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-}
+Board::Board() { loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); }
 
-Board::Board(const std::string& fen) {
-    loadFEN(fen);
-}
+Board::Board(const std::string& fen) { loadFEN(fen); }
 
 void Board::setPieceBoard() {
     memset(piece_board, 0, sizeof(piece_board)); // TODO: unclear if we need this -> test
@@ -124,7 +121,6 @@ void Board::clear() {
 
     // Counters
     move_number = 1;
-    null_move_number = 0;
     fmr = 0;
 
     // EP squares and Castling rights
@@ -281,12 +277,11 @@ void Board::makeMove(Move move) {
     Piece captured = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
 
     history[history_ply++] = BoardHistory(
-        castling, ep_square, null_move_number, fmr, captured, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash,
+        castling, ep_square, fmr, captured, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash,
         material_pst_score, eval_info
     );
 
     fmr++;
-    null_move_number++;
 
     flipBits(piece_bb[piece], from, to);
     flipBits(occ[stm], from, to);
@@ -445,8 +440,7 @@ void Board::makeMove(Move move) {
     zobrist_hash ^= piece_keys[piece][to];
     zobrist_hash ^= side_key;
     move_number += (stm == BLACK);
-    xstm = stm;
-    stm = xstm == WHITE ? BLACK : WHITE; // optimizable
+    std::swap(stm, xstm);
 
     setSpecials();
 }
@@ -460,7 +454,6 @@ void Board::undoMove(Move move) {
     BoardHistory& hist_data = history[history_ply];
     castling = hist_data.castling;
     ep_square = hist_data.ep_square;
-    null_move_number = hist_data.null_move_number;
     fmr = hist_data.fmr;
     checkers = hist_data.checkers;
     legal_mask = hist_data.legal_mask;
@@ -473,8 +466,7 @@ void Board::undoMove(Move move) {
     memcpy(&eval_info, &hist_data.eval_info, sizeof(EvalInfo));
 
     move_number -= (stm == BLACK);
-    stm = xstm;
-    xstm = stm == WHITE ? BLACK : WHITE; // optimizable
+    std::swap(stm, xstm);
 
     if (Prom(move)) {
         Piece prom_piece = makePiece(promPiece(move), stm);
@@ -556,6 +548,38 @@ void Board::undoMove(Move move) {
         piece_board[sq] = captured;
         phase_score += phase_weights[makeDefaultPiece(captured)];
     }
+}
+
+void Board::makeNullMove() {
+    history[history_ply++] = BoardHistory(
+        castling, ep_square, fmr, NO_PIECE, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash,
+        material_pst_score, eval_info
+    );
+    if (ep_square != NO_SQUARE) {
+        zobrist_hash ^= ep_keys[ep_square];
+        ep_square = NO_SQUARE;
+    }
+    std::swap(stm, xstm);
+    zobrist_hash ^= side_key;
+    setSpecials();
+}
+
+void Board::undoNullMove() {
+    history_ply--;
+    const BoardHistory& hist_data = history[history_ply];
+    castling = hist_data.castling;
+    ep_square = hist_data.ep_square;
+    fmr = hist_data.fmr;
+    checkers = hist_data.checkers;
+    legal_mask = hist_data.legal_mask;
+    threatened_by[WHITE] = hist_data.threatened_by[WHITE];
+    threatened_by[BLACK] = hist_data.threatened_by[BLACK];
+    pinned = hist_data.pinned;
+    zobrist_hash = hist_data.zobrist_hash;
+    pawn_hash = hist_data.pawn_hash;
+    material_pst_score = hist_data.material_pst_score;
+    memcpy(&eval_info, &hist_data.eval_info, sizeof(EvalInfo));
+    std::swap(stm, xstm);
 }
 
 void Board::refreshZobrist() {

@@ -45,7 +45,7 @@ bool isFiftyMoveRuleDraw(const Board& board) {
 }
 
 bool isRepetitionDraw(const Board& board, uint32_t ply) {
-    uint16_t distance = std::min(board.getNullMoveNumber(), static_cast<uint32_t>(board.getFMR()));
+    uint16_t distance = board.getFMR();
     uint16_t r = 0;
     const Board::BoardHistory* board_history = board.getBoardHistory();
     for (int32_t i = board.getHistPly() - 4; i >= 0 && i >= static_cast<int64_t>(board.getHistPly()) - distance; i -= 2) {

@@ -225,17 +225,19 @@ void searchTest(int depth, const std::string& fen = "") {
         std::cout << "depth: " << std::setw(2) << i << " | move: " << std::setw(13) << moveToStr(result) << " | score: " << std::setw(13) << score
                   << " | Time: " << std::setw(8) << duration.count() << "ms\n";
         // std::cout << "hash size: " << tt.size() << "\n";
+        // tt.clear();
     }
 }
 
 void searchTests() {
-    searchTest(7, "2k5/pp4R1/2b2P1p/8/8/1P5P/1r4PK/8 w - - 0 1");
-    searchTest(7);
-    searchTest(7, "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
-    searchTest(7, "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1");
-    searchTest(7, "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2");
-    searchTest(6, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+    searching = true;
+    searchTest(12);
+    searchTest(12, "2k5/pp4R1/2b2P1p/8/8/1P5P/1r4PK/8 w - - 0 1");
+    searchTest(12, "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
+    searchTest(12, "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2");
+    searchTest(12, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
     // searchTest(1, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
+    searching = false;
 }
 
 void initAttacks() {

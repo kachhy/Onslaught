@@ -23,11 +23,11 @@ void TTable::insert(const Board& board, Move best_move, int32_t score, TTBound b
         table_size++; // We added a new entry
         return;
     }
-    
+
     if (bucket.entries[0].hash == board.hash()) {
         return;
     }
-
+    
     uint8_t kickout_index = 0;
     int64_t best_kickout_score = bucket.entries[0].depth - (table_age - bucket.entries[0].last_seen);
 
