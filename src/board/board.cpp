@@ -5,13 +5,9 @@
 #include <iostream>
 #include <sstream>
 
-Board::Board() {
-    loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-}
+Board::Board() { loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); }
 
-Board::Board(const std::string& fen) {
-    loadFEN(fen);
-}
+Board::Board(const std::string& fen) { loadFEN(fen); }
 
 void Board::setPieceBoard() {
     memset(piece_board, 0, sizeof(piece_board)); // TODO: unclear if we need this -> test
@@ -558,7 +554,10 @@ void Board::undoMove(Move move) {
 }
 
 void Board::makeNullMove() {
-    history[history_ply++] = BoardHistory(castling, ep_square, null_move_number, fmr, NO_PIECE, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash, material_pst_score, eval_info);
+    history[history_ply++] = BoardHistory(
+        castling, ep_square, null_move_number, fmr, NO_PIECE, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash,
+        material_pst_score, eval_info
+    );
     null_move_number++;
     if (ep_square != NO_SQUARE) {
         zobrist_hash ^= ep_keys[ep_square];

@@ -225,13 +225,14 @@ void searchTest(int depth, const std::string& fen = "") {
         std::cout << "depth: " << std::setw(2) << i << " | move: " << std::setw(13) << moveToStr(result) << " | score: " << std::setw(13) << score
                   << " | Time: " << std::setw(8) << duration.count() << "ms\n";
         // std::cout << "hash size: " << tt.size() << "\n";
+        // tt.clear();
     }
 }
 
 void searchTests() {
     searching = true;
-    searchTest(10);
-    searchTest(10, "2k5/pp4R1/2b2P1p/8/8/1P5P/1r4PK/8 w - - 0 1");
+    searchTest(11);
+    searchTest(14, "2k5/pp4R1/2b2P1p/8/8/1P5P/1r4PK/8 w - - 0 1");
     searchTest(10, "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
     searchTest(10, "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1");
     searchTest(10, "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2");

@@ -5,8 +5,8 @@
 #include "core/move.h"
 #include "search-eval/terms.h"
 #include <algorithm>
-#include <vector>
 #include <cstring>
+#include <vector>
 
 using CastlingRights = uint8_t;
 
@@ -16,11 +16,11 @@ constexpr uint8_t WHITE_QS = 0x4;
 constexpr uint8_t BLACK_KS = 0x2;
 constexpr uint8_t BLACK_QS = 0x1;
 
-constexpr BitBoard WHITE_KINGSIDE_CASTLE_MASK         = 0x6000000000000000;
-constexpr BitBoard WHITE_QUEENSIDE_CASTLE_OCC_MASK    = 0x0E00000000000000;
+constexpr BitBoard WHITE_KINGSIDE_CASTLE_MASK = 0x6000000000000000;
+constexpr BitBoard WHITE_QUEENSIDE_CASTLE_OCC_MASK = 0x0E00000000000000;
 constexpr BitBoard WHITE_QUEENSIDE_CASTLE_THREAT_MASK = 0x0C00000000000000;
-constexpr BitBoard BLACK_KINGSIDE_CASTLE_MASK         = 0x0000000000000060;
-constexpr BitBoard BLACK_QUEENSIDE_CASTLE_OCC_MASK    = 0x000000000000000E;
+constexpr BitBoard BLACK_KINGSIDE_CASTLE_MASK = 0x0000000000000060;
+constexpr BitBoard BLACK_QUEENSIDE_CASTLE_OCC_MASK = 0x000000000000000E;
 constexpr BitBoard BLACK_QUEENSIDE_CASTLE_THREAT_MASK = 0x000000000000000C;
 
 // Engine constants
@@ -94,11 +94,9 @@ public:
         Score material_pst_score;
         EvalInfo eval_info;
 
-        BoardHistory() 
-            : castling(0), ep_square(NO_SQUARE), null_move_number(0), fmr(0), 
-            captured_piece(NO_PIECE), checkers(0), legal_mask(0), pinned(0), 
-            zobrist_hash(0), pawn_hash(0), material_pst_score(0) 
-        {
+        BoardHistory() :
+            castling(0), ep_square(NO_SQUARE), null_move_number(0), fmr(0), captured_piece(NO_PIECE), checkers(0), legal_mask(0), pinned(0), zobrist_hash(0),
+            pawn_hash(0), material_pst_score(0) {
             threatened_by[0] = 0;
             threatened_by[1] = 0;
             memset(&eval_info, 0, sizeof(EvalInfo));
@@ -106,7 +104,8 @@ public:
 
         BoardHistory(
             CastlingRights castling, Square ep_square, uint32_t null_move_number, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard legal_mask,
-            BitBoard white_threats, BitBoard black_threats, BitBoard pinned, uint64_t zobrist_hash, uint64_t pawn_hash, Score material_pst_score, const EvalInfo& eval_info
+            BitBoard white_threats, BitBoard black_threats, BitBoard pinned, uint64_t zobrist_hash, uint64_t pawn_hash, Score material_pst_score,
+            const EvalInfo& eval_info
         ) :
             castling(castling), ep_square(ep_square), null_move_number(null_move_number), fmr(fmr), captured_piece(captured_piece), checkers(checkers),
             legal_mask(legal_mask), pinned(pinned), zobrist_hash(zobrist_hash), pawn_hash(pawn_hash), material_pst_score(material_pst_score) {
@@ -139,7 +138,7 @@ private:
     Side xstm; // Not side to move
     Square ep_square;
     CastlingRights castling; // castling mask (i.e. 1111 = KQkq)
-    uint8_t fmr;               // For fifty-move rule draw
+    uint8_t fmr;             // For fifty-move rule draw
 
     // Note: 0 is white side, 64 is black side
     BitBoard piece_bb[12];
