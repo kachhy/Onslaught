@@ -74,6 +74,9 @@ public:
     void makeMove(Move move);
     void undoMove(Move move);
 
+    void makeNullMove();
+    void undoNullMove();
+
     // Zobrist setup
     void refreshZobrist();
     struct BoardHistory {

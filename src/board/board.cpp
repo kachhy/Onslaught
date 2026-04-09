@@ -1,4 +1,5 @@
 #include "board.h"
+#include "core/types.h"
 #include "hash/zobrist.h"
 #include "movegen/attacks.h"
 #include <iostream>
@@ -445,8 +446,7 @@ void Board::makeMove(Move move) {
     zobrist_hash ^= piece_keys[piece][to];
     zobrist_hash ^= side_key;
     move_number += (stm == BLACK);
-    xstm = stm;
-    stm = xstm == WHITE ? BLACK : WHITE; // optimizable
+    std::swap(stm, xstm);
 
     setSpecials();
 }
@@ -473,8 +473,7 @@ void Board::undoMove(Move move) {
     memcpy(&eval_info, &hist_data.eval_info, sizeof(EvalInfo));
 
     move_number -= (stm == BLACK);
-    stm = xstm;
-    xstm = stm == WHITE ? BLACK : WHITE; // optimizable
+    std::swap(stm, xstm);
 
     if (Prom(move)) {
         Piece prom_piece = makePiece(promPiece(move), stm);
@@ -556,6 +555,37 @@ void Board::undoMove(Move move) {
         piece_board[sq] = captured;
         phase_score += phase_weights[makeDefaultPiece(captured)];
     }
+}
+
+void Board::makeNullMove() {
+    history[history_ply++] = BoardHistory(castling, ep_square, null_move_number, fmr, NO_PIECE, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash, material_pst_score, eval_info);
+    null_move_number++;
+    if (ep_square != NO_SQUARE) {
+        zobrist_hash ^= ep_keys[ep_square];
+        ep_square = NO_SQUARE;
+    }
+    std::swap(stm, xstm);
+    zobrist_hash ^= side_key;
+    setSpecials();
+}
+
+void Board::undoNullMove() {
+    null_move_number--;
+    history_ply--;
+    const BoardHistory& hist_data = history[history_ply];
+    castling = hist_data.castling;
+    ep_square = hist_data.ep_square;
+    fmr = hist_data.fmr;
+    checkers = hist_data.checkers;
+    legal_mask = hist_data.legal_mask;
+    threatened_by[WHITE] = hist_data.threatened_by[WHITE];
+    threatened_by[BLACK] = hist_data.threatened_by[BLACK];
+    pinned = hist_data.pinned;
+    zobrist_hash = hist_data.zobrist_hash;
+    pawn_hash = hist_data.pawn_hash;
+    material_pst_score = hist_data.material_pst_score;
+    memcpy(&eval_info, &hist_data.eval_info, sizeof(EvalInfo));
+    std::swap(stm, xstm);
 }
 
 void Board::refreshZobrist() {
