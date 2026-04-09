@@ -121,7 +121,6 @@ void Board::clear() {
 
     // Counters
     move_number = 1;
-    null_move_number = 0;
     fmr = 0;
 
     // EP squares and Castling rights
@@ -278,12 +277,11 @@ void Board::makeMove(Move move) {
     Piece captured = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
 
     history[history_ply++] = BoardHistory(
-        castling, ep_square, null_move_number, fmr, captured, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash,
+        castling, ep_square, fmr, captured, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash,
         material_pst_score, eval_info
     );
 
     fmr++;
-    null_move_number++;
 
     flipBits(piece_bb[piece], from, to);
     flipBits(occ[stm], from, to);
@@ -456,7 +454,6 @@ void Board::undoMove(Move move) {
     BoardHistory& hist_data = history[history_ply];
     castling = hist_data.castling;
     ep_square = hist_data.ep_square;
-    null_move_number = hist_data.null_move_number;
     fmr = hist_data.fmr;
     checkers = hist_data.checkers;
     legal_mask = hist_data.legal_mask;
@@ -555,10 +552,9 @@ void Board::undoMove(Move move) {
 
 void Board::makeNullMove() {
     history[history_ply++] = BoardHistory(
-        castling, ep_square, null_move_number, fmr, NO_PIECE, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash,
+        castling, ep_square, fmr, NO_PIECE, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash,
         material_pst_score, eval_info
     );
-    null_move_number++;
     if (ep_square != NO_SQUARE) {
         zobrist_hash ^= ep_keys[ep_square];
         ep_square = NO_SQUARE;
@@ -569,7 +565,6 @@ void Board::makeNullMove() {
 }
 
 void Board::undoNullMove() {
-    null_move_number--;
     history_ply--;
     const BoardHistory& hist_data = history[history_ply];
     castling = hist_data.castling;
