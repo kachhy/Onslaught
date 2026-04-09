@@ -188,12 +188,25 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
         board.makeMove(move);
 
         int score;
+        bool do_full_search = false;
+
         if (moves_searched == 0) {
             score = -search(board, depth - 1, -beta, -alpha, ply + 1, true, pv_table, max_ply);
         } else {
-            score = -search(board, depth - 1, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
-            if (score > alpha && score < beta) {
-                score = -search(board, depth - 1, -beta, -alpha, ply + 1, true, pv_table, max_ply);
+            // lmr
+            if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check) {
+                int lmr_reduction = std::min((int)(1 + (int)(log(depth)) * log(moves_searched) / 2.0), depth - 2);
+                score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, true, ply + 1, pv_table, max_ply);
+                do_full_search = score > alpha;
+            } else {
+                do_full_search = true;
+            }
+            // pvs at full depth
+            if (do_full_search) {
+                score = -search(board, depth - 1, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
+                if (score > alpha && score < beta) {
+                    score = -search(board, depth - 1, -beta, -alpha, ply + 1, true, pv_table, max_ply);
+                }
             }
         }
         board.undoMove(move);
