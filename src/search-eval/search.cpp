@@ -197,7 +197,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
             // lmr
             if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check) {
                 int lmr_reduction = std::min((int)(1 + (int)(log(depth)) * log(moves_searched) / 2.0), depth - 2);
-                score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, true, ply + 1, pv_table, max_ply);
+                score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
                 do_full_search = true;
@@ -278,7 +278,7 @@ Move search(Board& board, int max_depth, int& best_score) {
         // PVS
         int moves_searched = 0;
 
-        // auto start = std::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
         for (uint8_t i = 0; i < moves.size(); i++) {
             uint8_t best_move_index = i;
             for (uint8_t j = i + 1; j < moves.size(); j++) {
@@ -325,19 +325,19 @@ Move search(Board& board, int max_depth, int& best_score) {
         if (!searching) {
             break;
         }
-        // auto stop = std::chrono::high_resolution_clock::now();
-        // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
         if (cur_iteration_best != NO_MOVE) {
             best_move = cur_iteration_best;
         }
 
-        // std::cout << "info depth " << depth << " seldepth " << seldepth << " score cp " << best_score << " nodes " << nodes << " nps "
-        //           << (!duration.count() ? nodes : static_cast<int>(static_cast<double>(nodes) / (static_cast<double>(duration.count()) / 1000))) << " pv ";
-        // for (uint16_t i = 0; i < pv_table[0].cur_move; i++) {
-        //     std::cout << moveToStr(pv_table[0].moves[i]) << ' ';
-        // }
-        // std::cout << std::endl;
+        std::cout << "info depth " << depth << " seldepth " << seldepth << " score cp " << best_score << " nodes " << nodes << " nps "
+                  << (!duration.count() ? nodes : static_cast<int>(static_cast<double>(nodes) / (static_cast<double>(duration.count()) / 1000))) << " pv ";
+        for (uint16_t i = 0; i < pv_table[0].cur_move; i++) {
+            std::cout << moveToStr(pv_table[0].moves[i]) << ' ';
+        }
+        std::cout << std::endl;
     }
 
     return best_move;

@@ -24,6 +24,11 @@ ifneq ($(shell uname),Darwin)
 endif
 	OBJDIR:=$(OBJDIR)/lto
 endif
+ifneq ($(filter native,$(MAKECMDGOALS)),)
+	CXXFLAGS += -O3 -flto -mpopcnt -march=native
+	LDFLAGS += -flto -static
+	OBJDIR:=$(OBJDIR)/native
+endif
 ifneq ($(filter pg,$(MAKECMDGOALS)),)
 	CXXFLAGS += -pg
 	LDFLAGS += -pg
@@ -41,6 +46,7 @@ BIN=$(OBJDIR)/Axiom
 debug: $(BIN)
 release: $(BIN)
 lto: $(BIN)
+native: $(BIN)
 pg: $(BIN)
 tune: $(BIN)
 
