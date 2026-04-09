@@ -129,10 +129,18 @@ int search(Board& board, int depth, int alpha, int beta, int ply, PVLine pv_tabl
         }
     }
 
+    bool in_check = board.inCheck();
+    int static_eval = eval(board);
+
+    // TODO Tune the constant
+    if (!in_check && depth <= 6 && static_eval - RFP_MARGIN * depth >= beta) {
+        return static_eval;
+    }
+
     MoveList moves = getLegalMoves(board);
     if (moves.size() == 0) {
         pv_table[ply].cur_move = 0;
-        return board.inCheck() ? -SCORE_MAX + ply : 0; // checkmate or stalemate
+        return in_check ? -SCORE_MAX + ply : 0; // checkmate or stalemate
     }
 
     std::array<int, MAX_MOVES> scores;
