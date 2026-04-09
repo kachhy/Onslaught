@@ -212,7 +212,7 @@ void searchTest(int depth, const std::string& fen = "") {
     } else {
         std::cout << "\nSearch framework tests with board: (" << fen << ")\n";
     }
-    for (int i = 1; i <= depth; i++) {
+    for (int i = depth; i <= depth; i++) {
         auto start = std::chrono::high_resolution_clock::now();
         Board testing_board;
         if (fen != "") {
@@ -464,7 +464,7 @@ int main(int argc, char** argv) {
 
     uci();
 
-    searchTests();
+    // searchTests();
     // playGameInTerminal();
 #endif
     return 0;

@@ -25,8 +25,12 @@ endif
 	OBJDIR:=$(OBJDIR)/lto
 endif
 ifneq ($(filter native,$(MAKECMDGOALS)),)
-	CXXFLAGS += -O3 -flto -mpopcnt -march=native
-	LDFLAGS += -flto -static
+	CXXFLAGS += -O3 -flto -march=native
+ifneq ($(shell uname),Darwin)
+	CXXFLAGS += -mpopcnt
+	LDFLAGS += -static
+endif
+	LDFLAGS += -flto
 	OBJDIR:=$(OBJDIR)/native
 endif
 ifneq ($(filter pg,$(MAKECMDGOALS)),)
