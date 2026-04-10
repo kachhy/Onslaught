@@ -42,6 +42,11 @@ ifneq ($(filter tune,$(MAKECMDGOALS)),)
 	CXXFLAGS += -DTUNING -O3 -flto -march=native
 	OBJDIR:=$(OBJDIR)/tune
 endif
+ifneq ($(filter perft,$(MAKECMDGOALS)),)
+	CXXFLAGS += -O3 -flto -DPERFT
+	LDFLAGS += -flto
+	OBJDIR:=$(OBJDIR)/perft
+endif
 
 OBJ=$(patsubst src/%.cpp,$(OBJDIR)/%.o,$(SRC))
 DEPS=$(OBJ:.o=.d)
@@ -53,6 +58,7 @@ lto: $(BIN)
 native: $(BIN)
 pg: $(BIN)
 tune: $(BIN)
+perft: $(BIN)
 
 $(BIN): $(OBJ)
 	@echo "  LINK $@"
