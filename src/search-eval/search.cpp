@@ -196,26 +196,33 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
         Move move = moves[i];
         board.makeMove(move);
 
+        // mate extensions
+        bool gives_check = board.inCheck();
+        int extension = 0;
+        if (gives_check && depth <= 2) {
+            extension = 1;
+        }
+
         int score;
         bool do_full_search = false;
 
         if (moves_searched == 0) {
-            score = -search(board, depth - 1, -beta, -alpha, ply + 1, true, pv_table, max_ply);
+            score = -search(board, depth - 1 + extension, -beta, -alpha, ply + 1, true, pv_table, max_ply);
         } else {
             // lmr
-            if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check) {
+            if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check && !gives_check) {
                 // TODO tune this function
                 int lmr_reduction = std::min((int)(1 + (int)(log(depth)) * log(moves_searched) / 2.0), depth - 2);
-                score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
+                score = -search(board, depth - 1 - lmr_reduction + extension, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
                 do_full_search = true;
             }
             // pvs at full depth
             if (do_full_search) {
-                score = -search(board, depth - 1, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
+                score = -search(board, depth - 1 + extension, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
                 if (score > alpha && score < beta) {
-                    score = -search(board, depth - 1, -beta, -alpha, ply + 1, true, pv_table, max_ply);
+                    score = -search(board, depth - 1 + extension, -beta, -alpha, ply + 1, true, pv_table, max_ply);
                 }
             }
         }
