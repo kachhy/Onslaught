@@ -8,8 +8,8 @@
 #include "terms.h"
 #include "uci/uci.h"
 #include <array>
-#include <cmath>
 #include <chrono>
+#include <cmath>
 #include <iostream>
 
 uint16_t seldepth;
@@ -261,13 +261,13 @@ Move search(Board& board, int max_depth, int& best_score) {
     const int MAX_PLY = 128;
     PVLine pv_table[MAX_PLY + 1]; // pre-allocated, indexed by ply
     nodes = 0;
+    best_score = 0;
 
     for (int depth = 1; depth <= max_depth; depth++) {
         if (!searching) {
             break;
         }
         seldepth = 0;
-        best_score = -SCORE_MAX;
 
         for (int (&history_score)[12] : board.score_history) {
             for (int& score : history_score) {
@@ -275,66 +275,45 @@ Move search(Board& board, int max_depth, int& best_score) {
             }
         }
 
-        // Clear PV table for this iteration
-        for (int i = 0; i <= MAX_PLY; i++) {
-            pv_table[i].cur_move = 0;
-        }
-
         tt.incAge();
 
-        int alpha = -SCORE_MAX;
-        int beta = SCORE_MAX;
-        Move cur_iteration_best = NO_MOVE;
-
-        MoveList moves = getLegalMoves(board);
-        std::array<int, MAX_MOVES> scores;
-        for (uint8_t i = 0; i < moves.size(); i++) {
-            scores[i] = scoreMove(board, moves[i], best_move, 0);
+        int delta = 25;
+        int alpha;
+        int beta;
+        if (depth >= 5) {
+            alpha = best_score - delta;
+            beta = best_score + delta;
+        } else {
+            alpha = -SCORE_MAX;
+            beta = SCORE_MAX;
         }
-        // PVS
-        int moves_searched = 0;
 
         auto start = std::chrono::high_resolution_clock::now();
-        for (uint8_t i = 0; i < moves.size(); i++) {
-            uint8_t best_move_index = i;
-            for (uint8_t j = i + 1; j < moves.size(); j++) {
-                if (scores[j] > scores[best_move_index]) {
-                    best_move_index = j;
-                }
+        int iter_score = best_score;
+        while (true) {
+            // Clear PV table before each search
+            for (int i = 0; i <= MAX_PLY; i++) {
+                pv_table[i].cur_move = 0;
             }
-            moves.sort_item(best_move_index);
-            std::swap(scores[i], scores[best_move_index]);
 
-            Move move = moves[i];
-            board.makeMove(move);
-            int score;
-            if (moves_searched == 0) {
-                score = -search(board, depth - 1, -beta, -alpha, 1, true, pv_table, MAX_PLY);
-            } else {
-                score = -search(board, depth - 1, -alpha - 1, -alpha, 1, true, pv_table, MAX_PLY);
-                if (score > alpha && score < beta) {
-                    score = -search(board, depth - 1, -beta, -alpha, 1, true, pv_table, MAX_PLY);
-                }
-            }
-            board.undoMove(move);
-            moves_searched++;
+            iter_score = search(board, depth, alpha, beta, 0, true, pv_table, MAX_PLY);
             if (!searching) {
                 break;
             }
 
-            if (score > best_score) {
-                best_score = score;
-                cur_iteration_best = move;
-                // Root is ply 0, build PV the same way
-                pv_table[0].moves[0] = move;
-                memcpy(pv_table[0].moves + 1, pv_table[1].moves, pv_table[1].cur_move * sizeof(Move));
-                pv_table[0].cur_move = pv_table[1].cur_move + 1;
-
-                if (score > alpha) {
-                    alpha = score;
+            if (iter_score <= alpha) {
+                // fail low = widen lower bound
+                alpha = std::max(-SCORE_MAX, iter_score - delta);
+                delta *= 2;
+            } else if (iter_score >= beta) {
+                // fail high = widen upper bound
+                beta = std::min(SCORE_MAX, iter_score + delta);
+                delta *= 2;
+            } else {
+                best_score = iter_score;
+                if (pv_table[0].cur_move > 0) {
+                    best_move = pv_table[0].moves[0];
                 }
-            }
-            if (score >= beta) {
                 break;
             }
         }
@@ -344,12 +323,8 @@ Move search(Board& board, int max_depth, int& best_score) {
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
-        if (cur_iteration_best != NO_MOVE) {
-            best_move = cur_iteration_best;
-        }
-
-         std::cout << "info depth " << depth << " seldepth " << seldepth << " score cp " << best_score << " nodes " << nodes << " nps "
-                   << (!duration.count() ? nodes : static_cast<int>(static_cast<double>(nodes) / (static_cast<double>(duration.count()) / 1000))) << " pv ";
+        std::cout << "info depth " << depth << " seldepth " << seldepth << " score cp " << best_score << " nodes " << nodes << " nps "
+                  << (!duration.count() ? nodes : static_cast<int>(static_cast<double>(nodes) / (static_cast<double>(duration.count()) / 1000))) << " pv ";
         for (uint16_t i = 0; i < pv_table[0].cur_move; i++) {
             std::cout << moveToStr(pv_table[0].moves[i]) << ' ';
         }
