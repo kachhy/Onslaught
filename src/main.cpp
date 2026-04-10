@@ -181,6 +181,9 @@ void runTimePerftTest(int depth, const unsigned long long expected[], const std:
                   << (static_cast<double>(result) / duration.count()) / static_cast<double>(1000) << " MNpS | computed NPS: " << std::setw(10) << std::setprecision(3)
                   << std::fixed << (static_cast<double>(cache.size()) / duration.count()) / static_cast<double>(1000) << " MNpS | "
                   << (result == expected[i] ? "PASS" : "FAIL") << " - Time: " << std::setw(10) << duration.count() << "ms\n";
+#ifdef PERFT
+        assert(result == expected[i] && "PerfT Failed");
+#endif
     }
 }
 
@@ -458,7 +461,10 @@ int main(int argc, char** argv) {
 #else
     // Run tests
     // tests();
-    // perftTests();
+#ifdef PERFT
+    perftTests();
+    return 0;
+#endif
     // divideTests();
     // searchTests();
 
