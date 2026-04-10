@@ -358,81 +358,6 @@ void tests() {
     // }
 }
 
-int getIntFromUser(int lower_bound, int upper_bound) {
-    std::string potential_int;
-    std::cin >> potential_int;
-    std::optional<int> cur_int;
-    do {
-        if (std::cin.eof()) {
-            exit(EXIT_FAILURE);
-        }
-        try {
-            cur_int = std::stoi(potential_int);
-        } catch (const std::exception& e) {
-            std::cout << "Invalid number, please enter a number between [" << lower_bound << "] and [" << upper_bound << "]:\n";
-            std::cin >> potential_int;
-            continue;
-        }
-        if (cur_int < lower_bound || cur_int > upper_bound) {
-            std::cout << "Invalid number, please enter a number between [" << lower_bound << "] and [" << upper_bound << "]:\n";
-            std::cin >> potential_int;
-            cur_int.reset();
-        }
-    } while (!cur_int.has_value());
-    return cur_int.value();
-}
-
-void playGameInTerminal() {
-    std::cout << "Which team do you want?\n  [1] White\n  [2] Black\n";
-    int team = getIntFromUser(1, 2);
-    std::cout << "How much depth should the engine search with? [1-10 | 8+ takes a long time]\n";
-    int max_depth = getIntFromUser(1, 10);
-    Board play_board;
-    play_board.printBoard();
-
-    if (team == 2) {
-        std::cout << "Engine thinking...\n";
-        int best_score;
-        Move best_move = search(play_board, max_depth, best_score);
-        std::cout << "Engine found move: " << moveToStr(best_move) << " and scored it: " << best_score << "\n";
-        play_board.makeMove(best_move);
-        play_board.printBoard();
-    }
-    MoveList user_moves;
-    do {
-        if (isDraw(play_board, 0)) {
-            std::cout << "DRAW\n";
-            play_board.printBoard();
-            return;
-        }
-        user_moves = getLegalMoves(play_board);
-        if (user_moves.empty()) {
-            std::cout << "Computer wins\n";
-            play_board.printBoard();
-            return;
-        }
-
-        std::cout << "Which move do you want to play?\n";
-        std::string move;
-        std::cin >> move;
-        Move user_move = strToMove(move, play_board);
-        play_board.makeMove(user_move);
-        if (getLegalMoves(play_board).empty()) {
-            std::cout << "Player wins\n";
-            play_board.printBoard();
-            return;
-        }
-
-        play_board.printBoard();
-        std::cout << "Engine thinking...\n";
-        int best_score;
-        Move best_move = search(play_board, max_depth, best_score);
-        std::cout << "Engine found move: " << moveToStr(best_move) << " and scored it: " << best_score << "\n";
-        play_board.makeMove(best_move);
-        play_board.printBoard();
-    } while (true);
-}
-
 int main(int argc, char** argv) {
     // Populate attacks
     initAttacks();
@@ -458,14 +383,13 @@ int main(int argc, char** argv) {
 #else
     // Run tests
     // tests();
-    // perftTests();
+ perftTests();
     // divideTests();
     // searchTests();
 
-    uci();
+    // uci();
 
     // searchTests();
-    // playGameInTerminal();
 #endif
     return 0;
 }

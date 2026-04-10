@@ -119,6 +119,12 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     if (ply > 0 && isDraw(board, ply)) {
         return 0;
     }
+    // mdp
+    alpha = std::max(alpha, -SCORE_MAX + ply);
+    beta = std::min(beta, SCORE_MAX - ply - 1);
+    if (alpha >= beta) {
+        return alpha;
+    }
 
     if (depth <= 0) {
         pv_table[ply].cur_move = 0;
@@ -177,6 +183,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     int moves_searched = 0;
 
     for (uint8_t i = 0; i < moves.size(); i++) {
+        // move ordering
         uint8_t best_move_index = i;
         for (uint8_t j = i + 1; j < moves.size(); j++) {
             if (scores[j] > scores[best_move_index]) {
