@@ -20,6 +20,18 @@ struct PVLine {
     Move moves[256];
 };
 
+void print_info(int depth, int seldepth, int score, const char* bound, long long nodes, int nps, PVLine* pv) {
+    std::cout << "info depth " << depth << " seldepth " << seldepth << " score cp " << score;
+    if (bound) {
+        std::cout << " " << bound;
+    }
+    std::cout << " nodes " << nodes << " nps " << nps << " pv ";
+    for (uint16_t i = 0; i < pv[0].cur_move; i++) {
+        std::cout << moveToStr(pv[0].moves[i]) << ' ';
+    }
+    std::cout << std::endl;
+}
+
 int quiesce(Board& board, int alpha, int beta) {
     nodes++;
     int static_eval;
@@ -125,6 +137,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     if (alpha >= beta) {
         return alpha;
     }
+    // quiesce on depth <= 0
 
     if (depth <= 0) {
         pv_table[ply].cur_move = 0;
@@ -132,7 +145,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     }
 
     nodes++;
-
+    // find if this position has already been searched at a good depth and returns its score
     Entry tt_entry;
     bool tt_hit = tt.fetch(board, tt_entry);
 
@@ -212,7 +225,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
             // lmr
             if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check && !gives_check) {
                 // TODO tune this function
-                int lmr_reduction = std::min((int)(1 + (int)(log(depth)) * log(moves_searched) / 2.0), depth - 2);
+                int lmr_reduction = std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2);
                 score = -search(board, depth - 1 - lmr_reduction + extension, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
@@ -274,10 +287,8 @@ Move search(Board& board, int max_depth, int& best_score) {
                 score /= 2;
             }
         }
-
-        tt.incAge();
-
-        int delta = 25;
+        // aspiration window
+        int delta = ASPIRATION_MARGIN;
         int alpha;
         int beta;
         if (depth >= 5) {
@@ -290,11 +301,15 @@ Move search(Board& board, int max_depth, int& best_score) {
 
         auto start = std::chrono::high_resolution_clock::now();
         int iter_score = best_score;
+
         while (true) {
             // Clear PV table before each search
             for (int i = 0; i <= MAX_PLY; i++) {
                 pv_table[i].cur_move = 0;
             }
+            auto stop = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+            int nps = duration.count() == 0 ? nodes : static_cast<int>((double)nodes / (duration.count() / 1000.0));
 
             iter_score = search(board, depth, alpha, beta, 0, true, pv_table, MAX_PLY);
             if (!searching) {
@@ -303,13 +318,16 @@ Move search(Board& board, int max_depth, int& best_score) {
 
             if (iter_score <= alpha) {
                 // fail low = widen lower bound
+                print_info(depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table);
                 alpha = std::max(-SCORE_MAX, iter_score - delta);
                 delta *= 2;
             } else if (iter_score >= beta) {
                 // fail high = widen upper bound
+                print_info(depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table);
                 beta = std::min(SCORE_MAX, iter_score + delta);
                 delta *= 2;
             } else {
+                print_info(depth, seldepth, best_score, nullptr, nodes, nps, pv_table);
                 best_score = iter_score;
                 if (pv_table[0].cur_move > 0) {
                     best_move = pv_table[0].moves[0];
@@ -320,15 +338,6 @@ Move search(Board& board, int max_depth, int& best_score) {
         if (!searching) {
             break;
         }
-        auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-
-        std::cout << "info depth " << depth << " seldepth " << seldepth << " score cp " << best_score << " nodes " << nodes << " nps "
-                  << (!duration.count() ? nodes : static_cast<int>(static_cast<double>(nodes) / (static_cast<double>(duration.count()) / 1000))) << " pv ";
-        for (uint16_t i = 0; i < pv_table[0].cur_move; i++) {
-            std::cout << moveToStr(pv_table[0].moves[i]) << ' ';
-        }
-        std::cout << std::endl;
     }
 
     return best_move;
