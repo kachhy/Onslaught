@@ -124,6 +124,8 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
         seldepth = ply;
     }
 
+    pv_table[ply].cur_move = 0;
+
     if (!(nodes & 4095)) {
         checkStdin();
         if (!searching) {
@@ -152,7 +154,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     Entry tt_entry;
     bool tt_hit = tt.fetch(board, tt_entry);
 
-    if (tt_hit && tt_entry.depth >= static_cast<size_t>(depth)) {
+    if (ply > 0 && tt_hit && tt_entry.depth >= static_cast<size_t>(depth)) {
         if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) || (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
             return tt_entry.score;
         }
@@ -383,6 +385,11 @@ Move search(Board& board, int max_depth, int& best_score) {
                 print_info(depth, seldepth, best_score, nullptr, nodes, nps, pv_table);
                 if (pv_table[0].cur_move > 0) {
                     best_move = pv_table[0].moves[0];
+                } else { // Fallback to TT for best move
+                    Entry tt_entry;
+                    if (tt.fetch(board, tt_entry) && tt_entry.best_move != NO_MOVE) {
+                        best_move = tt_entry.best_move;
+                    }
                 }
                 break;
             }
