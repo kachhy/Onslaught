@@ -245,7 +245,6 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
         bool gives_check = givesCheck(board, move);
         // futility pruning: if static_eval + margin <= alpha, prune quiet moves bc they are unlikely to improve position
         if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
-            moves_searched++;
             continue;
         }
         if (is_quiet_move) {
