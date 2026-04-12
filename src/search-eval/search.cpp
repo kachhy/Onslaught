@@ -156,7 +156,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     }
 
     // iir (no tt move)
-    if (depth >= 4 && !tt_hit) {
+    if (depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
         depth--;
     }
 
