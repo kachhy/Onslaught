@@ -8,8 +8,8 @@
 #include "terms.h"
 #include "uci/uci.h"
 #include <array>
-#include <cmath>
 #include <chrono>
+#include <cmath>
 #include <iostream>
 
 uint16_t seldepth;
@@ -20,7 +20,22 @@ struct PVLine {
     Move moves[256];
 };
 
-int quiesce(Board& board, int alpha, int beta) {
+void print_info(int depth, int seldepth, int score, const char* bound, long long nodes, int nps, PVLine* pv) {
+    std::cout << "info depth " << depth << " seldepth " << seldepth << " score cp " << score;
+    if (bound) {
+        std::cout << " " << bound;
+    }
+    std::cout << " nodes " << nodes << " nps " << nps << " pv ";
+    for (uint16_t i = 0; i < pv[0].cur_move; i++) {
+        std::cout << moveToStr(pv[0].moves[i]) << ' ';
+    }
+    std::cout << std::endl;
+}
+
+int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
+    if (ply >= seldepth) {
+        seldepth = ply;
+    }
     nodes++;
     int static_eval;
     int best_value;
@@ -63,7 +78,7 @@ int quiesce(Board& board, int alpha, int beta) {
 
         Move noisy_move = moves[i];
         board.makeMove(noisy_move);
-        int score = -quiesce(board, -beta, -alpha);
+        int score = -quiesce(board, -beta, -alpha, ply + 1, qply + 1);
         board.undoMove(noisy_move);
         if (score >= beta) {
             return score;
@@ -119,14 +134,21 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     if (ply > 0 && isDraw(board, ply)) {
         return 0;
     }
+    // mdp
+    alpha = std::max(alpha, -SCORE_MAX + ply);
+    beta = std::min(beta, SCORE_MAX - ply - 1);
+    if (alpha >= beta) {
+        return alpha;
+    }
+    // quiesce on depth <= 0
 
     if (depth <= 0) {
         pv_table[ply].cur_move = 0;
-        return quiesce(board, alpha, beta);
+        return quiesce(board, alpha, beta, ply + 1, 0);
     }
 
     nodes++;
-
+    // find if this position has already been searched at a good depth and returns its score
     Entry tt_entry;
     bool tt_hit = tt.fetch(board, tt_entry);
 
@@ -136,13 +158,27 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
         }
     }
 
+    // iir (no tt move)
+    if (depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
+        depth--;
+    }
+
     bool in_check = board.inCheck();
-    int static_eval = eval(board);
+    if (in_check) { // important; this prevents the improving flag from being false after check sequence finsishes
+        board.static_evals[ply] = (ply >= 2 ? board.static_evals[ply - 2] : 0);
+    } else {
+        board.static_evals[ply] = eval(board);
+    }
+
+    int static_eval = board.static_evals[ply];
     bool is_pv = beta - alpha != 1;
 
-    // rfp
+    // imrpoving checks
+    bool improving = !in_check && ply >= 2 && static_eval > board.static_evals[ply - 2];
+
+    // rfp (prune worse positions harder with improving position)
     // TODO Tune the rfp margin constant
-    if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * depth >= beta) {
+    if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * (depth - (improving && depth > 1)) >= beta) {
         return static_eval;
     }
 
@@ -155,6 +191,14 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
         board.undoNullMove();
         if (score >= beta) {
             return score;
+        }
+    }
+
+    // razoring = save movegen cost on pruned nodes by checking if it can beat alpha with quiesce, otherwise fail low
+    if (!is_pv && !in_check && depth <= 3 && static_eval + RAZOR_MARGIN * depth < alpha) {
+        int quiescent_score = quiesce(board, alpha - 1, alpha, ply + 1, 0);
+        if (quiescent_score < alpha) {
+            return quiescent_score;
         }
     }
 
@@ -176,7 +220,15 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     // PVS
     int moves_searched = 0;
 
+    // history malus. apply penalties when all moves fail low
+    MoveList quiets_tried;
+    int quiets_tried_count = 0;
+
+    // futility pruning
+    bool futility_pruning = !is_pv && !in_check && depth <= 8 && static_eval + FUTILITY_MARGIN * depth <= alpha;
+
     for (uint8_t i = 0; i < moves.size(); i++) {
+        // move ordering
         uint8_t best_move_index = i;
         for (uint8_t j = i + 1; j < moves.size(); j++) {
             if (scores[j] > scores[best_move_index]) {
@@ -187,28 +239,45 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
         std::swap(scores[i], scores[best_move_index]);
 
         Move move = moves[i];
+        bool is_quiet_move = !Capture(move) && !Prom(move);
+        bool gives_check = givesCheck(board, move);
+        // futility pruning: if static_eval + margin <= alpha, prune quiet moves bc they are unlikely to improve position
+        if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
+            moves_searched++;
+            continue;
+        }
+        if (is_quiet_move) {
+            quiets_tried[quiets_tried_count++] = move;
+        }
         board.makeMove(move);
+
+        // mate extensions
+        int extension = 0;
+        if (gives_check && depth <= 2) {
+            extension = 1;
+        }
 
         int score;
         bool do_full_search = false;
 
         if (moves_searched == 0) {
-            score = -search(board, depth - 1, -beta, -alpha, ply + 1, true, pv_table, max_ply);
+            score = -search(board, depth - 1 + extension, -beta, -alpha, ply + 1, true, pv_table, max_ply);
         } else {
             // lmr
-            if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check) {
+            if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check && !gives_check) {
                 // TODO tune this function
-                int lmr_reduction = std::min((int)(1 + (int)(log(depth)) * log(moves_searched) / 2.0), depth - 2);
-                score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
+                // improving flag = search more carefully when good position is improving (less reduction)
+                int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2) - improving);
+                score = -search(board, depth - 1 - lmr_reduction + extension, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
                 do_full_search = true;
             }
             // pvs at full depth
             if (do_full_search) {
-                score = -search(board, depth - 1, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
+                score = -search(board, depth - 1 + extension, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
                 if (score > alpha && score < beta) {
-                    score = -search(board, depth - 1, -beta, -alpha, ply + 1, true, pv_table, max_ply);
+                    score = -search(board, depth - 1 + extension, -beta, -alpha, ply + 1, true, pv_table, max_ply);
                 }
             }
         }
@@ -231,13 +300,25 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
             if (!Capture(best_move) && !Prom(best_move)) {
                 board.killers[ply][1] = board.killers[ply][0];
                 board.killers[ply][0] = best_move;
-                board.score_history[To(best_move)][MovePiece(best_move)] += depth * depth;
+                board.score_history[To(best_move)][MovePiece(best_move)] = std::min(board.score_history[To(best_move)][MovePiece(best_move)] + depth * depth, MAX_HISTORY);
+                // malus: penalize all quiet moves searched before this cutoff
+                for (int j = 0; j < quiets_tried_count - 1; j++) {
+                    Move m = quiets_tried[j];
+                    board.score_history[To(m)][MovePiece(m)] = std::max(board.score_history[To(m)][MovePiece(m)] - depth * depth, -MAX_HISTORY);
+                }
             }
             return best_score;
         }
     }
 
     TTBound bound = (best_score > original_alpha) ? EXACTBOUND : UPPERBOUND;
+    // history malus for when no beta cutoffs
+    if (bound == UPPERBOUND) {
+        for (int j = 0; j < quiets_tried_count; j++) {
+            Move m = quiets_tried[j];
+            board.score_history[To(m)][MovePiece(m)] = std::max(board.score_history[To(m)][MovePiece(m)] - depth * depth, -MAX_HISTORY);
+        }
+    }
     tt.insert(board, best_move, best_score, bound, depth);
     return best_score;
 }
@@ -247,99 +328,73 @@ Move search(Board& board, int max_depth, int& best_score) {
     const int MAX_PLY = 128;
     PVLine pv_table[MAX_PLY + 1]; // pre-allocated, indexed by ply
     nodes = 0;
+    best_score = 0;
+
+    auto start = std::chrono::high_resolution_clock::now();
 
     for (int depth = 1; depth <= max_depth; depth++) {
         if (!searching) {
             break;
         }
         seldepth = 0;
-        best_score = -SCORE_MAX;
+        tt.incAge();
 
+        // aspiration window
+        int delta = ASPIRATION_MARGIN;
+        int alpha;
+        int beta;
+        if (depth >= 5) {
+            alpha = best_score - delta;
+            beta = best_score + delta;
+        } else {
+            alpha = -SCORE_MAX;
+            beta = SCORE_MAX;
+        }
+
+        int iter_score = best_score;
+
+        while (true) {
+            // Clear PV table before each search
+            for (int i = 0; i <= MAX_PLY; i++) {
+                pv_table[i].cur_move = 0;
+            }
+
+            iter_score = search(board, depth, alpha, beta, 0, true, pv_table, MAX_PLY);
+            if (!searching) {
+                break;
+            }
+
+            auto stop = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+            int nps = duration.count() == 0 ? nodes : static_cast<int>((double)nodes / (duration.count() / 1000.0));
+
+            if (iter_score <= alpha) {
+                // fail low = true score is at most alpha (upper bound)
+                print_info(depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table);
+                alpha = std::max(-SCORE_MAX, iter_score - delta);
+                delta *= 2;
+            } else if (iter_score >= beta) {
+                // fail high = true score is at least beta (lower bound)
+                print_info(depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table);
+                beta = std::min(SCORE_MAX, iter_score + delta);
+                delta *= 2;
+            } else {
+                best_score = iter_score;
+                print_info(depth, seldepth, best_score, nullptr, nodes, nps, pv_table);
+                if (pv_table[0].cur_move > 0) {
+                    best_move = pv_table[0].moves[0];
+                }
+                break;
+            }
+        }
         for (int (&history_score)[12] : board.score_history) {
             for (int& score : history_score) {
                 score /= 2;
             }
         }
-
-        // Clear PV table for this iteration
-        for (int i = 0; i <= MAX_PLY; i++) {
-            pv_table[i].cur_move = 0;
-        }
-
-        tt.incAge();
-
-        int alpha = -SCORE_MAX;
-        int beta = SCORE_MAX;
-        Move cur_iteration_best = NO_MOVE;
-
-        MoveList moves = getLegalMoves(board);
-        std::array<int, MAX_MOVES> scores;
-        for (uint8_t i = 0; i < moves.size(); i++) {
-            scores[i] = scoreMove(board, moves[i], best_move, 0);
-        }
-        // PVS
-        int moves_searched = 0;
-
-        auto start = std::chrono::high_resolution_clock::now();
-        for (uint8_t i = 0; i < moves.size(); i++) {
-            uint8_t best_move_index = i;
-            for (uint8_t j = i + 1; j < moves.size(); j++) {
-                if (scores[j] > scores[best_move_index]) {
-                    best_move_index = j;
-                }
-            }
-            moves.sort_item(best_move_index);
-            std::swap(scores[i], scores[best_move_index]);
-
-            Move move = moves[i];
-            board.makeMove(move);
-            int score;
-            if (moves_searched == 0) {
-                score = -search(board, depth - 1, -beta, -alpha, 1, true, pv_table, MAX_PLY);
-            } else {
-                score = -search(board, depth - 1, -alpha - 1, -alpha, 1, true, pv_table, MAX_PLY);
-                if (score > alpha && score < beta) {
-                    score = -search(board, depth - 1, -beta, -alpha, 1, true, pv_table, MAX_PLY);
-                }
-            }
-            board.undoMove(move);
-            moves_searched++;
-            if (!searching) {
-                break;
-            }
-
-            if (score > best_score) {
-                best_score = score;
-                cur_iteration_best = move;
-                // Root is ply 0, build PV the same way
-                pv_table[0].moves[0] = move;
-                memcpy(pv_table[0].moves + 1, pv_table[1].moves, pv_table[1].cur_move * sizeof(Move));
-                pv_table[0].cur_move = pv_table[1].cur_move + 1;
-
-                if (score > alpha) {
-                    alpha = score;
-                }
-            }
-            if (score >= beta) {
-                break;
-            }
-        }
         if (!searching) {
             break;
         }
-        auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-
-        if (cur_iteration_best != NO_MOVE) {
-            best_move = cur_iteration_best;
-        }
-
-         std::cout << "info depth " << depth << " seldepth " << seldepth << " score cp " << best_score << " nodes " << nodes << " nps "
-                   << (!duration.count() ? nodes : static_cast<int>(static_cast<double>(nodes) / (static_cast<double>(duration.count()) / 1000))) << " pv ";
-        for (uint16_t i = 0; i < pv_table[0].cur_move; i++) {
-            std::cout << moveToStr(pv_table[0].moves[i]) << ' ';
-        }
-        std::cout << std::endl;
     }
 
     return best_move;

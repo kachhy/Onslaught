@@ -1,5 +1,6 @@
 #include "movegen.h"
 #include "attacks.h"
+#include "core/movelist.h"
 
 MoveList getQuietMoves(const Board& board) {
     MoveList out;
@@ -23,6 +24,12 @@ MoveList getNoisyMoves(const Board& board) {
     addLegalKingMoves(out, board, NOISY_MOVE_MOVEGEN);
     addLegalPawnMoves(out, board, NOISY_MOVE_MOVEGEN);
     addEPLegalMoves(out, board);
+    return out;
+}
+
+MoveList getLegalCheckingMoves(const Board& board) {
+    MoveList out;
+
     return out;
 }
 
@@ -188,6 +195,12 @@ void addPieceLegalMoves(MoveList& moves, const Board& board, Piece piece, MoveFl
 void addAllLegalPieceMoves(MoveList& moves, const Board& board) {
     for (int i = makePiece(PAWN, board.getSTM()) + 1; i <= makePiece(KING, board.getSTM()) - 1; i++) {
         addPieceLegalMoves(moves, board, static_cast<Piece>(i), LEGAL_MOVE_MOVEGEN);
+    }
+}
+
+void addAllLegalCheckingPieceMoves(MoveList &moves, const Board &board) {
+    for (int i = makePiece(PAWN, board.getSTM()) + 1; i <= makePiece(KING, board.getSTM()) - 1; i++) {
+        addPieceLegalMoves(moves, board, static_cast<Piece>(i), CHECKING_MOVE_MOVEGEN);
     }
 }
 
