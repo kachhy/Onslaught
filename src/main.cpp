@@ -1,4 +1,3 @@
-#include "board/rules.h"
 #include "core/move.h"
 #include "core/types.h"
 #include "hash/transposition.h"
@@ -14,7 +13,6 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
-#include <optional>
 #include <unordered_map>
 
 constexpr unsigned long long nodes_position_1[] = {

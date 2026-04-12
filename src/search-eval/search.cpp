@@ -156,12 +156,21 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     }
 
     bool in_check = board.inCheck();
-    int static_eval = eval(board);
+    if (in_check) { // important; this prevents the improving flag from being false after check sequence finsishes
+        board.static_evals[ply] = (ply >= 2 ? board.static_evals[ply - 2] : 0);
+    } else {
+        board.static_evals[ply] = eval(board);
+    }
+
+    int static_eval = board.static_evals[ply];
     bool is_pv = beta - alpha != 1;
 
-    // rfp
+    // imrpoving checks
+    bool improving = !in_check && ply >= 2 && static_eval > board.static_evals[ply - 2];
+
+    // rfp (prune worse positions harder with improving position)
     // TODO Tune the rfp margin constant
-    if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * depth >= beta) {
+    if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * (depth - improving) >= beta) {
         return static_eval;
     }
 
@@ -225,7 +234,8 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
             // lmr
             if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check && !gives_check) {
                 // TODO tune this function
-                int lmr_reduction = std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2);
+                // improving flag = search more carefully when good position is improving (less reduction)
+                int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2) - improving);
                 score = -search(board, depth - 1 - lmr_reduction + extension, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
