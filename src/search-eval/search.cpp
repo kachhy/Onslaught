@@ -155,6 +155,11 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
         }
     }
 
+    // iir (no tt move)
+    if (depth >= 4 && !tt_hit) {
+        depth--;
+    }
+
     bool in_check = board.inCheck();
     if (in_check) { // important; this prevents the improving flag from being false after check sequence finsishes
         board.static_evals[ply] = (ply >= 2 ? board.static_evals[ply - 2] : 0);
