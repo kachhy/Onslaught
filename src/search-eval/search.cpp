@@ -194,7 +194,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
         }
     }
 
-    // razoring: save movegen cost on pruned nodes
+    // razoring = save movegen cost on pruned nodes by checking if it can beat alpha with quiesce, otherwise fail low
     if (!is_pv && !in_check && depth <= 3 && static_eval + RAZOR_MARGIN * depth < alpha) {
         int quiescent_score = quiesce(board, alpha - 1, alpha, ply + 1, 0);
         if (quiescent_score < alpha) {
@@ -300,11 +300,11 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
             if (!Capture(best_move) && !Prom(best_move)) {
                 board.killers[ply][1] = board.killers[ply][0];
                 board.killers[ply][0] = best_move;
-                board.score_history[To(best_move)][MovePiece(best_move)] += depth * depth;
+                board.score_history[To(best_move)][MovePiece(best_move)] = std::min(board.score_history[To(best_move)][MovePiece(best_move)] + depth * depth, MAX_HISTORY);
                 // malus: penalize all quiet moves searched before this cutoff
                 for (int j = 0; j < quiets_tried_count - 1; j++) {
                     Move m = quiets_tried[j];
-                    board.score_history[To(m)][MovePiece(m)] -= depth * depth;
+                    board.score_history[To(m)][MovePiece(m)] = std::max(board.score_history[To(m)][MovePiece(m)] - depth * depth, -MAX_HISTORY);
                 }
             }
             return best_score;
@@ -313,9 +313,11 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
 
     TTBound bound = (best_score > original_alpha) ? EXACTBOUND : UPPERBOUND;
     // history malus for when no beta cutoffs
-    for (int j = 0; j < quiets_tried_count; j++) {
-        Move m = quiets_tried[j];
-        board.score_history[To(m)][MovePiece(m)] -= depth * depth;
+    if (bound == UPPERBOUND) {
+        for (int j = 0; j < quiets_tried_count; j++) {
+            Move m = quiets_tried[j];
+            board.score_history[To(m)][MovePiece(m)] = std::max(board.score_history[To(m)][MovePiece(m)] - depth * depth, -MAX_HISTORY);
+        }
     }
     tt.insert(board, best_move, best_score, bound, depth);
     return best_score;
@@ -337,11 +339,6 @@ Move search(Board& board, int max_depth, int& best_score) {
         seldepth = 0;
         tt.incAge();
 
-        for (int (&history_score)[12] : board.score_history) {
-            for (int& score : history_score) {
-                score /= 2;
-            }
-        }
         // aspiration window
         int delta = ASPIRATION_MARGIN;
         int alpha;
@@ -388,6 +385,11 @@ Move search(Board& board, int max_depth, int& best_score) {
                     best_move = pv_table[0].moves[0];
                 }
                 break;
+            }
+        }
+        for (int (&history_score)[12] : board.score_history) {
+            for (int& score : history_score) {
+                score /= 2;
             }
         }
         if (!searching) {
