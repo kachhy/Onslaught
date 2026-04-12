@@ -32,7 +32,13 @@ void print_info(int depth, int seldepth, int score, const char* bound, long long
     std::cout << std::endl;
 }
 
-int quiesce(Board& board, int alpha, int beta) {
+int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
+    if (ply >= seldepth) {
+        seldepth = ply;
+    }
+    // if (qply >= MAX_QPLY) {
+    //     return eval(board);
+    // }
     nodes++;
     int static_eval;
     int best_value;
@@ -75,7 +81,7 @@ int quiesce(Board& board, int alpha, int beta) {
 
         Move noisy_move = moves[i];
         board.makeMove(noisy_move);
-        int score = -quiesce(board, -beta, -alpha);
+        int score = -quiesce(board, -beta, -alpha, ply + 1, qply + 1);
         board.undoMove(noisy_move);
         if (score >= beta) {
             return score;
@@ -141,7 +147,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
 
     if (depth <= 0) {
         pv_table[ply].cur_move = 0;
-        return quiesce(board, alpha, beta);
+        return quiesce(board, alpha, beta, ply + 1, 0);
     }
 
     nodes++;
@@ -209,6 +215,10 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     // PVS
     int moves_searched = 0;
 
+    // history malus. apply penalties when all moves fail low
+    MoveList quiets_tried;
+    int quiets_tried_count = 0;
+
     for (uint8_t i = 0; i < moves.size(); i++) {
         // move ordering
         uint8_t best_move_index = i;
@@ -221,6 +231,9 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
         std::swap(scores[i], scores[best_move_index]);
 
         Move move = moves[i];
+        if (!Capture(move) && !Prom(move)) {
+            quiets_tried[quiets_tried_count++] = move;
+        }
         board.makeMove(move);
 
         // mate extensions
@@ -274,12 +287,22 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
                 board.killers[ply][1] = board.killers[ply][0];
                 board.killers[ply][0] = best_move;
                 board.score_history[To(best_move)][MovePiece(best_move)] += depth * depth;
+                // malus: penalize all quiet moves searched before this cutoff
+                for (int j = 0; j < quiets_tried_count - 1; j++) {
+                    Move m = quiets_tried[j];
+                    board.score_history[To(m)][MovePiece(m)] -= depth * depth;
+                }
             }
             return best_score;
         }
     }
 
     TTBound bound = (best_score > original_alpha) ? EXACTBOUND : UPPERBOUND;
+    // history malus for when no beta cutoffs
+    for (int j = 0; j < quiets_tried_count - 1; j++) {
+        Move m = quiets_tried[j];
+        board.score_history[To(m)][MovePiece(m)] -= depth * depth;
+    }
     tt.insert(board, best_move, best_score, bound, depth);
     return best_score;
 }
