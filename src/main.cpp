@@ -383,7 +383,7 @@ int main(int argc, char** argv) {
     // tests();
     // perftTests();
     // divideTests();
-    searchTests();
+    // searchTests();
 
     uci();
 #endif

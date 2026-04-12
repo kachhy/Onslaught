@@ -170,7 +170,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
 
     // rfp (prune worse positions harder with improving position)
     // TODO Tune the rfp margin constant
-    if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * (depth - improving) >= beta) {
+    if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * (depth - (improving && depth > 1)) >= beta) {
         return static_eval;
     }
 
@@ -293,6 +293,7 @@ Move search(Board& board, int max_depth, int& best_score) {
             break;
         }
         seldepth = 0;
+        tt.incAge();
 
         for (int (&history_score)[12] : board.score_history) {
             for (int& score : history_score) {
@@ -329,13 +330,13 @@ Move search(Board& board, int max_depth, int& best_score) {
             int nps = duration.count() == 0 ? nodes : static_cast<int>((double)nodes / (duration.count() / 1000.0));
 
             if (iter_score <= alpha) {
-                // fail low = widen lower bound
-                print_info(depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table);
+                // fail low = true score is at most alpha (upper bound)
+                print_info(depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table);
                 alpha = std::max(-SCORE_MAX, iter_score - delta);
                 delta *= 2;
             } else if (iter_score >= beta) {
-                // fail high = widen upper bound
-                print_info(depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table);
+                // fail high = true score is at least beta (lower bound)
+                print_info(depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table);
                 beta = std::min(SCORE_MAX, iter_score + delta);
                 delta *= 2;
             } else {
