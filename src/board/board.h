@@ -117,7 +117,7 @@ public:
     // Search
     Move killers[MAX_PLY][2];
     int static_evals[MAX_PLY]; // for improving
-    int score_history[64][12]; // [Piece][to_square]
+    int score_history[64][12]; // [to_square][Piece]
 private:
 
     // Private member functions

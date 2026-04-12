@@ -160,8 +160,9 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
         }
     }
 
+    bool is_pv = beta - alpha != 1;
     // iir (no tt move)
-    if (depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
+    if (!is_pv && depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
         depth--;
     }
 
@@ -173,7 +174,6 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     }
 
     int static_eval = board.static_evals[ply];
-    bool is_pv = beta - alpha != 1;
 
     // imrpoving checks
     bool improving = !in_check && ply >= 2 && static_eval > board.static_evals[ply - 2];
@@ -227,7 +227,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     int quiets_tried_count = 0;
 
     // futility pruning
-    bool futility_pruning = !is_pv && !in_check && depth <= 8 && static_eval + FUTILITY_MARGIN * depth <= alpha;
+    bool futility_pruning = !is_pv && !in_check && depth <= 5 && static_eval + FUTILITY_MARGIN * depth <= alpha;
 
     for (uint8_t i = 0; i < moves.size(); i++) {
         // move ordering
