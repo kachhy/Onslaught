@@ -78,6 +78,5 @@ constexpr inline DefaultPiece makeDefaultPiece(Piece piece) {
     }
     return static_cast<DefaultPiece>(static_cast<int>(piece) - static_cast<int>(BLACK_PAWN));
 }
-constexpr inline Side extractColor(Piece piece) { return piece >= BLACK_PAWN ? BLACK : WHITE; };
 
 #endif // TYPES_H

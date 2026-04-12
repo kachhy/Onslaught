@@ -1,5 +1,8 @@
 #include "move.h"
 #include "board/board.h"
+#include "core/bitboard.h"
+#include "core/types.h"
+#include "movegen/attacks.h"
 #include <cmath>
 
 std::string moveToStr(Move move) {
@@ -35,8 +38,7 @@ Move strToMove(const std::string& str, const Board& board) {
     int to_file = str[2] - 'a';
     int to_rank = '8' - str[3];
 
-    if (from_file < 0 || from_file > 7 || from_rank < 0 || from_rank > 7 ||
-        to_file < 0 || to_file > 7 || to_rank < 0 || to_rank > 7) {
+    if (from_file < 0 || from_file > 7 || from_rank < 0 || from_rank > 7 || to_file < 0 || to_file > 7 || to_rank < 0 || to_rank > 7) {
         return NO_MOVE;
     }
 
@@ -50,7 +52,7 @@ Move strToMove(const std::string& str, const Board& board) {
 
     uint32_t flags = QUIET_FLAG;
     Piece target = board.pieceAt(to);
-    
+
     if (target != NO_PIECE) {
         flags = CAPTURE_FLAG;
     }
@@ -65,11 +67,11 @@ Move strToMove(const std::string& str, const Board& board) {
         // Promotion
         if (str.length() == 5) {
             switch (str[4]) {
-                case 'n': flags = KNIGHT_PROMO_FLAG; break;
-                case 'b': flags = BISHOP_PROMO_FLAG; break;
-                case 'r': flags = ROOK_PROMO_FLAG; break;
-                case 'q': flags = QUEEN_PROMO_FLAG; break;
-                default: break; 
+            case 'n': flags = KNIGHT_PROMO_FLAG; break;
+            case 'b': flags = BISHOP_PROMO_FLAG; break;
+            case 'r': flags = ROOK_PROMO_FLAG; break;
+            case 'q': flags = QUEEN_PROMO_FLAG; break;
+            default: break;
             }
             if (target != NO_PIECE) {
                 flags |= CAPTURE_FLAG;
@@ -96,4 +98,11 @@ DefaultPiece promPiece(Move move) {
         return BISHOP;
     }
     return KNIGHT;
+}
+
+bool givesCheck(const Board& board, Move move) {
+    if (Prom(move)) {
+        return getPieceAttacks(makePiece(promPiece(move), board.getSTM()), To(move), board.getOcc(BOTH)) & board.getPieceBB(makePiece(KING, board.getXSTM()));
+    }
+    return getPieceAttacks(MovePiece(move), To(move), board.getOcc(BOTH)) & board.getPieceBB(makePiece(KING, board.getXSTM()));
 }

@@ -36,9 +36,6 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
     if (ply >= seldepth) {
         seldepth = ply;
     }
-    // if (qply >= MAX_QPLY) {
-    //     return eval(board);
-    // }
     nodes++;
     int static_eval;
     int best_value;
@@ -197,6 +194,14 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
         }
     }
 
+    // razoring: save movegen cost on pruned nodes
+    if (!is_pv && !in_check && depth <= 3 && static_eval + RAZOR_MARGIN * depth < alpha) {
+        int quiescent_score = quiesce(board, alpha - 1, alpha, ply + 1, 0);
+        if (quiescent_score < alpha) {
+            return quiescent_score;
+        }
+    }
+
     MoveList moves = getLegalMoves(board);
     if (moves.size() == 0) {
         pv_table[ply].cur_move = 0;
@@ -219,6 +224,9 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     MoveList quiets_tried;
     int quiets_tried_count = 0;
 
+    // futility pruning
+    bool futility_pruning = !is_pv && !in_check && depth <= 8 && static_eval + FUTILITY_MARGIN * depth <= alpha;
+
     for (uint8_t i = 0; i < moves.size(); i++) {
         // move ordering
         uint8_t best_move_index = i;
@@ -231,13 +239,19 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
         std::swap(scores[i], scores[best_move_index]);
 
         Move move = moves[i];
-        if (!Capture(move) && !Prom(move)) {
+        bool is_quiet_move = !Capture(move) && !Prom(move);
+        bool gives_check = givesCheck(board, move);
+        // futility pruning: if static_eval + margin <= alpha, prune quiet moves bc they are unlikely to improve position
+        if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
+            moves_searched++;
+            continue;
+        }
+        if (is_quiet_move) {
             quiets_tried[quiets_tried_count++] = move;
         }
         board.makeMove(move);
 
         // mate extensions
-        bool gives_check = board.inCheck();
         int extension = 0;
         if (gives_check && depth <= 2) {
             extension = 1;
@@ -299,7 +313,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
 
     TTBound bound = (best_score > original_alpha) ? EXACTBOUND : UPPERBOUND;
     // history malus for when no beta cutoffs
-    for (int j = 0; j < quiets_tried_count - 1; j++) {
+    for (int j = 0; j < quiets_tried_count; j++) {
         Move m = quiets_tried[j];
         board.score_history[To(m)][MovePiece(m)] -= depth * depth;
     }

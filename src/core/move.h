@@ -34,5 +34,6 @@ class Board;
 std::string moveToStr(Move move);
 Move strToMove(const std::string& str, const Board& board);
 DefaultPiece promPiece(Move move);
+bool givesCheck(const Board& board, Move move);
 
-#endif
+#endif // MOVE_H
