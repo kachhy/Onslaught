@@ -232,6 +232,7 @@ void searchTest(int depth, const std::string& fen = "") {
 void searchTests() {
     searching = true;
     searchTest(12);
+    searchTest(15, "4Q3/7k/5Kp1/6p1/6P1/8/8/8 b - - 0 1");
     searchTest(12, "2k5/pp4R1/2b2P1p/8/8/1P5P/1r4PK/8 w - - 0 1");
     searchTest(12, "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
     searchTest(12, "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2");

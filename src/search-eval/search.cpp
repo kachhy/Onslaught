@@ -41,7 +41,7 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
     int best_value;
     MoveList moves;
     if (board.inCheck()) {
-        best_value = -SCORE_MAX;
+        best_value = -SCORE_MAX + ply;
         moves = getLegalMoves(board);
     } else {
         static_eval = eval(board);
@@ -161,12 +161,15 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     }
 
     bool is_pv = beta - alpha != 1;
-    // iir (no tt move)
-    if (!is_pv && depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
-        depth--;
-    }
+    // // iir (no tt move)
+    // if (!is_pv && depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
+    //     depth--;
+    // }
 
     bool in_check = board.inCheck();
+    if (in_check) {
+        depth++; // check extension
+    }
     if (in_check) { // important; this prevents the improving flag from being false after check sequence finsishes
         board.static_evals[ply] = (ply >= 2 ? board.static_evals[ply - 2] : 0);
     } else {
@@ -176,11 +179,11 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     int static_eval = board.static_evals[ply];
 
     // imrpoving checks
-    bool improving = !in_check && ply >= 2 && static_eval > board.static_evals[ply - 2];
+    // bool improving = !in_check && ply >= 2 && static_eval > board.static_evals[ply - 2];
 
     // rfp (prune worse positions harder with improving position)
     // TODO Tune the rfp margin constant
-    if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * (depth - (improving && depth > 1)) >= beta) {
+    if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * (depth/* - (improving && depth > 1)*/) >= beta) {
         return static_eval;
     }
 
@@ -196,13 +199,13 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
         }
     }
 
-    // razoring = save movegen cost on pruned nodes by checking if it can beat alpha with quiesce, otherwise fail low
-    if (!is_pv && !in_check && depth <= 3 && static_eval + RAZOR_MARGIN * depth < alpha) {
-        int quiescent_score = quiesce(board, alpha - 1, alpha, ply + 1, 0);
-        if (quiescent_score < alpha) {
-            return quiescent_score;
-        }
-    }
+    // // razoring = save movegen cost on pruned nodes by checking if it can beat alpha with quiesce, otherwise fail low
+    // if (!is_pv && !in_check && depth <= 3 && static_eval + RAZOR_MARGIN * depth < alpha) {
+    //     int quiescent_score = quiesce(board, alpha - 1, alpha, ply + 1, 0);
+    //     if (quiescent_score < alpha) {
+    //         return quiescent_score;
+    //     }
+    // }
 
     MoveList moves = getLegalMoves(board);
     if (moves.size() == 0) {
@@ -223,11 +226,11 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     int moves_searched = 0;
 
     // history malus. apply penalties when all moves fail low
-    MoveList quiets_tried;
-    int quiets_tried_count = 0;
+    // MoveList quiets_tried;
+    // int quiets_tried_count = 0;
 
-    // futility pruning
-    bool futility_pruning = !is_pv && !in_check && depth <= 5 && static_eval + FUTILITY_MARGIN * depth <= alpha;
+    // // futility pruning
+    // bool futility_pruning = !is_pv && !in_check && depth <= 5 && static_eval + FUTILITY_MARGIN * depth <= alpha;
 
     for (uint8_t i = 0; i < moves.size(); i++) {
         // move ordering
@@ -241,44 +244,44 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
         std::swap(scores[i], scores[best_move_index]);
 
         Move move = moves[i];
-        bool is_quiet_move = !Capture(move) && !Prom(move);
-        bool gives_check = givesCheck(board, move);
-        // futility pruning: if static_eval + margin <= alpha, prune quiet moves bc they are unlikely to improve position
-        if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
-            continue;
-        }
-        if (is_quiet_move) {
-            quiets_tried[quiets_tried_count++] = move;
-        }
+        // bool is_quiet_move = !Capture(move) && !Prom(move);
+        // bool gives_check = givesCheck(board, move);
+        // // futility pruning: if static_eval + margin <= alpha, prune quiet moves bc they are unlikely to improve position
+        // if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
+        //     continue;
+        // }
+        // if (is_quiet_move) {
+        //     quiets_tried[quiets_tried_count++] = move;
+        // }
         board.makeMove(move);
 
-        // mate extensions
-        int extension = 0;
-        if (gives_check && depth <= 2) {
-            extension = 1;
-        }
+        // // mate extensions (replaced by check extension at top of search)
+        // int extension = 0;
+        // if (gives_check && depth <= 2) {
+        //     extension = 1;
+        // }
 
         int score;
         bool do_full_search = false;
 
         if (moves_searched == 0) {
-            score = -search(board, depth - 1 + extension, -beta, -alpha, ply + 1, true, pv_table, max_ply);
+            score = -search(board, depth - 1, -beta, -alpha, ply + 1, true, pv_table, max_ply);
         } else {
             // lmr
-            if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check && !gives_check) {
+            if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check) {
                 // TODO tune this function
                 // improving flag = search more carefully when good position is improving (less reduction)
-                int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2) - improving);
-                score = -search(board, depth - 1 - lmr_reduction + extension, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
+                int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2)/* - improving*/);
+                score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
                 do_full_search = true;
             }
             // pvs at full depth
             if (do_full_search) {
-                score = -search(board, depth - 1 + extension, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
+                score = -search(board, depth - 1, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
                 if (score > alpha && score < beta) {
-                    score = -search(board, depth - 1 + extension, -beta, -alpha, ply + 1, true, pv_table, max_ply);
+                    score = -search(board, depth - 1, -beta, -alpha, ply + 1, true, pv_table, max_ply);
                 }
             }
         }
@@ -301,12 +304,13 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
             if (!Capture(best_move) && !Prom(best_move)) {
                 board.killers[ply][1] = board.killers[ply][0];
                 board.killers[ply][0] = best_move;
-                board.score_history[To(best_move)][MovePiece(best_move)] = std::min(board.score_history[To(best_move)][MovePiece(best_move)] + depth * depth, MAX_HISTORY);
+                board.score_history[To(best_move)][MovePiece(best_move)] =
+                    std::min(board.score_history[To(best_move)][MovePiece(best_move)] + depth * depth, MAX_HISTORY);
                 // malus: penalize all quiet moves searched before this cutoff
-                for (int j = 0; j < quiets_tried_count - 1; j++) {
-                    Move m = quiets_tried[j];
-                    board.score_history[To(m)][MovePiece(m)] = std::max(board.score_history[To(m)][MovePiece(m)] - depth * depth, -MAX_HISTORY);
-                }
+                // for (int j = 0; j < quiets_tried_count - 1; j++) {
+                //     Move m = quiets_tried[j];
+                //     board.score_history[To(m)][MovePiece(m)] = std::max(board.score_history[To(m)][MovePiece(m)] - depth * depth, -MAX_HISTORY);
+                // }
             }
             return best_score;
         }
@@ -314,12 +318,12 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
 
     TTBound bound = (best_score > original_alpha) ? EXACTBOUND : UPPERBOUND;
     // history malus for when no beta cutoffs
-    if (bound == UPPERBOUND) {
-        for (int j = 0; j < quiets_tried_count; j++) {
-            Move m = quiets_tried[j];
-            board.score_history[To(m)][MovePiece(m)] = std::max(board.score_history[To(m)][MovePiece(m)] - depth * depth, -MAX_HISTORY);
-        }
-    }
+    // if (bound == UPPERBOUND) {
+    //     for (int j = 0; j < quiets_tried_count; j++) {
+    //         Move m = quiets_tried[j];
+    //         board.score_history[To(m)][MovePiece(m)] = std::max(board.score_history[To(m)][MovePiece(m)] - depth * depth, -MAX_HISTORY);
+    //     }
+    // }
     tt.insert(board, best_move, best_score, bound, depth);
     return best_score;
 }

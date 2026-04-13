@@ -133,7 +133,7 @@ bool givesCheck(const Board& board, Move move) {
         BitBoard blockers = between_squares[king_square_xstm][sq] & occ;
         // check stm piece pinning stm piece against xstm king
         // or ep and exactly 2 blockers between slider and king on ep rank
-        if (!multipleActiveBits(blockers) || (isep && bitCount(blockers) == 2 && sliders & getAttackingEPRank(stm))) {
+        if ((!multipleActiveBits(blockers) && !(cur_to_square_bb & between_squares[king_square_xstm][sq])) || (isep && bitCount(blockers) == 2 && (BitBoard(1) << sq) & getAttackingEPRank(stm))) {
             return true;
         }
     }
