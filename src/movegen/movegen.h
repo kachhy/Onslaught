@@ -12,7 +12,6 @@ enum MoveFlag {
 };
 
 constexpr inline BitBoard getDoublePushRank(Side side) { return side == WHITE ? RANK_4 : RANK_5; }
-constexpr inline BitBoard getAttackingEPRank(Side side) { return side == WHITE ? RANK_5 : RANK_4; }
 
 MoveList getQuietMoves(const Board& board);
 MoveList getNoisyMoves(const Board& board);

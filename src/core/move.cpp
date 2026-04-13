@@ -101,8 +101,45 @@ DefaultPiece promPiece(Move move) {
 }
 
 bool givesCheck(const Board& board, Move move) {
-    if (Prom(move)) {
-        return getPieceAttacks(makePiece(promPiece(move), board.getSTM()), To(move), board.getOcc(BOTH)) & board.getPieceBB(makePiece(KING, board.getXSTM()));
+    // edge cases:
+    //  X1: Ensure to get rid of From(move) from occ, otherwise slider sliding away from king will not give check.
+    //  X2: Promo: promoting to a new piece will turn pawn to piece and can attack king
+    //  X3: pins: moving can reveal slider checks
+    //  X3.5: ep: en passant can get rid of 2 pawns on 1 file, possibly revealing a non pinning slider attacking the king
+    Side stm = board.getSTM();
+    Side xstm = board.getXSTM();
+    Square cur_from_square = From(move);
+    BitBoard cur_from_square_bb = BitBoard(1) << cur_from_square;
+    Square cur_to_square = To(move);
+    BitBoard cur_to_square_bb = BitBoard(1) << cur_to_square;
+    // BitBoard king_square_stm_bb = board.getPieceBB(makePiece(KING, stm));
+    BitBoard king_square_xstm_bb = board.getPieceBB(makePiece(KING, xstm));
+    // Square king_square_stm = static_cast<Square>(getLSB(king_square_stm_bb));
+    Square king_square_xstm = static_cast<Square>(getLSB(king_square_xstm_bb));
+    Piece cur_piece = MovePiece(move);
+    bool isep = IsEP(move);
+    if (isep) {
+        cur_from_square_bb |= stm == WHITE ? shiftSouth(cur_to_square_bb) : shiftNorth(cur_to_square_bb);
     }
-    return getPieceAttacks(MovePiece(move), To(move), board.getOcc(BOTH)) & board.getPieceBB(makePiece(KING, board.getXSTM()));
+    BitBoard occ = board.getOcc(BOTH);
+    BitBoard new_occ = (board.getOcc(BOTH) & ~cur_from_square_bb) | cur_to_square_bb;
+    // BitBoard new_occ_stm = (board.getOcc(stm) & ~cur_from_square_bb) | cur_to_square_bb;
+    BitBoard sliders = (board.getPieceBB(makePiece(BISHOP, stm)) | board.getPieceBB(makePiece(QUEEN, stm))) & getBishopAttacks(king_square_xstm, BitBoard(0)) & getBishopAttacks(cur_from_square, BitBoard(0));
+    sliders |= (board.getPieceBB(makePiece(ROOK, stm)) | board.getPieceBB(makePiece(QUEEN, stm))) & getRookAttacks(king_square_xstm, BitBoard(0)) & getRookAttacks(cur_from_square, BitBoard(0));
+
+    // bool pin_mask = false; // contains stm piece pinned by stm piece against xstm king
+    while (sliders) {
+        Square sq = static_cast<Square>(popLSB(sliders));
+        BitBoard blockers = between_squares[king_square_xstm][sq] & occ;
+        // check stm piece pinning stm piece against xstm king
+        // or ep and exactly 2 blockers between slider and king on ep rank
+        if (!multipleActiveBits(blockers) || (isep && bitCount(blockers) == 2 && sliders & getAttackingEPRank(stm))) {
+            return true;
+        }
+    }
+    if (Prom(move)) {
+        return getPieceAttacks(makePiece(promPiece(move), stm), cur_to_square, new_occ) & king_square_xstm_bb;
+    } else {
+        return getPieceAttacks(cur_piece, cur_to_square, new_occ) & king_square_xstm_bb;
+    }
 }

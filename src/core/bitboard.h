@@ -62,6 +62,8 @@ inline void flipBits(BitBoard& bitboard, int bit_1, int bit_2) { bitboard ^= (Bi
 constexpr int getRank(int square) { return square >> 3; }
 constexpr int getFile(int square) { return square & 7; }
 
+constexpr inline BitBoard getAttackingEPRank(Side side) { return side == WHITE ? RANK_5 : RANK_4; }
+
 constexpr BitBoard getRankMask(int rank) { return BitBoard(0xFF) << (rank * 8); }
 constexpr BitBoard getFileMask(int file) { return BitBoard(0x0101010101010101ULL) << file; }
 
