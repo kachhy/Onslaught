@@ -1,4 +1,4 @@
-CXXC=g++
+CXX ?= g++
 CXXFLAGS=-Wall -MMD -MP -Wno-switch -Isrc -std=c++17
 LDFLAGS=
 OBJDIR=build
@@ -63,20 +63,20 @@ perft: $(EXE)
 $(EXE): $(OBJ)
 	@echo "  LINK $@"
 	@mkdir -p $(dir $@)
-	@$(CXXC) $(LDFLAGS) $^ -o $@
+	@$(CXX) $(LDFLAGS) $^ -o $@
 
 $(OBJDIR)/%.o: src/%.cpp src/%.h
 	@echo "  CXXC $@"
 	@mkdir -p $(dir $@)
-	@$(CXXC) $(CXXFLAGS) -c $< -o $@
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: src/%.cpp
 	@echo "  CXXC $@"
 	@mkdir -p $(dir $@)
-	@$(CXXC) $(CXXFLAGS) -c $< -o $@
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(EXE) $(OBJDIR)
+	rm -rf $(OBJDIR)
 
 .PHONY: all clean debug release
 -include $(DEPS)
