@@ -50,17 +50,17 @@ endif
 
 OBJ=$(patsubst src/%.cpp,$(OBJDIR)/%.o,$(SRC))
 DEPS=$(OBJ:.o=.d)
-BIN=$(OBJDIR)/Axiom
+EXE ?= $(OBJDIR)/Axiom
 
-debug: $(BIN)
-release: $(BIN)
-lto: $(BIN)
-native: $(BIN)
-pg: $(BIN)
-tune: $(BIN)
-perft: $(BIN)
+debug: $(EXE)
+release: $(EXE)
+lto: $(EXE)
+native: $(EXE)
+pg: $(EXE)
+tune: $(EXE)
+perft: $(EXE)
 
-$(BIN): $(OBJ)
+$(EXE): $(OBJ)
 	@echo "  LINK $@"
 	@mkdir -p $(dir $@)
 	@$(CXXC) $(LDFLAGS) $^ -o $@
@@ -76,7 +76,7 @@ $(OBJDIR)/%.o: src/%.cpp
 	@$(CXXC) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	$(RM) $(BIN) $(OBJDIR)
+	$(RM) $(EXE) $(OBJDIR)
 
 .PHONY: all clean debug release
 -include $(DEPS)
