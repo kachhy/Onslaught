@@ -76,7 +76,7 @@ $(OBJDIR)/%.o: src/%.cpp
 	@$(CXXC) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	$(RM) $(EXE) $(OBJDIR)
+	rm -rf $(EXE) $(OBJDIR)
 
 .PHONY: all clean debug release
 -include $(DEPS)
