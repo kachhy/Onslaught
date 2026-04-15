@@ -20,8 +20,42 @@ struct PVLine {
     Move moves[256];
 };
 
-void print_info(int depth, int seldepth, int score, const char* bound, long long nodes, int nps, PVLine* pv) {
-    std::cout << "info depth " << depth << " seldepth " << seldepth << " score cp " << score;
+int scoreToMateScore(int score) {
+    if (score > 0) {
+        return (SCORE_MAX - score + 1) / 2;
+    }
+    else {
+        return -(SCORE_MAX + score + 1) / 2;
+    }
+}
+
+int scoreToTT(int score, int ply) {
+    if (score >=  SCORE_MAX - MAX_GAME_MOVES) {
+        return score + ply;
+    }
+    if (score <= -SCORE_MAX + MAX_GAME_MOVES) {
+        return score - ply;
+    }
+    return score;
+}
+
+int scoreFromTT(int score, int ply) {
+    if (score >=  SCORE_MAX - MAX_GAME_MOVES) {
+        return score - ply;
+    }
+    if (score <= -SCORE_MAX + MAX_GAME_MOVES) {
+        return score + ply;
+    }
+    return score;
+}
+
+void printInfo(int depth, int seldepth, int score, const char* bound, long long nodes, int nps, PVLine* pv) {
+    std::cout << "info depth " << depth << " seldepth " << seldepth;
+    if (std::abs(score) < SCORE_MAX - MAX_GAME_MOVES) {
+        std::cout << " score cp " << score;
+    } else {
+        std::cout << " score mate " << scoreToMateScore(score);
+    }
     if (bound) {
         std::cout << " " << bound;
     }
@@ -154,9 +188,13 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     Entry tt_entry;
     bool tt_hit = tt.fetch(board, tt_entry);
 
-    if (ply > 0 && tt_hit && tt_entry.depth >= static_cast<size_t>(depth)) {
-        if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) || (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
-            return tt_entry.score;
+    if (tt_hit) {
+        tt_entry.score = scoreFromTT(tt_entry.score, ply);
+
+        if (ply > 0 && tt_entry.depth >= static_cast<size_t>(depth)) {
+            if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) || (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
+                return tt_entry.score;
+            }
         }
     }
 
@@ -300,7 +338,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
             }
         }
         if (score >= beta) {
-            tt.insert(board, best_move, best_score, LOWERBOUND, depth);
+            tt.insert(board, best_move, scoreToTT(best_score, ply), LOWERBOUND, depth);
             if (!Capture(best_move) && !Prom(best_move)) {
                 board.killers[ply][1] = board.killers[ply][0];
                 board.killers[ply][0] = best_move;
@@ -324,7 +362,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     //         board.score_history[To(m)][MovePiece(m)] = std::max(board.score_history[To(m)][MovePiece(m)] - depth * depth, -MAX_HISTORY);
     //     }
     // }
-    tt.insert(board, best_move, best_score, bound, depth);
+    tt.insert(board, best_move, scoreToTT(best_score, ply), bound, depth);
     return best_score;
 }
 
@@ -375,17 +413,17 @@ Move search(Board& board, int max_depth, int& best_score) {
 
             if (iter_score <= alpha) {
                 // fail low = true score is at most alpha (upper bound)
-                print_info(depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table);
+                printInfo(depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table);
                 alpha = std::max(-SCORE_MAX, iter_score - delta);
                 delta *= 2;
             } else if (iter_score >= beta) {
                 // fail high = true score is at least beta (lower bound)
-                print_info(depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table);
+                printInfo(depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table);
                 beta = std::min(SCORE_MAX, iter_score + delta);
                 delta *= 2;
             } else {
                 best_score = iter_score;
-                print_info(depth, seldepth, best_score, nullptr, nodes, nps, pv_table);
+                printInfo(depth, seldepth, best_score, nullptr, nodes, nps, pv_table);
                 if (pv_table[0].cur_move > 0) {
                     best_move = pv_table[0].moves[0];
                 } else { // Fallback to TT for best move

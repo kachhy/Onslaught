@@ -5,7 +5,7 @@
 #include <cstdint>
 
 constexpr size_t MEGABYTE = 1024 * 1024;
-constexpr size_t MAX_GAME_MOVES = 512;
+constexpr int MAX_GAME_MOVES = 512;
 
 enum Square {
     A8 = 0, B8, C8, D8, E8, F8, G8, H8,
