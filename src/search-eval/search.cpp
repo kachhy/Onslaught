@@ -282,15 +282,15 @@ int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long l
         std::swap(scores[i], scores[best_move_index]);
 
         Move move = moves[i];
-        // bool is_quiet_move = !Capture(move) && !Prom(move);
+        bool is_quiet_move = !Capture(move) && !Prom(move);
         // bool gives_check = givesCheck(board, move);
         // // futility pruning: if static_eval + margin <= alpha, prune quiet moves bc they are unlikely to improve position
         // if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
         //     continue;
         // }
-        // if (is_quiet_move) {
-        //     quiets_tried[quiets_tried_count++] = move;
-        // }
+        if (is_quiet_move) {
+            quiets_tried[quiets_tried_count++] = move;
+        }
         board.makeMove(move);
 
         // // mate extensions (replaced by check extension at top of search)
