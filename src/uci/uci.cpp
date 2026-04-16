@@ -16,6 +16,8 @@ bool searching = false;
 // All the different things we can change about the engine
 static inline void options() {
     // currently does nothing for now but when we add options they will go here
+    std::cout << "option name Hash type spin default 16 min 16 max 16" << std::endl;
+    std::cout << "option name Threads type spin default 1 min 1 max 1" << std::endl;
 }
 
 // actually changing the options for the engine
