@@ -264,8 +264,8 @@ int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long l
     int moves_searched = 0;
 
     // history malus. apply penalties when all moves fail low
-    // MoveList quiets_tried;
-    // int quiets_tried_count = 0;
+    MoveList quiets_tried;
+    int quiets_tried_count = 0;
 
     // // futility pruning
     // bool futility_pruning = !is_pv && !in_check && depth <= 5 && static_eval + FUTILITY_MARGIN * depth <= alpha;
@@ -345,10 +345,10 @@ int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long l
                 board.score_history[To(best_move)][MovePiece(best_move)] =
                     std::min(board.score_history[To(best_move)][MovePiece(best_move)] + depth * depth, MAX_HISTORY);
                 // malus: penalize all quiet moves searched before this cutoff
-                // for (int j = 0; j < quiets_tried_count - 1; j++) {
-                //     Move m = quiets_tried[j];
-                //     board.score_history[To(m)][MovePiece(m)] = std::max(board.score_history[To(m)][MovePiece(m)] - depth * depth, -MAX_HISTORY);
-                // }
+                for (int j = 0; j < quiets_tried_count - 1; j++) {
+                    Move m = quiets_tried[j];
+                    board.score_history[To(m)][MovePiece(m)] = std::max(board.score_history[To(m)][MovePiece(m)] - depth * depth, -MAX_HISTORY);
+                }
             }
             return best_score;
         }
@@ -356,12 +356,12 @@ int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long l
 
     TTBound bound = (best_score > original_alpha) ? EXACTBOUND : UPPERBOUND;
     // history malus for when no beta cutoffs
-    // if (bound == UPPERBOUND) {
-    //     for (int j = 0; j < quiets_tried_count; j++) {
-    //         Move m = quiets_tried[j];
-    //         board.score_history[To(m)][MovePiece(m)] = std::max(board.score_history[To(m)][MovePiece(m)] - depth * depth, -MAX_HISTORY);
-    //     }
-    // }
+    if (bound == UPPERBOUND) {
+        for (int j = 0; j < quiets_tried_count; j++) {
+            Move m = quiets_tried[j];
+            board.score_history[To(m)][MovePiece(m)] = std::max(board.score_history[To(m)][MovePiece(m)] - depth * depth, -MAX_HISTORY);
+        }
+    }
     tt.insert(board, best_move, scoreToTT(best_score, ply), bound, depth);
     return best_score;
 }
