@@ -5,10 +5,12 @@
 #include "core/move.h"
 #include <iostream>
 #include <string>
+#include <chrono>
+#include <cstddef>
 
 int uciStartup();
 void uci();
-void checkStdin();
+void checkStdin(std::chrono::high_resolution_clock::time_point start, long long max_nodes, long long current_nodes, size_t hard_cap);
 
 extern bool searching;
 

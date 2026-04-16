@@ -86,10 +86,10 @@ static inline void go(Board& board) {
         } else if (arg == "btime") {
             params.btime = std::stoi(buffer.substr(0, buffer.find(" ")));
             buffer = buffer.substr(buffer.find(" ") + 1);
-        } else if (arg == "winc") {
+        } else if (arg == "winc") {//time added after each move for white
             params.winc = std::stoi(buffer.substr(0, buffer.find(" ")));
             buffer = buffer.substr(buffer.find(" ") + 1);
-        } else if (arg == "binc") {
+        } else if (arg == "binc") {//time added after each move for black
             params.binc = std::stoi(buffer.substr(0, buffer.find(" ")));
             buffer = buffer.substr(buffer.find(" ") + 1);
         } else if (arg == "movestogo") {
@@ -119,7 +119,7 @@ static inline void go(Board& board) {
 
     searching = true;
     int best_score;
-    Move best_move = search(board, params.infinite ? 256 : params.depth, best_score);
+    Move best_move = search(board, params.infinite ? 256 : params.depth, best_score, params);
     std::cout << "bestmove " << moveToStr(best_move) << std::endl;
 }
 
@@ -193,8 +193,17 @@ static bool stdinHasData() {
 #endif
 }
 
-void checkStdin() {
+void checkStdin( std::chrono::high_resolution_clock::time_point start, long long max_nodes, long long current_nodes, size_t hard_cap) {
+    auto now = std::chrono::high_resolution_clock::now();
     if (!stdinHasData()) {
+        return;
+    }
+    if (hard_cap != 0 && (size_t)std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count() >= hard_cap) {
+        searching = false;
+        return;
+    }
+    if(max_nodes != -1 && current_nodes >= max_nodes) {
+        searching = false;
         return;
     }
     std::string line;

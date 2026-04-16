@@ -220,7 +220,7 @@ void searchTest(int depth, const std::string& fen = "") {
             testing_board.loadFEN(fen);
         }
         int score;
-        Move result = search(testing_board, i, score);
+        Move result = search(testing_board, i, score, GoParams{ -1, -1, -1, -1, -1 });
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
         std::cout << "depth: " << std::setw(2) << i << " | move: " << std::setw(13) << moveToStr(result) << " | score: " << std::setw(13) << score
