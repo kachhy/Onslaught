@@ -199,10 +199,10 @@ int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long l
     }
 
     bool is_pv = beta - alpha != 1;
-    // // iir (no tt move)
-    // if (!is_pv && depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
-    //     depth--;
-    // }
+    // iir (no tt move)
+    if (!is_pv && depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
+        depth--;
+    }
 
     bool in_check = board.inCheck();
     if (in_check) {
