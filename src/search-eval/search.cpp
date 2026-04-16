@@ -338,7 +338,10 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
     auto start = std::chrono::high_resolution_clock::now();
     size_t hard_cap, soft_cap;
 
-    if(board.getSTM() == WHITE){
+    if (params.movetime != -1) {
+        hard_cap = params.movetime;
+        soft_cap = params.movetime;
+    } else if(board.getSTM() == WHITE){
         if(params.wtime == -1) {
             hard_cap = 0;
             soft_cap = 0;
@@ -427,7 +430,7 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
         if (!searching) {
             break;
         }
-        if(soft_cap != 0 && (size_t)std::chrono::duration_cast<std::chrono::milliseconds>(start - std::chrono::high_resolution_clock::now()).count() >= soft_cap){
+        if(soft_cap != 0 && (size_t)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() >= soft_cap){
             break;
         }
     }
