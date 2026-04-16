@@ -153,7 +153,7 @@ static int scoreMove(Board& board, Move move, Move tt_move, int ply) {
     return board.score_history[To(move)][MovePiece(move)];
 }
 
-int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_null_move, PVLine pv_table[], int max_ply) {
+int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long long max_nodes, std::chrono::high_resolution_clock::time_point start, int ply, bool can_make_null_move, PVLine pv_table[], int max_ply) {
     if (ply >= seldepth) {
         seldepth = ply;
     }
@@ -161,7 +161,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     pv_table[ply].cur_move = 0;
 
     if (!(nodes & 4095)) {
-        checkStdin();
+        checkStdin(start, max_nodes, nodes, hard_cap);
         if (!searching) {
             return eval(board);
         }
@@ -230,7 +230,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     if (!is_pv && can_make_null_move && !in_check && depth >= 3 && static_eval >= beta && non_pawn_material) {
         int nmp_reduction = 3 + depth / 6;
         board.makeNullMove();
-        int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, ply + 1, false, pv_table, max_ply);
+        int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ply + 1, false, pv_table, max_ply);
         board.undoNullMove();
         if (score >= beta) {
             return score;
@@ -303,23 +303,23 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
         bool do_full_search = false;
 
         if (moves_searched == 0) {
-            score = -search(board, depth - 1, -beta, -alpha, ply + 1, true, pv_table, max_ply);
+            score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
         } else {
             // lmr
             if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check) {
                 // TODO tune this function
                 // improving flag = search more carefully when good position is improving (less reduction)
                 int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2)/* - improving*/);
-                score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
+                score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
                 do_full_search = true;
             }
             // pvs at full depth
             if (do_full_search) {
-                score = -search(board, depth - 1, -alpha - 1, -alpha, ply + 1, true, pv_table, max_ply);
+                score = -search(board, depth - 1, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
                 if (score > alpha && score < beta) {
-                    score = -search(board, depth - 1, -beta, -alpha, ply + 1, true, pv_table, max_ply);
+                    score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
                 }
             }
         }
@@ -366,7 +366,7 @@ int search(Board& board, int depth, int alpha, int beta, int ply, bool can_make_
     return best_score;
 }
 
-Move search(Board& board, int max_depth, int& best_score) {
+Move search(Board& board, int max_depth, int& best_score, const GoParams& params) {
     Move best_move = NO_MOVE;
     const int MAX_PLY = 128;
     PVLine pv_table[MAX_PLY + 1]; // pre-allocated, indexed by ply
@@ -374,6 +374,31 @@ Move search(Board& board, int max_depth, int& best_score) {
     best_score = 0;
 
     auto start = std::chrono::high_resolution_clock::now();
+    size_t hard_cap, soft_cap;
+
+    if (params.movetime != -1) {
+        hard_cap = params.movetime;
+        soft_cap = params.movetime;
+    } else if(board.getSTM() == WHITE){
+        if(params.wtime == -1) {
+            hard_cap = 0;
+            soft_cap = 0;
+        }
+        else{
+            hard_cap = params.wtime / 20 + params.winc / 2;
+            soft_cap = params.wtime / 30 + params.winc / 3;
+        }
+    }
+    else{
+        if(params.btime == -1) {
+            hard_cap = 0;
+            soft_cap = 0;
+        }
+        else {
+            hard_cap = params.btime / 20 + params.binc / 2;
+            soft_cap = params.btime / 30 + params.binc / 3;
+        }
+    }
 
     for (int depth = 1; depth <= max_depth; depth++) {
         if (!searching) {
@@ -402,7 +427,7 @@ Move search(Board& board, int max_depth, int& best_score) {
                 pv_table[i].cur_move = 0;
             }
 
-            iter_score = search(board, depth, alpha, beta, 0, true, pv_table, MAX_PLY);
+            iter_score = search(board, depth, alpha, beta, hard_cap, params.nodes, start, 0, true, pv_table, MAX_PLY);
             if (!searching) {
                 break;
             }
@@ -441,6 +466,9 @@ Move search(Board& board, int max_depth, int& best_score) {
             }
         }
         if (!searching) {
+            break;
+        }
+        if(soft_cap != 0 && (size_t)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() >= soft_cap){
             break;
         }
     }
