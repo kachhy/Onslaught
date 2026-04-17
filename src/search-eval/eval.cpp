@@ -68,8 +68,34 @@ static inline Score applyPST(const Board& board, const Piece piece_w, const Piec
 
 static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     Score score{};
+    
 #ifndef TUNING
-    if (probePawns(board, score)) {
+    const bool probe_hit = probePawns(board, score);
+#endif
+
+    BitBoard wp_protected = info.pawn_attacks[WHITE];
+    BitBoard bp_protected = info.pawn_attacks[BLACK];
+    while (wp_protected) {
+        uint8_t sq = popLSB(wp_protected);
+        if (getBit(board.getOcc(WHITE), sq)) {
+            const Piece pc = board.pieceAt(sq);
+            const int dpc = makeDefaultPiece(pc);
+            score += PAWN_PROTECTION[dpc];
+            TRACE_INC(pawn_protection[dpc], WHITE);
+        }
+    }
+    while (bp_protected) {
+        uint8_t sq = popLSB(bp_protected);
+        if (getBit(board.getOcc(BLACK), sq)) {
+            const Piece pc = board.pieceAt(sq);
+            const int dpc = makeDefaultPiece(pc);
+            score -= PAWN_PROTECTION[dpc];
+            TRACE_INC(pawn_protection[dpc], BLACK);
+        }
+    }
+
+#ifndef TUNING
+    if (probe_hit) {
         return score;
     }
 #endif
@@ -98,27 +124,6 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     score += (dpw - dpb) * DOUBLED_PAWNS;
     TRACE_ADD(doubled_pawns, WHITE, dpw);
     TRACE_ADD(doubled_pawns, BLACK, dpb);
-
-    BitBoard wp_protected = info.pawn_attacks[WHITE];
-    BitBoard bp_protected = info.pawn_attacks[BLACK];
-    while (wp_protected) {
-        uint8_t sq = popLSB(wp_protected);
-        if (getBit(board.getOcc(WHITE), sq)) {
-            const Piece pc = board.pieceAt(sq);
-            const int dpc = makeDefaultPiece(pc);
-            score += PAWN_PROTECTION[dpc];
-            TRACE_INC(pawn_protection[dpc], WHITE);
-        }
-    }
-    while (bp_protected) {
-        uint8_t sq = popLSB(bp_protected);
-        if (getBit(board.getOcc(BLACK), sq)) {
-            const Piece pc = board.pieceAt(sq);
-            const int dpc = makeDefaultPiece(pc);
-            score -= PAWN_PROTECTION[dpc];
-            TRACE_INC(pawn_protection[dpc], BLACK);
-        }
-    }
 
     // Passed pawns & backwards pawns
     BitBoard temp_wp = wp;
