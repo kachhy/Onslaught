@@ -290,6 +290,9 @@ int search(
         // if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
         //     continue;
         // }
+        if (!is_pv && !in_check && depth <= 4 && moves_searched >= LMP_BASE + depth * depth) {
+            continue;
+        }
         // if (is_quiet_move) {
         //     quiets_tried[quiets_tried_count++] = move;
         // }
