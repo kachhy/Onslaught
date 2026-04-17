@@ -11,7 +11,7 @@ constexpr uint16_t FUTILITY_MARGIN = 150;
 constexpr uint16_t RAZOR_MARGIN = 350;
 constexpr float LMR_VALUE = 1;
 constexpr float LMR_SCALAR = 2;
-constexpr int MAX_HISTORY = 16384;
+constexpr int MAX_HISTORY = 8192;
 
 struct GoParams;
 

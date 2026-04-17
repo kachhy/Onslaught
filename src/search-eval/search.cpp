@@ -282,7 +282,8 @@ int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long l
         std::swap(scores[i], scores[best_move_index]);
 
         Move move = moves[i];
-        bool is_quiet_move = !Capture(move) && !Prom(move);
+        bool is_quiet_move = !Capture(move) && !Prom(move) && !IsEP(move);
+
         // bool gives_check = givesCheck(board, move);
         // // futility pruning: if static_eval + margin <= alpha, prune quiet moves bc they are unlikely to improve position
         // if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
@@ -342,8 +343,8 @@ int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long l
             if (!Capture(best_move) && !Prom(best_move)) {
                 board.killers[ply][1] = board.killers[ply][0];
                 board.killers[ply][0] = best_move;
-                board.score_history[To(best_move)][MovePiece(best_move)] =
-                    std::min(board.score_history[To(best_move)][MovePiece(best_move)] + depth * depth, MAX_HISTORY);
+                int bonus = depth * depth;
+                    board.score_history[best_move][MovePiece(best_move)] += bonus - board.score_history[best_move][MovePiece(best_move)] * abs(bonus) / MAX_HISTORY;
                 // malus: penalize all quiet moves searched before this cutoff
                 for (int j = 0; j < quiets_tried_count - 1; j++) {
                     Move m = quiets_tried[j];
