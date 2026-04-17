@@ -465,8 +465,8 @@ void Board::undoMove(Move move) {
     material_pst_score = hist_data.material_pst_score;
     memcpy(&eval_info, &hist_data.eval_info, sizeof(EvalInfo));
 
-    move_number -= (stm == BLACK);
     std::swap(stm, xstm);
+    move_number -= (stm == BLACK);
 
     if (Prom(move)) {
         Piece prom_piece = makePiece(promPiece(move), stm);
