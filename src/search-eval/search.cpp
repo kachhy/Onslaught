@@ -217,11 +217,11 @@ int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long l
     int static_eval = board.static_evals[ply];
 
     // imrpoving checks
-    // bool improving = !in_check && ply >= 2 && static_eval > board.static_evals[ply - 2];
+    bool improving = !in_check && ply >= 2 && static_eval > board.static_evals[ply - 2];
 
     // rfp (prune worse positions harder with improving position)
     // TODO Tune the rfp margin constant
-    if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * (depth/* - (improving && depth > 1)*/) >= beta) {
+    if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * (depth - (improving && depth > 1)) >= beta) {
         return static_eval;
     }
 
@@ -309,7 +309,7 @@ int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long l
             if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check) {
                 // TODO tune this function
                 // improving flag = search more carefully when good position is improving (less reduction)
-                int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2)/* - improving*/);
+                int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2)- improving);
                 score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {

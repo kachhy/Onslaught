@@ -109,6 +109,7 @@ void Board::clear() {
     memset(occ, 0, sizeof(occ));
     memset(killers, 0, sizeof(killers));
     memset(score_history, 0, sizeof(score_history));
+    memset(static_evals, 0, sizeof(static_evals));
     history_ply = 0;
 
     threatened_by[WHITE] = 0ULL;
