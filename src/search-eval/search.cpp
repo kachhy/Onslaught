@@ -237,13 +237,13 @@ int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long l
         }
     }
 
-    // // razoring = save movegen cost on pruned nodes by checking if it can beat alpha with quiesce, otherwise fail low
-    // if (!is_pv && !in_check && depth <= 3 && static_eval + RAZOR_MARGIN * depth < alpha) {
-    //     int quiescent_score = quiesce(board, alpha - 1, alpha, ply + 1, 0);
-    //     if (quiescent_score < alpha) {
-    //         return quiescent_score;
-    //     }
-    // }
+    // razoring = save movegen cost on pruned nodes by checking if it can beat alpha with quiesce, otherwise fail low
+    if (!is_pv && !in_check && depth <= 3 && static_eval + RAZOR_MARGIN * depth < alpha) {
+        int quiescent_score = quiesce(board, alpha - 1, alpha, ply + 1, 0);
+        if (quiescent_score < alpha) {
+            return quiescent_score;
+        }
+    }
 
     MoveList moves = getLegalMoves(board);
     if (moves.size() == 0) {
