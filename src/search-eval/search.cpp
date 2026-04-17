@@ -201,10 +201,6 @@ int search(
     }
 
     bool is_pv = beta - alpha != 1;
-    // // iir (no tt move)
-    // if (!is_pv && depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
-    //     depth--;
-    // }
 
     bool in_check = board.inCheck();
     if (in_check) {
@@ -245,6 +241,11 @@ int search(
         if (quiescent_score < alpha) {
             return quiescent_score;
         }
+    }
+
+    // iir (no tt move)
+    if (!is_pv && depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
+        depth--;
     }
 
     MoveList moves = getLegalMoves(board);
