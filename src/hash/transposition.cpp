@@ -5,7 +5,7 @@ TTable tt;
 TTable::TTable() : table_age(0) { clear(); }
 
 void TTable::insert(const Board& board, Move best_move, int32_t score, TTBound bound, size_t depth) {
-    const uint64_t hash = board.hash() % TABLE_SIZE;
+    const uint64_t hash = board.hash() & (TABLE_SIZE - 1);
     EntryTriple& bucket = table[hash];
     if (bucket.count < 3) {
         // Ensure entry doesn't already exist
@@ -52,7 +52,7 @@ void TTable::insert(const Board& board, Move best_move, int32_t score, TTBound b
 }
 
 bool TTable::fetch(const Board& board, Entry& entry) {
-    const uint64_t hash = board.hash() % TABLE_SIZE;
+    const uint64_t hash = board.hash() & (TABLE_SIZE - 1);
     EntryTriple& bucket = table[hash];
 
     if (!bucket.count) {
@@ -79,4 +79,5 @@ void TTable::clear() {
     static_assert(std::is_trivially_copyable<EntryTriple>::value, "EntryTriple must be trivial for memset to be safe.");
     memset(table, 0, sizeof(table));
     table_size = 0;
+    table_age = 0;
 }
