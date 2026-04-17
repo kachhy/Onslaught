@@ -242,7 +242,7 @@ int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long l
     }
 
     // iir (no tt move)
-    if (!is_pv && !in_check && depth >= 4 && tt_entry.best_move == NO_MOVE) {
+    if (!is_pv && depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
         depth--;
     }
 
