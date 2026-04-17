@@ -23,14 +23,13 @@ struct PVLine {
 int scoreToMateScore(int score) {
     if (score > 0) {
         return (SCORE_MAX - score + 1) / 2;
-    }
-    else {
+    } else {
         return -(SCORE_MAX + score + 1) / 2;
     }
 }
 
 int scoreToTT(int score, int ply) {
-    if (score >=  SCORE_MAX - MAX_GAME_MOVES) {
+    if (score >= SCORE_MAX - MAX_GAME_MOVES) {
         return score + ply;
     }
     if (score <= -SCORE_MAX + MAX_GAME_MOVES) {
@@ -40,7 +39,7 @@ int scoreToTT(int score, int ply) {
 }
 
 int scoreFromTT(int score, int ply) {
-    if (score >=  SCORE_MAX - MAX_GAME_MOVES) {
+    if (score >= SCORE_MAX - MAX_GAME_MOVES) {
         return score - ply;
     }
     if (score <= -SCORE_MAX + MAX_GAME_MOVES) {
@@ -153,7 +152,10 @@ static int scoreMove(Board& board, Move move, Move tt_move, int ply) {
     return board.score_history[To(move)][MovePiece(move)];
 }
 
-int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long long max_nodes, std::chrono::high_resolution_clock::time_point start, int ply, bool can_make_null_move, PVLine pv_table[], int max_ply) {
+int search(
+    Board& board, int depth, int alpha, int beta, size_t hard_cap, long long max_nodes, std::chrono::high_resolution_clock::time_point start, int ply,
+    bool can_make_null_move, PVLine pv_table[], int max_ply
+) {
     if (ply >= seldepth) {
         seldepth = ply;
     }
@@ -221,7 +223,7 @@ int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long l
 
     // rfp (prune worse positions harder with improving position)
     // TODO Tune the rfp margin constant
-    if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * (depth/* - (improving && depth > 1)*/) >= beta) {
+    if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * (depth /* - (improving && depth > 1)*/) >= beta) {
         return static_eval;
     }
 
@@ -310,7 +312,7 @@ int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long l
             if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check) {
                 // TODO tune this function
                 // improving flag = search more carefully when good position is improving (less reduction)
-                int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2)/* - improving*/);
+                int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2) /* - improving*/);
                 score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
@@ -344,7 +346,7 @@ int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long l
                 board.killers[ply][1] = board.killers[ply][0];
                 board.killers[ply][0] = best_move;
                 int bonus = depth * depth;
-                    board.score_history[best_move][MovePiece(best_move)] += bonus - board.score_history[best_move][MovePiece(best_move)] * abs(bonus) / MAX_HISTORY;
+                board.score_history[To(best_move)][MovePiece(best_move)] += bonus - board.score_history[To(best_move)][MovePiece(best_move)] * abs(bonus) / MAX_HISTORY;
                 // malus: penalize all quiet moves searched before this cutoff
                 for (int j = 0; j < quiets_tried_count - 1; j++) {
                     Move m = quiets_tried[j];
@@ -382,22 +384,19 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
     if (params.movetime != -1) {
         hard_cap = params.movetime;
         soft_cap = params.movetime;
-    } else if(board.getSTM() == WHITE){
-        if(params.wtime == -1) {
+    } else if (board.getSTM() == WHITE) {
+        if (params.wtime == -1) {
             hard_cap = 0;
             soft_cap = 0;
-        }
-        else{
+        } else {
             hard_cap = params.wtime / 20 + params.winc / 2;
             soft_cap = params.wtime / 30 + params.winc / 3;
         }
-    }
-    else{
-        if(params.btime == -1) {
+    } else {
+        if (params.btime == -1) {
             hard_cap = 0;
             soft_cap = 0;
-        }
-        else {
+        } else {
             hard_cap = params.btime / 20 + params.binc / 2;
             soft_cap = params.btime / 30 + params.binc / 3;
         }
@@ -471,7 +470,7 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
         if (!searching) {
             break;
         }
-        if(soft_cap != 0 && (size_t)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() >= soft_cap){
+        if (soft_cap != 0 && (size_t)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() >= soft_cap) {
             break;
         }
     }
