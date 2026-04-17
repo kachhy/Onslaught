@@ -271,7 +271,7 @@ int search(
     // int quiets_tried_count = 0;
 
     // // futility pruning
-    // bool futility_pruning = !is_pv && !in_check && depth <= 5 && static_eval + FUTILITY_MARGIN * depth <= alpha;
+    bool futility_pruning = !is_pv && !in_check && depth <= 5 && static_eval + FUTILITY_MARGIN * depth <= alpha;
 
     for (uint8_t i = 0; i < moves.size(); i++) {
         // move ordering
@@ -285,12 +285,12 @@ int search(
         std::swap(scores[i], scores[best_move_index]);
 
         Move move = moves[i];
-        // bool is_quiet_move = !Capture(move) && !Prom(move);
-        // bool gives_check = givesCheck(board, move);
-        // // futility pruning: if static_eval + margin <= alpha, prune quiet moves bc they are unlikely to improve position
-        // if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
-        //     continue;
-        // }
+        bool is_quiet_move = !Capture(move) && !Prom(move);
+        bool gives_check = givesCheck(board, move);
+        // futility pruning: if static_eval + margin <= alpha, prune quiet moves bc they are unlikely to improve position
+        if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
+            continue;
+        }
         // if (is_quiet_move) {
         //     quiets_tried[quiets_tried_count++] = move;
         // }
