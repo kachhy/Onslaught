@@ -267,8 +267,8 @@ int search(
     int moves_searched = 0;
 
     // history malus. apply penalties when all moves fail low
-    MoveList quiets_tried;
-    int quiets_tried_count = 0;
+    // MoveList quiets_tried;
+    // int quiets_tried_count = 0;
 
     // // futility pruning
     bool futility_pruning = !is_pv && !in_check && depth <= 5 && static_eval + FUTILITY_MARGIN * depth <= alpha;
@@ -291,9 +291,9 @@ int search(
         if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
             continue;
         }
-        if (is_quiet_move) {
-            quiets_tried[quiets_tried_count++] = move;
-        }
+        // if (is_quiet_move) {
+        //     quiets_tried[quiets_tried_count++] = move;
+        // }
         board.makeMove(move);
 
         int score;
@@ -342,11 +342,11 @@ int search(
                 int bonus = depth * depth;
                 board.score_history[From(best_move)][To(best_move)][MovePiece(best_move)] += bonus - board.score_history[From(best_move)][To(best_move)][MovePiece(best_move)] * abs(bonus) / MAX_HISTORY;
                 // malus: penalize all quiet moves searched before this cutoff
-                for (int j = 0; j < quiets_tried_count - 1; j++) {
-                    Move m = quiets_tried[j];
-                    int bonus = -depth;
-                    board.score_history[From(m)][To(m)][MovePiece(m)] += bonus - board.score_history[From(m)][To(m)][MovePiece(m)] * abs(bonus) / MAX_HISTORY;
-                }
+                // for (int j = 0; j < quiets_tried_count - 1; j++) {
+                //     Move m = quiets_tried[j];
+                //     int bonus = -depth;
+                //     board.score_history[From(m)][To(m)][MovePiece(m)] += bonus - board.score_history[From(m)][To(m)][MovePiece(m)] * abs(bonus) / MAX_HISTORY;
+                // }
             }
             return best_score;
         }
@@ -354,13 +354,13 @@ int search(
 
     TTBound bound = (best_score > original_alpha) ? EXACTBOUND : UPPERBOUND;
     // history malus for when no beta cutoffs
-    if (bound == UPPERBOUND) {
-        for (int j = 0; j < quiets_tried_count; j++) {
-            Move m = quiets_tried[j];
-            int bonus = -depth;
-            board.score_history[From(m)][To(m)][MovePiece(m)] += bonus - board.score_history[From(m)][To(m)][MovePiece(m)] * abs(bonus) / MAX_HISTORY;
-        }
-    }
+    // if (bound == UPPERBOUND) {
+    //     for (int j = 0; j < quiets_tried_count; j++) {
+    //         Move m = quiets_tried[j];
+    //         int bonus = -depth;
+    //         board.score_history[From(m)][To(m)][MovePiece(m)] += bonus - board.score_history[From(m)][To(m)][MovePiece(m)] * abs(bonus) / MAX_HISTORY;
+    //     }
+    // }
     tt.insert(board, best_move, scoreToTT(best_score, ply), bound, depth);
     return best_score;
 }
