@@ -149,7 +149,7 @@ static int scoreMove(Board& board, Move move, Move tt_move, int ply) {
     if (move == board.killers[ply][1]) {
         return 100000;
     }
-    return board.score_history[To(move)][MovePiece(move)];
+    return board.score_history[From(move)][To(move)][MovePiece(move)];
 }
 
 int search(
@@ -285,35 +285,16 @@ int search(
         std::swap(scores[i], scores[best_move_index]);
 
         Move move = moves[i];
-<<<<<<< HEAD
-        bool is_quiet_move = !Capture(move) && !Prom(move) && !IsEP(move);
-
-        // bool gives_check = givesCheck(board, move);
-        // // futility pruning: if static_eval + margin <= alpha, prune quiet moves bc they are unlikely to improve position
-        // if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
-        //     continue;
-        // }
-        if (is_quiet_move) {
-            quiets_tried[quiets_tried_count++] = move;
-        }
-=======
         bool is_quiet_move = !Capture(move) && !Prom(move);
         bool gives_check = givesCheck(board, move);
         // futility pruning: if static_eval + margin <= alpha, prune quiet moves bc they are unlikely to improve position
         if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
             continue;
         }
-        // if (is_quiet_move) {
-        //     quiets_tried[quiets_tried_count++] = move;
-        // }
->>>>>>> main
+        if (is_quiet_move) {
+            quiets_tried[quiets_tried_count++] = move;
+        }
         board.makeMove(move);
-
-        // // mate extensions (replaced by check extension at top of search)
-        // int extension = 0;
-        // if (gives_check && depth <= 2) {
-        //     extension = 1;
-        // }
 
         int score;
         bool do_full_search = false;
@@ -359,12 +340,12 @@ int search(
                 board.killers[ply][1] = board.killers[ply][0];
                 board.killers[ply][0] = best_move;
                 int bonus = depth * depth;
-                board.score_history[To(best_move)][MovePiece(best_move)] += bonus - board.score_history[To(best_move)][MovePiece(best_move)] * abs(bonus) / MAX_HISTORY;
+                board.score_history[From(best_move)][To(best_move)][MovePiece(best_move)] += bonus - board.score_history[From(best_move)][To(best_move)][MovePiece(best_move)] * abs(bonus) / MAX_HISTORY;
                 // malus: penalize all quiet moves searched before this cutoff
                 for (int j = 0; j < quiets_tried_count - 1; j++) {
                     Move m = quiets_tried[j];
                     int bonus = -depth;
-                    board.score_history[To(m)][MovePiece(m)] += bonus - board.score_history[To(m)][MovePiece(m)] * abs(bonus) / MAX_HISTORY;
+                    board.score_history[From(m)][To(m)][MovePiece(m)] += bonus - board.score_history[From(m)][To(m)][MovePiece(m)] * abs(bonus) / MAX_HISTORY;
                 }
             }
             return best_score;
@@ -377,7 +358,7 @@ int search(
         for (int j = 0; j < quiets_tried_count; j++) {
             Move m = quiets_tried[j];
             int bonus = -depth;
-            board.score_history[To(m)][MovePiece(m)] += bonus - board.score_history[To(m)][MovePiece(m)] * abs(bonus) / MAX_HISTORY;
+            board.score_history[From(m)][To(m)][MovePiece(m)] += bonus - board.score_history[From(m)][To(m)][MovePiece(m)] * abs(bonus) / MAX_HISTORY;
         }
     }
     tt.insert(board, best_move, scoreToTT(best_score, ply), bound, depth);
@@ -475,9 +456,11 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
                 break;
             }
         }
-        for (int (&history_score)[12] : board.score_history) {
-            for (int& score : history_score) {
-                score /= 2;
+        for (auto& from_arr : board.score_history) {
+            for (auto& to_arr : from_arr) {
+                for (int& score : to_arr) {
+                    score /= 2;
+                }
             }
         }
         if (!searching) {
