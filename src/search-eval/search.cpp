@@ -201,10 +201,6 @@ int search(
     }
 
     bool is_pv = beta - alpha != 1;
-    // // iir (no tt move)
-    // if (!is_pv && depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
-    //     depth--;
-    // }
 
     bool in_check = board.inCheck();
     if (in_check) {
@@ -247,6 +243,11 @@ int search(
         }
     }
 
+    // iir (no tt move)
+    if (!is_pv && depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
+        depth--;
+    }
+
     MoveList moves = getLegalMoves(board);
     if (moves.size() == 0) {
         pv_table[ply].cur_move = 0;
@@ -270,7 +271,7 @@ int search(
     int quiets_tried_count = 0;
 
     // // futility pruning
-    // bool futility_pruning = !is_pv && !in_check && depth <= 5 && static_eval + FUTILITY_MARGIN * depth <= alpha;
+    bool futility_pruning = !is_pv && !in_check && depth <= 5 && static_eval + FUTILITY_MARGIN * depth <= alpha;
 
     for (uint8_t i = 0; i < moves.size(); i++) {
         // move ordering
@@ -284,6 +285,7 @@ int search(
         std::swap(scores[i], scores[best_move_index]);
 
         Move move = moves[i];
+<<<<<<< HEAD
         bool is_quiet_move = !Capture(move) && !Prom(move) && !IsEP(move);
 
         // bool gives_check = givesCheck(board, move);
@@ -294,6 +296,17 @@ int search(
         if (is_quiet_move) {
             quiets_tried[quiets_tried_count++] = move;
         }
+=======
+        bool is_quiet_move = !Capture(move) && !Prom(move);
+        bool gives_check = givesCheck(board, move);
+        // futility pruning: if static_eval + margin <= alpha, prune quiet moves bc they are unlikely to improve position
+        if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
+            continue;
+        }
+        // if (is_quiet_move) {
+        //     quiets_tried[quiets_tried_count++] = move;
+        // }
+>>>>>>> main
         board.makeMove(move);
 
         // // mate extensions (replaced by check extension at top of search)
