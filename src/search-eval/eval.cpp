@@ -70,38 +70,15 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     Score score{};
     
 #ifndef TUNING
-    const bool probe_hit = probePawns(board, score);
-#endif
-
-    BitBoard wp_protected = info.pawn_attacks[WHITE];
-    BitBoard bp_protected = info.pawn_attacks[BLACK];
-    while (wp_protected) {
-        uint8_t sq = popLSB(wp_protected);
-        if (getBit(board.getOcc(WHITE), sq)) {
-            const Piece pc = board.pieceAt(sq);
-            const int dpc = makeDefaultPiece(pc);
-            score += PAWN_PROTECTION[dpc];
-            TRACE_INC(pawn_protection[dpc], WHITE);
-        }
-    }
-    while (bp_protected) {
-        uint8_t sq = popLSB(bp_protected);
-        if (getBit(board.getOcc(BLACK), sq)) {
-            const Piece pc = board.pieceAt(sq);
-            const int dpc = makeDefaultPiece(pc);
-            score -= PAWN_PROTECTION[dpc];
-            TRACE_INC(pawn_protection[dpc], BLACK);
-        }
-    }
-
-#ifndef TUNING
-    if (probe_hit) {
+    if (probePawns(board, score)) {
         return score;
     }
 #endif
 
     BitBoard wp = board.getPieceBB(WHITE_PAWN);
     BitBoard bp = board.getPieceBB(BLACK_PAWN);
+    BitBoard wp_protected = info.pawn_attacks[WHITE];
+    BitBoard bp_protected = info.pawn_attacks[BLACK];
 
     const uint8_t wp_phalanx = bitCount(shiftWest(wp) & wp);
     const uint8_t bp_phalanx = bitCount(shiftWest(bp) & bp);
@@ -181,6 +158,31 @@ static inline Score applyAllPST(const Board& board) {
     score += applyPST(board, WHITE_ROOK, BLACK_ROOK);
     score += applyPST(board, WHITE_QUEEN, BLACK_QUEEN);
     score += applyPST(board, WHITE_KING, BLACK_KING);
+    return score;
+}
+
+static inline Score applyPawnProtection(const Board& board, const EvalInfo& info) {
+    Score score{};
+    BitBoard wp_protected = info.pawn_attacks[WHITE];
+    BitBoard bp_protected = info.pawn_attacks[BLACK];
+    while (wp_protected) {
+        uint8_t sq = popLSB(wp_protected);
+        if (getBit(board.getOcc(WHITE), sq)) {
+            const Piece pc = board.pieceAt(sq);
+            const int dpc = makeDefaultPiece(pc);
+            score += PAWN_PROTECTION[dpc];
+            TRACE_INC(pawn_protection[dpc], WHITE);
+        }
+    }
+    while (bp_protected) {
+        uint8_t sq = popLSB(bp_protected);
+        if (getBit(board.getOcc(BLACK), sq)) {
+            const Piece pc = board.pieceAt(sq);
+            const int dpc = makeDefaultPiece(pc);
+            score -= PAWN_PROTECTION[dpc];
+            TRACE_INC(pawn_protection[dpc], BLACK);
+        }
+    }
     return score;
 }
 
@@ -631,6 +633,7 @@ int eval(const Board& board) {
     score += evaluateQueens(board, info); // - 0.284 MNPS
     score += evaluatePawnAdjustments(pc); // inacc
     score += evaluatePawns(board, info); // - 0.322 MNPS
+    score += applyPawnProtection(board, info);
     score += kingSafety(pc, board, info); // inacc
 
     // Tempo bonus
