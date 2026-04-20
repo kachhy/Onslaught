@@ -41,6 +41,7 @@ int main(int argc, char** argv) {
     tuner.loadDataset(argv[1], dataset_size);
     tuner.run(atol(argv[3]), argc < 6 ? 1 : atoll(argv[5]));
     tuner.dumpParams(tuned_params_out);
+    return 0;
 #elif PERFT
     perftTests();
     return 0;
