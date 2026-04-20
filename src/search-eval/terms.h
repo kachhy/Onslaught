@@ -111,6 +111,7 @@ constexpr Score BISHOP_PAIR = S(-15, 101);
 constexpr Score BISHOP_CONTROL_PENALTY = S(-2, -14);
 constexpr Score BAD_BISHOP = S(-8, -3);
 constexpr Score BISHOP_BLOCKING_PAWN = S(-12, -6);
+constexpr Score BISHOP_BEHIND_PAWN = S(11, 26);
 constexpr Score TRAPPED_BISHOP = S(7, -153);
 
 constexpr Score ROOK_ON_SEVENTH_RANK = S(41, 62);

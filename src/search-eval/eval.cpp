@@ -274,6 +274,14 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
         score -= pawns_same_color * BISHOP_CONTROL_PENALTY;
         TRACE_ADD(bishop_control_penalty, BLACK, pawns_same_color);
     }
+
+    const uint8_t wb_behind_pawn = bitCount(shiftNorth(board.getPieceBB(WHITE_BISHOP)) & board.getPieceBB(WHITE_PAWN));
+    const uint8_t bb_behind_pawn = bitCount(shiftSouth(board.getPieceBB(BLACK_BISHOP)) & board.getPieceBB(BLACK_PAWN));
+    score += wb_behind_pawn * BISHOP_BEHIND_PAWN;
+    score -= bb_behind_pawn * BISHOP_BEHIND_PAWN;
+    TRACE_ADD(bishop_behind_pawn, WHITE, wb_behind_pawn);
+    TRACE_ADD(bishop_behind_pawn, BLACK, bb_behind_pawn);
+
     BitBoard wp_attacks = info.pawn_attacks[WHITE];
     BitBoard bp_attacks = info.pawn_attacks[BLACK];
     BitBoard wb = board.getPieceBB(WHITE_BISHOP);
