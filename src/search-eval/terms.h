@@ -55,107 +55,108 @@ constexpr BitBoard A8_B8_C8 = (1ULL << A8) | (1ULL << B8) | (1ULL << C8);
 
 // Eval parameters
 constexpr Score material_values[6] = {
-	S(127, 220),
-	S(337, 616),
-	S(424, 733),
-	S(498, 1159),
-	S(909, 1199),
+	S(122, 207),
+	S(325, 594),
+	S(402, 700),
+	S(482, 1105),
+	S(868, 1150),
 	S(0, 0),
 };
-constexpr Score TEMPO = S(17, 18);
+constexpr Score TEMPO = S(16, 17);
 constexpr Score MOBILITY[5] = {
 	S(2, 2),
-	S(-1, 7),
-	S(3, 11),
-	S(3, 3),
-	S(1, 5),
+	S(-1, 6),
+	S(2, 10),
+	S(2, 4),
+	S(1, 4),
 };
 
-constexpr Score PAWN_PHALANX = S(18, 28);
-constexpr Score DOUBLED_PAWNS = S(-12, -35);
-constexpr Score BACKWARDS_PAWN = S(-3, -14);
+constexpr Score PAWN_PHALANX = S(16, 47);
+constexpr Score DOUBLED_PAWNS = S(-3, -23);
+constexpr Score BACKWARDS_PAWN = S(-5, -18);
 constexpr Score PAWN_PROTECTION[6] = {
-	S(26, 27),
-	S(-4, 26),
-	S(6, 39),
-	S(2, 8),
-	S(-12, 26),
-	S(-36, 19),
+	S(22, 40),
+	S(-3, 25),
+	S(6, 34),
+	S(1, 7),
+	S(-15, 25),
+	S(-37, 14),
 };
 constexpr Score PASSED_PAWNS[8] = {
-	S(208, 296),
-	S(82, 211),
-	S(29, 121),
-	S(11, 67),
-	S(1, 42),
-	S(-4, 45),
-	S(56, 40),
+	S(187, 277),
+	S(67, 192),
+	S(32, 115),
+	S(-9, 73),
+	S(-21, 45),
+	S(-12, 33),
+	S(50, 36),
 	S(0, 0),
 };
 
-constexpr Score KNIGHT_OUTPOST = S(59, 3);
-constexpr Score KNIGHT_BEHIND_PAWN = S(11, 26);
+constexpr Score KNIGHT_OUTPOST = S(58, 3);
+constexpr Score KNIGHT_BEHIND_PAWN = S(14, 27);
 constexpr Score KNIGHT_PAWN_ADJ[9] = {
-	S(84, 2),
-	S(97, 47),
-	S(74, 59),
-	S(57, 84),
-	S(43, 101),
-	S(41, 116),
-	S(38, 144),
-	S(41, 166),
-	S(42, 188),
+	S(89, 9),
+	S(98, 45),
+	S(73, 49),
+	S(63, 70),
+	S(39, 92),
+	S(39, 111),
+	S(37, 144),
+	S(38, 178),
+	S(40, 192),
 };
 
-constexpr Score BISHOP_PAIR = S(-15, 101);
-constexpr Score BISHOP_CONTROL_PENALTY = S(-2, -14);
-constexpr Score BAD_BISHOP = S(-8, -3);
-constexpr Score BISHOP_BLOCKING_PAWN = S(-12, -6);
-constexpr Score TRAPPED_BISHOP = S(7, -153);
+constexpr Score BISHOP_PAIR = S(-6, 97);
+constexpr Score BISHOP_CONTROL_PENALTY = S(-1, -13);
+constexpr Score BAD_BISHOP = S(-8, -2);
+constexpr Score BISHOP_BLOCKING_PAWN = S(-5, -8);
+constexpr Score BISHOP_BEHIND_PAWN = S(13, 16);
+constexpr Score TRAPPED_BISHOP = S(0, -136);
 
-constexpr Score ROOK_ON_SEVENTH_RANK = S(41, 62);
-constexpr Score ROOK_ON_OPEN_FILE = S(52, 20);
-constexpr Score ROOK_ON_SEMI_OPEN_FILE = S(17, 26);
+constexpr Score ROOK_ON_SEVENTH_RANK = S(35, 64);
+constexpr Score ROOK_ON_OPEN_FILE = S(50, 17);
+constexpr Score ROOK_ON_SEMI_OPEN_FILE = S(14, 25);
 constexpr Score ROOK_PAWN_ADJ[9] = {
-	S(155, 67),
-	S(92, 83),
-	S(69, 113),
-	S(43, 131),
-	S(37, 147),
-	S(28, 162),
-	S(24, 173),
-	S(11, 190),
-	S(-9, 222),
+	S(155, 69),
+	S(92, 79),
+	S(76, 98),
+	S(41, 119),
+	S(37, 135),
+	S(27, 152),
+	S(21, 167),
+	S(10, 189),
+	S(-10, 230),
 };
 
-constexpr Score QUEEN_REL_PIN = S(-17, -14);
-constexpr Score NO_OPPONENT_QUEENS = S(635, 1007);
+constexpr Score QUEEN_REL_PIN = S(-18, -5);
+constexpr Score NO_OPPONENT_QUEENS = S(603, 968);
 
-constexpr Score KING_ON_OPEN_FILE = S(-72, -25);
-constexpr Score KING_ON_SEMI_OPEN_FILE = S(-35, 21);
+constexpr Score KING_ON_OPEN_FILE = S(-70, -23);
+constexpr Score KING_ON_SEMI_OPEN_FILE = S(-33, 16);
 constexpr Score PAWN_SHIELD[4] = {
-	S(-31, 1),
-	S(-3, -13),
-	S(-1, -2),
-	S(-16, -21),
+	S(-31, 0),
+	S(-2, -10),
+	S(-1, 1),
+	S(-16, -17),
 };
 constexpr Score PAWN_STORM[3] = {
-	S(-24, 31),
-	S(9, -6),
-	S(11, -8),
+	S(-28, 35),
+	S(9, -5),
+	S(12, -9),
 };
 constexpr Score KING_ZONE_ATTACK[4] = {
-	S(-15, -2),
-	S(-14, 0),
+	S(-13, -3),
+	S(-13, 0),
 	S(-25, 3),
-	S(-14, -38),
+	S(-14, -37),
 };
 constexpr Score KING_CASTLED[2] = {
-	S(-23, -12),
-	S(-55, 45),
+	S(-22, -9),
+	S(-54, 44),
 };
-constexpr Score KING_LOST_ONE_CASTLING_RIGHT = S(32, -48);
-constexpr Score KING_UNCASTLED_RIGHTS_REMAIN = S(59, -18);
+constexpr Score KING_LOST_ONE_CASTLING_RIGHT = S(32, -42);
+constexpr Score KING_UNCASTLED_RIGHTS_REMAIN = S(59, -29);
 extern const Score pst[12][64];
 
 constexpr int MVV_LVA[6][6] = {
