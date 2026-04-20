@@ -44,12 +44,6 @@ constexpr uint16_t PST_OFFSET = KING_UNCASTLED_OFFSET + 2;
 // Minibatching parameters
 constexpr static uint16_t BATCH_SIZE = 16384;
 
-struct Position {
-    Board board;
-    Side result;
-    Position(const std::string& fen, const Side result) : board(fen), result(result) { }
-};
-
 struct TunerParam {
     double value = 0.0;
     double grad = 0.0;
@@ -78,7 +72,6 @@ private:
     void updateAdam(const uint32_t epoch);
     void initParams();
 
-    std::vector<Position> dataset;
     std::vector<Trace> traces;
     std::vector<Trace> validation_traces;
     std::vector<TunerParam> params;
