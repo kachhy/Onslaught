@@ -107,12 +107,12 @@ constexpr Score KNIGHT_PAWN_ADJ[9] = {
 	S(40, 192),
 };
 
-constexpr Score BISHOP_PAIR = S(-15, 101);
-constexpr Score BISHOP_CONTROL_PENALTY = S(-2, -14);
-constexpr Score BAD_BISHOP = S(-8, -3);
-constexpr Score BISHOP_BLOCKING_PAWN = S(-12, -6);
-constexpr Score BISHOP_BEHIND_PAWN = S(11, 26);
-constexpr Score TRAPPED_BISHOP = S(7, -153);
+constexpr Score BISHOP_PAIR = S(-6, 97);
+constexpr Score BISHOP_CONTROL_PENALTY = S(-1, -13);
+constexpr Score BAD_BISHOP = S(-8, -2);
+constexpr Score BISHOP_BLOCKING_PAWN = S(-5, -8);
+constexpr Score BISHOP_BEHIND_PAWN = S(13, 16);
+constexpr Score TRAPPED_BISHOP = S(0, -136);
 
 constexpr Score ROOK_ON_SEVENTH_RANK = S(35, 64);
 constexpr Score ROOK_ON_OPEN_FILE = S(50, 17);
