@@ -55,108 +55,108 @@ constexpr BitBoard A8_B8_C8 = (1ULL << A8) | (1ULL << B8) | (1ULL << C8);
 
 // Eval parameters
 constexpr Score material_values[6] = {
-	S(112, 192),
-	S(340, 620),
-	S(424, 737),
-	S(506, 1169),
-	S(901, 1195),
+	S(104, 183),
+	S(315, 588),
+	S(391, 708),
+	S(470, 1116),
+	S(811, 1102),
 	S(0, 0),
 };
-constexpr Score TEMPO = S(17, 18);
+constexpr Score TEMPO = S(17, 16);
 constexpr Score MOBILITY[5] = {
-	S(2, 2),
-	S(-1, 7),
-	S(2, 12),
-	S(2, 4),
-	S(1, 5),
+	S(1, 1),
+	S(-1, 10),
+	S(3, 12),
+	S(2, 5),
+	S(0, 9),
 };
 
-constexpr Score PAWN_PHALANX = S(17, 49);
-constexpr Score DOUBLED_PAWNS = S(10, 5);
-constexpr Score BACKWARDS_PAWN = S(-5, -19);
+constexpr Score PAWN_PHALANX = S(18, 47);
+constexpr Score DOUBLED_PAWNS = S(12, 15);
+constexpr Score BACKWARDS_PAWN = S(-6, -15);
 constexpr Score PAWN_PROTECTION[6] = {
-	S(23, 42),
-	S(-3, 26),
+	S(25, 40),
+	S(-2, 23),
 	S(6, 36),
-	S(0, 8),
-	S(-16, 28),
-	S(-37, 14),
+	S(-4, 10),
+	S(-14, 27),
+	S(-29, 13),
 };
 constexpr Score PASSED_PAWNS[8] = {
-	S(195, 289),
-	S(72, 202),
-	S(34, 122),
-	S(-9, 78),
-	S(-23, 47),
-	S(-13, 35),
-	S(41, 29),
+	S(192, 281),
+	S(76, 190),
+	S(31, 118),
+	S(-12, 79),
+	S(-22, 45),
+	S(-13, 34),
+	S(37, 26),
 	S(0, 0),
 };
 
-constexpr Score KNIGHT_OUTPOST = S(61, 4);
-constexpr Score KNIGHT_BEHIND_PAWN = S(14, 28);
+constexpr Score KNIGHT_OUTPOST = S(60, 7);
+constexpr Score KNIGHT_BEHIND_PAWN = S(14, 30);
 constexpr Score KNIGHT_PAWN_ADJ[9] = {
-	S(94, 12),
-	S(106, 49),
-	S(80, 53),
-	S(70, 75),
-	S(44, 99),
-	S(44, 119),
-	S(41, 154),
-	S(42, 190),
-	S(45, 200),
+	S(70, 13),
+	S(83, 42),
+	S(74, 48),
+	S(53, 67),
+	S(41, 85),
+	S(39, 103),
+	S(39, 136),
+	S(42, 168),
+	S(39, 185),
 };
 
-constexpr Score BISHOP_PAIR = S(-5, 103);
-constexpr Score BISHOP_CONTROL_PENALTY = S(-1, -14);
-constexpr Score BAD_BISHOP = S(-9, -1);
-constexpr Score BISHOP_BLOCKING_PAWN = S(-5, -9);
-constexpr Score BISHOP_BEHIND_PAWN = S(14, 17);
-constexpr Score TRAPPED_BISHOP = S(-4, -4);
+constexpr Score BISHOP_PAIR = S(6, 94);
+constexpr Score BISHOP_CONTROL_PENALTY = S(0, -14);
+constexpr Score BAD_BISHOP = S(-7, -2);
+constexpr Score BISHOP_BLOCKING_PAWN = S(-6, -6);
+constexpr Score BISHOP_BEHIND_PAWN = S(15, 15);
+constexpr Score TRAPPED_BISHOP = S(-3, -3);
 
-constexpr Score ROOK_ON_SEVENTH_RANK = S(38, 68);
-constexpr Score ROOK_ON_OPEN_FILE = S(54, 18);
-constexpr Score ROOK_ON_SEMI_OPEN_FILE = S(15, 27);
+constexpr Score ROOK_ON_SEVENTH_RANK = S(43, 60);
+constexpr Score ROOK_ON_OPEN_FILE = S(54, 15);
+constexpr Score ROOK_ON_SEMI_OPEN_FILE = S(17, 23);
 constexpr Score ROOK_PAWN_ADJ[9] = {
-	S(159, 76),
-	S(97, 85),
-	S(79, 106),
-	S(43, 126),
-	S(40, 144),
-	S(30, 160),
-	S(24, 175),
-	S(13, 197),
-	S(-7, 239),
+	S(136, 77),
+	S(84, 85),
+	S(61, 107),
+	S(42, 123),
+	S(37, 137),
+	S(30, 153),
+	S(26, 165),
+	S(16, 178),
+	S(3, 203),
 };
 
-constexpr Score QUEEN_REL_PIN = S(-19, -4);
-constexpr Score NO_OPPONENT_QUEENS = S(654, 1031);
+constexpr Score QUEEN_REL_PIN = S(-20, -3);
+constexpr Score NO_OPPONENT_QUEENS = S(600, 959);
 
-constexpr Score KING_ON_OPEN_FILE = S(-75, -25);
-constexpr Score KING_ON_SEMI_OPEN_FILE = S(-36, 17);
+constexpr Score KING_ON_OPEN_FILE = S(-67, -23);
+constexpr Score KING_ON_SEMI_OPEN_FILE = S(-35, 19);
 constexpr Score PAWN_SHIELD[4] = {
-	S(-33, 0),
-	S(-1, -12),
-	S(0, 0),
-	S(-16, -19),
+	S(-31, -3),
+	S(2, -17),
+	S(-1, 1),
+	S(-15, -20),
 };
 constexpr Score PAWN_STORM[3] = {
-	S(-31, 37),
-	S(9, -5),
-	S(12, -10),
+	S(-27, 35),
+	S(8, -3),
+	S(10, -8),
 };
 constexpr Score KING_ZONE_ATTACK[4] = {
-	S(-15, -3),
-	S(-13, 0),
-	S(-27, 3),
-	S(-14, -40),
+	S(-18, -5),
+	S(-14, -1),
+	S(-26, 3),
+	S(-13, -42),
 };
 constexpr Score KING_CASTLED[2] = {
-	S(-21, -11),
-	S(-56, 47),
+	S(-19, -13),
+	S(-54, 40),
 };
-constexpr Score KING_LOST_ONE_CASTLING_RIGHT = S(34, -42);
-constexpr Score KING_UNCASTLED_RIGHTS_REMAIN = S(63, -32);
+constexpr Score KING_LOST_ONE_CASTLING_RIGHT = S(28, -40);
+constexpr Score KING_UNCASTLED_RIGHTS_REMAIN = S(59, -13);
 extern const Score pst[12][64];
 
 constexpr int MVV_LVA[6][6] = {
