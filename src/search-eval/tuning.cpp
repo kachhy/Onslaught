@@ -287,6 +287,11 @@ void Tuner::dumpParams(std::ofstream& out) const {
     // Bishop blocking pawn
     out << "constexpr Score BISHOP_BLOCKING_PAWN = S(" << static_cast<int>(std::round(params[BISHOP_BLOCKING_PAWN_OFFSET].value)) << ", "
         << static_cast<int>(std::round(params[BISHOP_BLOCKING_PAWN_OFFSET + 1].value)) << ");\n";
+        
+    // Bishop blocking pawn
+    out << "constexpr Score BISHOP_BEHIND_PAWN = S(" << static_cast<int>(std::round(params[BISHOP_BEHIND_PAWN_OFFSET].value)) << ", "
+        << static_cast<int>(std::round(params[BISHOP_BEHIND_PAWN_OFFSET + 1].value)) << ");\n";
+    
     
     // Trapped bishop
     out << "constexpr Score TRAPPED_BISHOP = S(" << static_cast<int>(std::round(params[TRAPPED_BISHOP_OFFSET].value)) << ", "
@@ -481,6 +486,12 @@ double Tuner::reconstructScore(const Trace& tr) const {
     int bbp = tr.bishop_blocking_pawn[WHITE] - tr.bishop_blocking_pawn[BLACK];
     mg += bbp * params[BISHOP_BLOCKING_PAWN_OFFSET].value;
     eg += bbp * params[BISHOP_BLOCKING_PAWN_OFFSET + 1].value;
+
+    // Bishop behind pawn
+    int bbehp = tr.bishop_behind_pawn[WHITE] - tr.bishop_behind_pawn[BLACK];
+    mg += bbehp * params[BISHOP_BEHIND_PAWN_OFFSET].value;
+    eg += bbehp * params[BISHOP_BEHIND_PAWN_OFFSET + 1].value;
+
     // Trapped bishop
     int trapped_bishop = tr.trapped_bishop[WHITE] - tr.trapped_bishop[BLACK];
     mg += trapped_bishop * params[TRAPPED_BISHOP_OFFSET].value;
@@ -673,6 +684,11 @@ void Tuner::updateGradients(const Trace& tr, double base, double phase, std::vec
     local_grads[BISHOP_BLOCKING_PAWN_OFFSET] += base * bbp * phase;
     local_grads[BISHOP_BLOCKING_PAWN_OFFSET + 1] += base * bbp * (1.0 - phase);
 
+    // Bishop behind pawn
+    int bbehp = tr.bishop_behind_pawn[WHITE] - tr.bishop_behind_pawn[BLACK];
+    local_grads[BISHOP_BEHIND_PAWN_OFFSET] += base * bbehp * phase;
+    local_grads[BISHOP_BEHIND_PAWN_OFFSET + 1] += base * bbehp * (1.0 - phase);
+
     // Trapped bishop
     int trapped_bishop = tr.trapped_bishop[WHITE] - tr.trapped_bishop[BLACK];
     local_grads[TRAPPED_BISHOP_OFFSET] += base * trapped_bishop * phase;
@@ -840,6 +856,12 @@ void Tuner::initParams() {
 
     params.push_back({ (double)MG(BISHOP_BLOCKING_PAWN) });
     params.push_back({ (double)EG(BISHOP_BLOCKING_PAWN) });
+
+    params.push_back({ (double)MG(BISHOP_BEHIND_PAWN) });
+    params.push_back({ (double)EG(BISHOP_BEHIND_PAWN) });
+
+    params.push_back({ (double)MG(BISHOP_BEHIND_PAWN) });
+    params.push_back({ (double)EG(BISHOP_BEHIND_PAWN) });
 
     params.push_back({ (double)MG(TRAPPED_BISHOP) });
     params.push_back({ (double)EG(TRAPPED_BISHOP) });

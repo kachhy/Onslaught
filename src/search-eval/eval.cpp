@@ -70,38 +70,15 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     Score score{};
     
 #ifndef TUNING
-    const bool probe_hit = probePawns(board, score);
-#endif
-
-    BitBoard wp_protected = info.pawn_attacks[WHITE];
-    BitBoard bp_protected = info.pawn_attacks[BLACK];
-    while (wp_protected) {
-        uint8_t sq = popLSB(wp_protected);
-        if (getBit(board.getOcc(WHITE), sq)) {
-            const Piece pc = board.pieceAt(sq);
-            const int dpc = makeDefaultPiece(pc);
-            score += PAWN_PROTECTION[dpc];
-            TRACE_INC(pawn_protection[dpc], WHITE);
-        }
-    }
-    while (bp_protected) {
-        uint8_t sq = popLSB(bp_protected);
-        if (getBit(board.getOcc(BLACK), sq)) {
-            const Piece pc = board.pieceAt(sq);
-            const int dpc = makeDefaultPiece(pc);
-            score -= PAWN_PROTECTION[dpc];
-            TRACE_INC(pawn_protection[dpc], BLACK);
-        }
-    }
-
-#ifndef TUNING
-    if (probe_hit) {
+    if (probePawns(board, score)) {
         return score;
     }
 #endif
 
     BitBoard wp = board.getPieceBB(WHITE_PAWN);
     BitBoard bp = board.getPieceBB(BLACK_PAWN);
+    BitBoard wp_protected = info.pawn_attacks[WHITE];
+    BitBoard bp_protected = info.pawn_attacks[BLACK];
 
     const uint8_t wp_phalanx = bitCount(shiftWest(wp) & wp);
     const uint8_t bp_phalanx = bitCount(shiftWest(bp) & bp);
@@ -181,6 +158,31 @@ static inline Score applyAllPST(const Board& board) {
     score += applyPST(board, WHITE_ROOK, BLACK_ROOK);
     score += applyPST(board, WHITE_QUEEN, BLACK_QUEEN);
     score += applyPST(board, WHITE_KING, BLACK_KING);
+    return score;
+}
+
+static inline Score applyPawnProtection(const Board& board, const EvalInfo& info) {
+    Score score{};
+    BitBoard wp_protected = info.pawn_attacks[WHITE];
+    BitBoard bp_protected = info.pawn_attacks[BLACK];
+    while (wp_protected) {
+        uint8_t sq = popLSB(wp_protected);
+        if (getBit(board.getOcc(WHITE), sq)) {
+            const Piece pc = board.pieceAt(sq);
+            const int dpc = makeDefaultPiece(pc);
+            score += PAWN_PROTECTION[dpc];
+            TRACE_INC(pawn_protection[dpc], WHITE);
+        }
+    }
+    while (bp_protected) {
+        uint8_t sq = popLSB(bp_protected);
+        if (getBit(board.getOcc(BLACK), sq)) {
+            const Piece pc = board.pieceAt(sq);
+            const int dpc = makeDefaultPiece(pc);
+            score -= PAWN_PROTECTION[dpc];
+            TRACE_INC(pawn_protection[dpc], BLACK);
+        }
+    }
     return score;
 }
 
@@ -272,6 +274,14 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
         score -= pawns_same_color * BISHOP_CONTROL_PENALTY;
         TRACE_ADD(bishop_control_penalty, BLACK, pawns_same_color);
     }
+
+    const uint8_t wb_behind_pawn = bitCount(shiftNorth(board.getPieceBB(WHITE_BISHOP)) & board.getPieceBB(WHITE_PAWN));
+    const uint8_t bb_behind_pawn = bitCount(shiftSouth(board.getPieceBB(BLACK_BISHOP)) & board.getPieceBB(BLACK_PAWN));
+    score += wb_behind_pawn * BISHOP_BEHIND_PAWN;
+    score -= bb_behind_pawn * BISHOP_BEHIND_PAWN;
+    TRACE_ADD(bishop_behind_pawn, WHITE, wb_behind_pawn);
+    TRACE_ADD(bishop_behind_pawn, BLACK, bb_behind_pawn);
+
     BitBoard wp_attacks = info.pawn_attacks[WHITE];
     BitBoard bp_attacks = info.pawn_attacks[BLACK];
     BitBoard wb = board.getPieceBB(WHITE_BISHOP);
@@ -284,7 +294,7 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
         score += blocking_pawns * BAD_BISHOP;
         TRACE_ADD(bad_bishop, WHITE, blocking_pawns);
 
-        if (valid_moves && !safe_moves) {
+        if (safe_moves) {
             score += TRAPPED_BISHOP;
             TRACE_INC(trapped_bishop, WHITE);
         }
@@ -304,7 +314,7 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
         score -= blocking_pawns * BAD_BISHOP;
         TRACE_ADD(bad_bishop, BLACK, blocking_pawns);
 
-        if (valid_moves && !safe_moves) {
+        if (!safe_moves) {
             score -= TRAPPED_BISHOP;
             TRACE_INC(trapped_bishop, BLACK);
         }
@@ -631,6 +641,7 @@ int eval(const Board& board) {
     score += evaluateQueens(board, info); // - 0.284 MNPS
     score += evaluatePawnAdjustments(pc); // inacc
     score += evaluatePawns(board, info); // - 0.322 MNPS
+    score += applyPawnProtection(board, info);
     score += kingSafety(pc, board, info); // inacc
 
     // Tempo bonus

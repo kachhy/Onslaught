@@ -43,6 +43,7 @@ struct Trace {
     int16_t bishop_control_penalty[2];           // [side] (count of penalized squares) //
     int16_t bad_bishop[2];                       // [side] (count of blocking pawns) //
     int16_t bishop_blocking_pawn[2];             // [side] //
+    int16_t bishop_behind_pawn[2];             // [side] //
     int16_t trapped_bishop[2];                   // [side] //
 
     // Rook
