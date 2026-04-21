@@ -860,9 +860,6 @@ void Tuner::initParams() {
     params.push_back({ (double)MG(BISHOP_BEHIND_PAWN) });
     params.push_back({ (double)EG(BISHOP_BEHIND_PAWN) });
 
-    params.push_back({ (double)MG(BISHOP_BEHIND_PAWN) });
-    params.push_back({ (double)EG(BISHOP_BEHIND_PAWN) });
-
     params.push_back({ (double)MG(TRAPPED_BISHOP) });
     params.push_back({ (double)EG(TRAPPED_BISHOP) });
 
