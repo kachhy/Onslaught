@@ -440,12 +440,12 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
                 // fail low = true score is at most alpha (upper bound)
                 printInfo(depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table);
                 alpha = std::max(-SCORE_MAX, iter_score - delta);
-                delta *= 2;
+                delta += delta * 1.25;
             } else if (iter_score >= beta) {
                 // fail high = true score is at least beta (lower bound)
                 printInfo(depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table);
                 beta = std::min(SCORE_MAX, iter_score + delta);
-                delta *= 2;
+                delta += delta * 1.25;
             } else {
                 best_score = iter_score;
                 printInfo(depth, seldepth, best_score, nullptr, nodes, nps, pv_table);
