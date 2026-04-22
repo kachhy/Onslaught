@@ -1,11 +1,7 @@
 <div align="center">
 <img src="./img/icon_tiny.png" height:auto;"/>
 
-[![GitHub stars](https://img.shields.io/github/stars/kachhy/Axiom?style=for-the-badge)](https://github.com/kachhy/Axiom/stargazers)
-
-[![GitHub forks](https://img.shields.io/github/forks/kachhy/Axiom?style=for-the-badge)](https://github.com/kachhy/Axiom/network)
-
-[![GitHub issues](https://img.shields.io/github/issues/kachhy/Axiom?style=for-the-badge)](https://github.com/kachhy/Axiom/issues)
+[![GitHub stars](https://img.shields.io/github/stars/kachhy/Axiom?style=for-the-badge)](https://github.com/kachhy/Axiom/stargazers) [![GitHub forks](https://img.shields.io/github/forks/kachhy/Axiom?style=for-the-badge)](https://github.com/kachhy/Axiom/network) [![GitHub issues](https://img.shields.io/github/issues/kachhy/Axiom?style=for-the-badge)](https://github.com/kachhy/Axiom/issues)
 
 [![GitHub license](https://img.shields.io/github/license/kachhy/Axiom?style=for-the-badge)](LICENSE)
 
