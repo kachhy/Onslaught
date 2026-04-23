@@ -35,9 +35,9 @@ struct Score {
 };
 
 // Construction and extraction
-constexpr Score S(const int16_t mg, const int16_t eg) { return static_cast<Score>((static_cast<uint32_t>(mg) << 16) | static_cast<uint16_t>(eg)); }
-constexpr int16_t MG(const Score s) { return static_cast<int16_t>(s.value >> 16); }
+constexpr Score S(const int16_t mg, const int16_t eg) { return static_cast<Score>(static_cast<int32_t>((static_cast<uint32_t>(mg) << 16) + static_cast<uint32_t>(static_cast<int32_t>(eg)))); }
 constexpr int16_t EG(const Score s) { return static_cast<int16_t>(s.value); }
+constexpr int16_t MG(const Score s) { return static_cast<int16_t>(static_cast<int32_t>(static_cast<uint32_t>(s.value) + 0x8000u) >> 16); }
 constexpr int16_t T(const Score score, const int phase) { return (MG(score) * phase + EG(score) * (MAX_PHASE - phase)) / MAX_PHASE; } // taper
 
 constexpr Score operator*(Score s, int n) { return S(MG(s) * n, EG(s) * n); }
