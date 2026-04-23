@@ -71,6 +71,8 @@ constexpr Score MOBILITY[5] = {
 	S(0, 9),
 };
 
+constexpr Score UNCONTESTED_CENTRAL_CONTROL = S(13, 2);
+
 constexpr Score PAWN_PHALANX = S(18, 47);
 constexpr Score DOUBLED_PAWNS = S(12, 15);
 constexpr Score BACKWARDS_PAWN = S(-6, -15);

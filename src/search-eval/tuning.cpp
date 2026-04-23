@@ -225,6 +225,9 @@ void Tuner::dumpParams(std::ofstream& out) const {
     }
     out << "};\n";
 
+    out << "constexpr Score UNCONTESTED_CENTRAL_CONTROL = S(" << static_cast<int>(std::round(params[UNCONTESTED_CENTRAL_CONTROL_OFFSET].value)) << ", "
+        << static_cast<int>(std::round(params[UNCONTESTED_CENTRAL_CONTROL_OFFSET + 1].value)) << ");\n";
+
     // Pawn structure
     // Pawn phalanx
     out << "\nconstexpr Score PAWN_PHALANX = S(" << static_cast<int>(std::round(params[PAWN_PHALANX_OFFSET].value)) << ", "
@@ -417,6 +420,11 @@ double Tuner::reconstructScore(const Trace& tr) const {
         mg += coeff * params[MOBILITY_OFFSET + i * 2].value;
         eg += coeff * params[MOBILITY_OFFSET + i * 2 + 1].value;
     }
+
+    // Uncontested central control
+    int ucc = tr.uncontested_central_control[WHITE] - tr.uncontested_central_control[BLACK];
+    mg += ucc * params[UNCONTESTED_CENTRAL_CONTROL_OFFSET].value;
+    eg += ucc * params[UNCONTESTED_CENTRAL_CONTROL_OFFSET + 1].value;
 
     // Pawn structure
     // Pawn phalanx
@@ -615,6 +623,11 @@ void Tuner::updateGradients(const Trace& tr, double base, double phase, std::vec
         local_grads[MOBILITY_OFFSET + i * 2 + 1] += base * coeff * (1.0 - phase);
     }
 
+    // Uncontested central control
+    int ucc = tr.uncontested_central_control[WHITE] - tr.uncontested_central_control[BLACK];
+    local_grads[UNCONTESTED_CENTRAL_CONTROL_OFFSET] += base * ucc * phase;
+    local_grads[UNCONTESTED_CENTRAL_CONTROL_OFFSET + 1] += base * ucc * (1.0 - phase);
+
     // Pawn structure
     // Pawn phalanx
     int phal = tr.pawn_phalanx[WHITE] - tr.pawn_phalanx[BLACK];
@@ -808,6 +821,10 @@ void Tuner::initParams() {
         params.push_back({ (double)MG(MOBILITY[i]) });
         params.push_back({ (double)EG(MOBILITY[i]) });
     }
+
+    // Uncontested central control
+    params.push_back({ (double)MG(UNCONTESTED_CENTRAL_CONTROL) });
+    params.push_back({ (double)EG(UNCONTESTED_CENTRAL_CONTROL) });
 
     // Pawn structure
     params.push_back({ (double)MG(PAWN_PHALANX) });

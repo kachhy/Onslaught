@@ -35,6 +35,8 @@ constexpr BitBoard RANK_8 = 0x00000000000000FFULL;
 constexpr BitBoard DARK_SQUARES = 0x55AA55AA55AA55AAULL;
 constexpr BitBoard LIGHT_SQUARES = 0xFFFFFFFFFFFFFFFFULL & ~DARK_SQUARES;
 
+constexpr BitBoard CENTRAL_SQUARES = 0x00003C3C3C3C0000ULL;
+
 constexpr inline BitBoard shiftNorth(const BitBoard bitboard) { return bitboard >> 8; }
 constexpr inline BitBoard shiftNorthEast(const BitBoard bitboard) { return (bitboard & ~H_FILE) >> 7; }
 constexpr inline BitBoard shiftEast(const BitBoard bitboard) { return (bitboard & ~H_FILE) << 1; }

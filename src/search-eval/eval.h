@@ -22,9 +22,11 @@ struct Trace {
 
     // Tempo
     int16_t tempo[2];                            // [side] //
-
+    
     // Mobility (indexed by piece 0-4, then mobility count 0-4)
     int16_t mobility[5][2];                      // [mobility_index][side] //
+
+    int16_t uncontested_central_control[2];                            // [side] //
 
     // Pawn structure
     int16_t pawn_phalanx[2];                     // [side] //

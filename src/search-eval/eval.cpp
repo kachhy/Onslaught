@@ -622,6 +622,17 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
     return score;
 }
 
+Score evaluateSpace(const Board& board) {
+    Score s{};
+    const uint8_t ucc_white = bitCount(board.getThreatenedBy(WHITE) & CENTRAL_SQUARES & ~board.getThreatenedBy(BLACK));
+    const uint8_t ucc_black = bitCount(board.getThreatenedBy(BLACK) & CENTRAL_SQUARES & ~board.getThreatenedBy(WHITE));
+    s += ucc_white * UNCONTESTED_CENTRAL_CONTROL;
+    s -= ucc_black * UNCONTESTED_CENTRAL_CONTROL;
+    TRACE_ADD(uncontested_central_control, WHITE, ucc_white);
+    TRACE_ADD(uncontested_central_control, BLACK, ucc_black);
+    return s;
+}
+
 int eval(const Board& board) {
     if (isMaterialDraw(board)) {
         return 0;
@@ -636,13 +647,14 @@ int eval(const Board& board) {
     Score score = board.getMaterialPST();
 #endif
     score += evaluateKnights(board, info);
-    score += evaluateBishops(pc, board, info); // - 0.26 MNPS
-    score += evaluateRooks(board, info); // - .198 MNPS
-    score += evaluateQueens(board, info); // - 0.284 MNPS
-    score += evaluatePawnAdjustments(pc); // inacc
-    score += evaluatePawns(board, info); // - 0.322 MNPS
+    score += evaluateBishops(pc, board, info);
+    score += evaluateRooks(board, info);
+    score += evaluateQueens(board, info);
+    score += evaluatePawnAdjustments(pc);
+    score += evaluatePawns(board, info);
     score += applyPawnProtection(board, info);
-    score += kingSafety(pc, board, info); // inacc
+    score += kingSafety(pc, board, info);
+    score += evaluateSpace(board);
 
     // Tempo bonus
     score += (board.getSTM() == WHITE) ? TEMPO : -TEMPO;
