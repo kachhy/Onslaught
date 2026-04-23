@@ -24,6 +24,7 @@ struct PieceCounts {
 static BitBoard knight_outpost_table[2][64];
 static BitBoard king_zones[2][64]; // SIDE -> SQUARE
 static BitBoard king_critical_files[8];
+static BitBoard adjacent_files[8];
 
 static inline PieceCounts getPieceCounts(const Board& board) {
     return {
@@ -68,7 +69,7 @@ static inline Score applyPST(const Board& board, const Piece piece_w, const Piec
 
 static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     Score score{};
-    
+
 #ifndef TUNING
     if (probePawns(board, score)) {
         return score;
@@ -102,11 +103,16 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     TRACE_ADD(doubled_pawns, WHITE, dpw);
     TRACE_ADD(doubled_pawns, BLACK, dpb);
 
-    // Passed pawns & backwards pawns
+    // Passed pawns, backwards pawns, isolated pawns
     BitBoard temp_wp = wp;
     while (temp_wp) {
         const Square sq = static_cast<Square>(popLSB(temp_wp));
         const int rank = getRank(sq);
+        const int file = getFile(sq);
+        if (!(wp & adjacent_files[file])) {
+            score += ISOLATED_PAWN;
+            TRACE_INC(isolated_pawn, WHITE);
+        }
         const BitBoard forward_ray = H_FILE >> (63 - sq);
         if (rank >= 1 && rank <= 6 && !(forward_ray & (bp | bp_protected))) {
             score += PASSED_PAWNS[rank - 1];
@@ -126,6 +132,11 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     while (temp_bp) {
         const Square sq = static_cast<Square>(popLSB(temp_bp));
         const int rank = getRank(sq);
+        const int file = getFile(sq);
+        if (!(bp & adjacent_files[file])) {
+            score -= ISOLATED_PAWN;
+            TRACE_INC(isolated_pawn, BLACK);
+        }
         const BitBoard forward_ray = A_FILE << sq;
         if (rank >= 1 && rank <= 6 && !(forward_ray & (wp | wp_protected))) {
             score -= PASSED_PAWNS[6 - rank];
@@ -571,7 +582,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
             TRACE_INC(king_on_semi_open_file, BLACK);
         }
     }
-    
+
     const BitBoard w_king_zone = king_zones[WHITE][w_king_sq];
     const BitBoard b_king_zone = king_zones[BLACK][b_king_sq];
 
@@ -681,6 +692,7 @@ void initEval() {
         knight_outpost_table[BLACK][sq] = below & adj_files;
 
         if (sq < 8) {
+            adjacent_files[sq] = adj_files;
             adj_files |= (A_FILE << file);
             king_critical_files[sq] = adj_files;
         }
