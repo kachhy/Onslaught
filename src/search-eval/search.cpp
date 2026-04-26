@@ -50,9 +50,6 @@ int scoreFromTT(int score, int ply) {
 
 // Important: we copy board here
 void printInfo(Board board, int depth, int seldepth, int score, const char* bound, long long nodes, int nps, PVLine* pv) {
-#ifdef ATAGEN
-    return;
-#endif
     std::cout << "info depth " << depth << " seldepth " << seldepth;
     if (std::abs(score) < SCORE_MAX - MAX_GAME_MOVES) {
         std::cout << " score cp " << score;
@@ -242,9 +239,20 @@ int search(
     if (in_check) { // important; this prevents the improving flag from being false after check sequence finsishes
         board.static_evals[ply] = (ply >= 2 ? board.static_evals[ply - 2] : 0);
     } else {
-        board.static_evals[ply] = eval(board);
+        if (tt_hit) {
+            if (tt_entry.bound == EXACTBOUND) {
+                board.static_evals[ply] = tt_entry.score;
+            } else {
+                board.static_evals[ply] = eval(board);
+                if (tt_entry.bound == (tt_entry.score > board.static_evals[ply] ? LOWERBOUND : UPPERBOUND)) {
+                    board.static_evals[ply] = tt_entry.score;
+                }
+            }
+        } else {
+            board.static_evals[ply] = eval(board);
+        }
     }
-
+    
     int static_eval = board.static_evals[ply];
 
     // imrpoving checks
