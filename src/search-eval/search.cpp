@@ -239,7 +239,7 @@ int search(
     if (in_check) { // important; this prevents the improving flag from being false after check sequence finsishes
         board.static_evals[ply] = (ply >= 2 ? board.static_evals[ply - 2] : 0);
     } else {
-        if (tt_hit) {
+        if (tt_hit && std::abs(tt_entry.score) < 31000) {
             if (tt_entry.bound == EXACTBOUND) {
                 board.static_evals[ply] = tt_entry.score;
             } else {
@@ -480,12 +480,13 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
             if (iter_score <= alpha) {
                 // fail low = true score is at most alpha (upper bound)
                 printInfo(board, depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table);
-                alpha = std::max(-SCORE_MAX, iter_score - delta);
+                beta = (beta + alpha) / 2;
+                alpha = std::max(-SCORE_MAX, alpha - delta);
                 delta += delta * 1.25;
             } else if (iter_score >= beta) {
                 // fail high = true score is at least beta (lower bound)
                 printInfo(board, depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table);
-                beta = std::min(SCORE_MAX, iter_score + delta);
+                beta = std::min(SCORE_MAX, beta + delta);
                 delta += delta * 1.25;
             } else {
                 best_score = iter_score;
