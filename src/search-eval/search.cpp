@@ -12,13 +12,13 @@
 #include <cmath>
 #include <iostream>
 
-double LMR_TABLE[MAX_PLY][MAX_MOVES];
+int LMR_TABLE[MAX_PLY][MAX_MOVES];
 
 
 void initSearchTables() {
     for (int d = 1; d < MAX_PLY; d++) {
         for (int m = 1; m < MAX_MOVES; m++) {
-            LMR_TABLE[d][m] = log(d) * log(m) / LMR_SCALAR; 
+            LMR_TABLE[d][m] = static_cast<int>(LMR_VALUE + log(d) * log(m) / LMR_SCALAR);
         }
     }
 }
@@ -368,7 +368,7 @@ int search(
             if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check) {
                 // TODO tune this function
                 // improving flag = search more carefully when good position is improving (less reduction)
-                int lmr_reduction = std::max(0, std::min(static_cast<int>(LMR_VALUE + LMR_TABLE[depth][moves_searched]), depth - 2) /* - improving*/);
+                int lmr_reduction = std::max(0, std::min(LMR_TABLE[depth][moves_searched], depth - 2) /* - improving*/);
                 score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
