@@ -14,12 +14,17 @@
 
 double LMR_TABLE[MAX_PLY][MAX_MOVES];
 
+
 void initSearchTables() {
     for (int d = 1; d < MAX_PLY; d++) {
         for (int m = 1; m < MAX_MOVES; m++) {
             LMR_TABLE[d][m] = log(d) * log(m) / LMR_SCALAR; 
         }
     }
+}
+
+void initSearch() {
+    initSearchTables();
 }
 
 uint16_t seldepth;

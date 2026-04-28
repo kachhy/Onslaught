@@ -1,5 +1,6 @@
 #include "hash/zobrist.h"
 #include "movegen/attacks.h"
+#include "search-eval/search.h"
 #include "search-eval/tuning.h"
 #include "testing/perft.h"
 #include "uci/uci.h"
@@ -28,6 +29,9 @@ int main(int argc, char** argv) {
 
     // Populate eval data
     initEval();
+
+    // Populate search data
+    initSearch();
 
 #ifdef TUNING
     if (argc < 5) {
