@@ -254,7 +254,18 @@ int search(
     if (in_check) { // important; this prevents the improving flag from being false after check sequence finsishes
         board.static_evals[ply] = (ply >= 2 ? board.static_evals[ply - 2] : 0);
     } else {
-        board.static_evals[ply] = eval(board);
+        if (tt_hit) {
+            if (tt_entry.bound == EXACTBOUND) {
+                board.static_evals[ply] = tt_entry.score;
+            } else {
+                board.static_evals[ply] = eval(board);
+                if (tt_entry.bound == (tt_entry.score > board.static_evals[ply] ? LOWERBOUND : UPPERBOUND)) {
+                    board.static_evals[ply] = tt_entry.score;
+                }
+            }
+        } else {
+            board.static_evals[ply] = eval(board);
+        }
     }
 
     int static_eval = board.static_evals[ply];
