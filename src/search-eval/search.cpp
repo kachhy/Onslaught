@@ -368,7 +368,9 @@ int search(
             if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check) {
                 // TODO tune this function
                 // improving flag = search more carefully when good position is improving (less reduction)
-                int lmr_reduction = std::max(0, std::min(LMR_TABLE[depth][moves_searched], depth - 2) /* - improving*/);
+                int lmr_idx_d = std::min(depth, MAX_PLY - 1);
+                int lmr_idx_m = std::min<int>(moves_searched, MAX_MOVES - 1);
+                int lmr_reduction = std::max(0, std::min(LMR_TABLE[lmr_idx_d][lmr_idx_m], depth - 2) /* - improving*/);
                 score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
