@@ -294,7 +294,7 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
         score += blocking_pawns * BAD_BISHOP;
         TRACE_ADD(bad_bishop, WHITE, blocking_pawns);
 
-        if (safe_moves) {
+        if (!safe_moves) {
             score += TRAPPED_BISHOP;
             TRACE_INC(trapped_bishop, WHITE);
         }
