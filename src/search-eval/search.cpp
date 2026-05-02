@@ -354,6 +354,20 @@ int search(
                 // TODO tune this function
                 // improving flag = search more carefully when good position is improving (less reduction)
                 int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2) /* - improving*/);
+
+                if (!is_pv && !tt_hit) {
+                    lmr_reduction++;
+                }
+
+                if (in_check && makeDefaultPiece(Piece(move)) == KING) {
+                    lmr_reduction++;
+                }
+                
+                if (tt_hit && tt_entry.depth > depth) {
+                    lmr_reduction--;
+                }
+                
+                lmr_reduction = std::max(0, lmr_reduction);
                 score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
