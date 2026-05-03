@@ -359,10 +359,6 @@ int search(
                     lmr_reduction++;
                 }
 
-                if (in_check && makeDefaultPiece(Piece(move)) == KING) {
-                    lmr_reduction++;
-                }
-                
                 if (tt_hit && tt_entry.depth > depth) {
                     lmr_reduction--;
                 }
