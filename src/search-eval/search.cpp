@@ -64,8 +64,7 @@ void printInfo(Board board, int depth, int seldepth, int score, const char* boun
         for (uint16_t i = 0; i < pv[0].cur_move; i++) {
             std::cout << moveToStr(pv[0].moves[i]) << ' ';
         }
-    }
-    else { // Reconstruct from TT
+    } else { // Reconstruct from TT
         for (int i = 0; i < MAX_PLY; i++) {
             Entry tt_entry;
             bool tt_hit = tt.fetch(board, tt_entry);
@@ -225,7 +224,8 @@ int search(
             tt_entry.score = scoreFromTT(tt_entry.score, ply);
 
             if (ply > 0 && tt_entry.depth >= static_cast<size_t>(depth)) {
-                if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) || (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
+                if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) ||
+                    (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
                     return tt_entry.score;
                 }
             }
@@ -362,7 +362,7 @@ int search(
                 if (tt_hit && tt_entry.depth > depth) {
                     lmr_reduction--;
                 }
-                
+
                 lmr_reduction = std::max(0, lmr_reduction);
                 score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
@@ -487,17 +487,7 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
             int nps = duration.count() == 0 ? nodes : static_cast<int>((double)nodes / (duration.count() / 1000.0));
 
-            if (iter_score <= alpha) {
-                // fail low = true score is at most alpha (upper bound)
-                printInfo(board, depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table);
-                alpha = std::max(-SCORE_MAX, iter_score - delta);
-                delta += delta * 1.25;
-            } else if (iter_score >= beta) {
-                // fail high = true score is at least beta (lower bound)
-                printInfo(board, depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table);
-                beta = std::min(SCORE_MAX, iter_score + delta);
-                delta += delta * 1.25;
-            } else {
+            if ((iter_score > alpha && iter_score < beta) || iter_score >= SCORE_MAX - MAX_GAME_MOVES) {
                 best_score = iter_score;
                 printInfo(board, depth, seldepth, best_score, nullptr, nodes, nps, pv_table);
                 if (pv_table[0].cur_move > 0) {
@@ -509,6 +499,18 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
                     }
                 }
                 break;
+            }
+
+            if (iter_score <= alpha) {
+                // fail low = true score is at most alpha (upper bound)
+                printInfo(board, depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table);
+                alpha = std::max(-SCORE_MAX, iter_score - delta);
+                delta += delta * 1.25;
+            } else if (iter_score >= beta) {
+                // fail high = true score is at least beta (lower bound)
+                printInfo(board, depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table);
+                beta = std::min(SCORE_MAX, iter_score + delta);
+                delta += delta * 1.25;
             }
         }
         for (int (&history_score)[12] : board.score_history) {
