@@ -64,8 +64,7 @@ void printInfo(Board board, int depth, int seldepth, int score, const char* boun
         for (uint16_t i = 0; i < pv[0].cur_move; i++) {
             std::cout << moveToStr(pv[0].moves[i]) << ' ';
         }
-    }
-    else { // Reconstruct from TT
+    } else { // Reconstruct from TT
         for (int i = 0; i < MAX_PLY; i++) {
             Entry tt_entry;
             bool tt_hit = tt.fetch(board, tt_entry);
@@ -183,7 +182,7 @@ static int scoreMove(Board& board, Move move, Move tt_move, int ply) {
 
 int search(
     Board& board, int depth, int alpha, int beta, size_t hard_cap, long long max_nodes, std::chrono::high_resolution_clock::time_point start, int ply,
-    bool can_make_null_move, PVLine pv_table[], int max_ply
+    bool can_make_null_move, PVLine pv_table[], int max_ply, Move excluded_move = NO_MOVE
 ) {
     if (ply >= seldepth) {
         seldepth = ply;
@@ -225,7 +224,8 @@ int search(
             tt_entry.score = scoreFromTT(tt_entry.score, ply);
 
             if (ply > 0 && tt_entry.depth >= static_cast<size_t>(depth)) {
-                if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) || (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
+                if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) ||
+                    (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
                     return tt_entry.score;
                 }
             }
@@ -266,7 +266,7 @@ int search(
 
     // nmp
     BitBoard non_pawn_material = board.getOcc(board.getSTM()) & ~board.getPieceBB(makePiece(PAWN, board.getSTM())) & ~board.getPieceBB(makePiece(KING, board.getSTM()));
-    if (!is_pv && can_make_null_move && !in_check && depth >= 3 && static_eval >= beta && non_pawn_material) {
+    if (!is_pv && can_make_null_move && !in_check && depth >= 3 && static_eval >= beta && non_pawn_material && excluded_move == NO_MOVE) {
         int nmp_reduction = 3 + depth / 6;
         board.makeNullMove();
         int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ply + 1, false, pv_table, max_ply);
@@ -326,6 +326,10 @@ int search(
         std::swap(scores[i], scores[best_move_index]);
 
         Move move = moves[i];
+        // singular extensions
+        if (move == excluded_move) {
+            continue;
+        }
         bool is_quiet_move = !Capture(move) && !Prom(move);
         bool gives_check = givesCheck(board, move);
         // futility pruning: if static_eval + margin <= alpha, prune quiet moves bc they are unlikely to improve position
@@ -335,6 +339,20 @@ int search(
         // if (is_quiet_move) {
         //     quiets_tried[quiets_tried_count++] = move;
         // }
+
+        // singular extensions
+        int extension = 0;
+        if (excluded_move == NO_MOVE && move == tt_entry.best_move && tt_hit && depth >= 8 && tt_entry.depth >= depth - 3 && tt_entry.bound != UPPERBOUND && std::abs(tt_entry.score) < SCORE_MAX - MAX_GAME_MOVES) {
+            int singular_beta = tt_entry.score - SE_MARGIN * depth;
+            int singular_depth = (depth - 1) / 2;
+            int singular_score = search(board, singular_depth, singular_beta - 1, singular_beta, hard_cap, max_nodes, start, ply, false, pv_table, max_ply, move);
+            
+            if (singular_score < singular_beta) {
+                extension = 1;
+            } else if (singular_beta >= beta) { // multi cut
+                return singular_beta; // other moves already beat beta - not singular
+            }
+        }
         board.makeMove(move);
 
         // // mate extensions (replaced by check extension at top of search)
@@ -347,21 +365,21 @@ int search(
         bool do_full_search = false;
 
         if (moves_searched == 0) {
-            score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
+            score = -search(board, depth - 1 + extension, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
         } else {
             // lmr
             if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check) {
                 // TODO tune this function
                 // improving flag = search more carefully when good position is improving (less reduction)
                 int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2) /* - improving*/);
-                score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
+                score = -search(board, depth - 1 - lmr_reduction + extension, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
                 do_full_search = true;
             }
             // pvs at full depth
             if (do_full_search) {
-                score = -search(board, depth - 1, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
+                score = -search(board, depth - 1 + extension, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
                 if (score > alpha && score < beta) {
                     score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
                 }

@@ -13,6 +13,7 @@ constexpr float LMR_VALUE = 1;
 constexpr float LMR_SCALAR = 2;
 constexpr int MAX_HISTORY = 16384;
 constexpr uint8_t LMP_BASE = 3;
+constexpr uint8_t SE_MARGIN = 2;
 
 struct GoParams;
 
