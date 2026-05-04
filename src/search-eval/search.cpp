@@ -15,11 +15,6 @@
 uint16_t seldepth;
 uint64_t nodes;
 
-// debug
-uint64_t singular_fires;
-uint64_t singular_extends;
-uint64_t singular_multicuts;
-
 struct PVLine {
     uint16_t cur_move;
     Move moves[256];
@@ -348,17 +343,14 @@ int search(
         // singular extensions
         int extension = 0;
         if (excluded_move == NO_MOVE && extensions < 12 && move == tt_entry.best_move && !in_check && tt_hit && depth >= 6 && tt_entry.depth >= depth - 3 && tt_entry.bound != UPPERBOUND && std::abs(tt_entry.score) < SCORE_MAX - MAX_GAME_MOVES) {
-            singular_fires++;
             int singular_beta = tt_entry.score - SE_MARGIN * depth;
             int singular_depth = (depth - 1) / 2;
             int singular_score = search(board, singular_depth, singular_beta - 1, singular_beta, hard_cap, max_nodes, start, ply, false, pv_table, max_ply, move, 0);
             
             if (singular_score < singular_beta) {
                 extension = 1;
-                singular_extends++;
             } else if (singular_beta >= beta) { // multi cut
-                // return singular_beta; // other moves already beat beta - not singular
-                // singular_multicuts++;
+                return singular_beta; // other moves already beat beta - not singular
             }
         }
         board.makeMove(move);
@@ -467,11 +459,6 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
         }
     }
 
-    // debug
-    singular_fires = 0;
-    singular_extends = 0;
-    singular_multicuts = 0;
-
     for (int depth = 1; depth <= max_depth; depth++) {
         if (!searching) {
             break;
@@ -544,8 +531,6 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
             break;
         }
     }
-
-    // std::cerr << "SE: fires=" << singular_fires << " extends=" << singular_extends << " multicuts=" << singular_multicuts << "\n";
 
     return best_move;
 }
