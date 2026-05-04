@@ -182,7 +182,7 @@ static int scoreMove(Board& board, Move move, Move tt_move, int ply) {
 
 int search(
     Board& board, int depth, int alpha, int beta, size_t hard_cap, long long max_nodes, std::chrono::high_resolution_clock::time_point start, int ply,
-    bool can_make_null_move, PVLine pv_table[], int max_ply, Move excluded_move = NO_MOVE
+    bool can_make_null_move, PVLine pv_table[], int max_ply, Move excluded_move, int extensions
 ) {
     if (ply >= seldepth) {
         seldepth = ply;
@@ -260,7 +260,7 @@ int search(
 
     // rfp (prune worse positions harder with improving position)
     // TODO Tune the rfp margin constant
-    if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * (depth /* - (improving && depth > 1)*/) >= beta) {
+    if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * (depth /* - (improving && depth > 1)*/) >= beta && excluded_move == NO_MOVE) {
         return static_eval;
     }
 
@@ -269,7 +269,7 @@ int search(
     if (!is_pv && can_make_null_move && !in_check && depth >= 3 && static_eval >= beta && non_pawn_material && excluded_move == NO_MOVE) {
         int nmp_reduction = 3 + depth / 6;
         board.makeNullMove();
-        int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ply + 1, false, pv_table, max_ply);
+        int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ply + 1, false, pv_table, max_ply, NO_MOVE, 0);
         board.undoNullMove();
         if (score >= beta) {
             return score;
@@ -277,7 +277,7 @@ int search(
     }
 
     // razoring = save movegen cost on pruned nodes by checking if it can beat alpha with quiesce, otherwise fail low
-    if (!is_pv && !in_check && depth <= 3 && static_eval + RAZOR_MARGIN * depth < alpha) {
+    if (!is_pv && !in_check && depth <= 3 && static_eval + RAZOR_MARGIN * depth < alpha && excluded_move == NO_MOVE) {
         int quiescent_score = quiesce(board, alpha - 1, alpha, ply + 1, 0);
         if (quiescent_score < alpha) {
             return quiescent_score;
@@ -312,7 +312,7 @@ int search(
     // int quiets_tried_count = 0;
 
     // // futility pruning
-    bool futility_pruning = !is_pv && !in_check && depth <= 5 && static_eval + FUTILITY_MARGIN * depth <= alpha;
+    bool futility_pruning = !is_pv && !in_check && depth <= 5 && static_eval + FUTILITY_MARGIN * depth <= alpha && excluded_move == NO_MOVE;
 
     for (uint8_t i = 0; i < moves.size(); i++) {
         // move ordering
@@ -342,10 +342,10 @@ int search(
 
         // singular extensions
         int extension = 0;
-        if (excluded_move == NO_MOVE && move == tt_entry.best_move && !in_check && tt_hit && depth >= 10 && tt_entry.depth >= depth - 3 && tt_entry.bound != UPPERBOUND && std::abs(tt_entry.score) < SCORE_MAX - MAX_GAME_MOVES) {
+        if (excluded_move == NO_MOVE && extensions < 12 && move == tt_entry.best_move && !in_check && tt_hit && depth >= 8 && tt_entry.depth >= depth - 3 && tt_entry.bound != UPPERBOUND && std::abs(tt_entry.score) < SCORE_MAX - MAX_GAME_MOVES) {
             int singular_beta = tt_entry.score - SE_MARGIN * depth;
             int singular_depth = (depth - 1) / 2;
-            int singular_score = search(board, singular_depth, singular_beta - 1, singular_beta, hard_cap, max_nodes, start, ply, false, pv_table, max_ply, move);
+            int singular_score = search(board, singular_depth, singular_beta - 1, singular_beta, hard_cap, max_nodes, start, ply, false, pv_table, max_ply, move, 0);
             
             if (singular_score < singular_beta) {
                 extension = 1;
@@ -365,23 +365,23 @@ int search(
         bool do_full_search = false;
 
         if (moves_searched == 0) {
-            score = -search(board, depth - 1 + extension, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
+            score = -search(board, depth - 1 + extension, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply, NO_MOVE, extensions + extension);
         } else {
             // lmr
             if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check) {
                 // TODO tune this function
                 // improving flag = search more carefully when good position is improving (less reduction)
                 int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2) /* - improving*/);
-                score = -search(board, depth - 1 - lmr_reduction + extension, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
+                score = -search(board, depth - 1 - lmr_reduction + extension, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply, NO_MOVE, extensions + extension);
                 do_full_search = score > alpha;
             } else {
                 do_full_search = true;
             }
             // pvs at full depth
             if (do_full_search) {
-                score = -search(board, depth - 1 + extension, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
+                score = -search(board, depth - 1 + extension, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply, NO_MOVE, extensions + extension);
                 if (score > alpha && score < beta) {
-                    score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
+                    score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply, NO_MOVE, extensions);
                 }
             }
         }
@@ -486,7 +486,7 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
                 pv_table[i].cur_move = 0;
             }
 
-            iter_score = search(board, depth, alpha, beta, hard_cap, params.nodes, start, 0, true, pv_table, MAX_PLY);
+            iter_score = search(board, depth, alpha, beta, hard_cap, params.nodes, start, 0, true, pv_table, MAX_PLY, NO_MOVE, 0);
             if (!searching) {
                 break;
             }
