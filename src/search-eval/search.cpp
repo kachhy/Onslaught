@@ -345,13 +345,12 @@ int search(
         if (excluded_move == NO_MOVE && move == tt_entry.best_move && !in_check && tt_hit && depth >= 8 && tt_entry.depth >= depth - 3 && tt_entry.bound != UPPERBOUND && std::abs(tt_entry.score) < SCORE_MAX - MAX_GAME_MOVES) {
             int singular_beta = tt_entry.score - SE_MARGIN * depth;
             int singular_depth = (depth - 1) / 2;
-            PVLine singular_pv[MAX_PLY + 1] = {};
-            int singular_score = search(board, singular_depth, singular_beta - 1, singular_beta, hard_cap, max_nodes, start, ply, false, singular_pv, max_ply, move);
+            int singular_score = search(board, singular_depth, singular_beta - 1, singular_beta, hard_cap, max_nodes, start, ply, false, pv_table, max_ply, move);
             
             if (singular_score < singular_beta) {
                 extension = 1;
             } else if (singular_beta >= beta) { // multi cut
-                return singular_beta; // other moves already beat beta - not singular
+                // return singular_beta; // other moves already beat beta - not singular
             }
         }
         board.makeMove(move);
