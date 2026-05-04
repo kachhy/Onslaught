@@ -223,7 +223,7 @@ int search(
         if (tt_hit) {
             tt_entry.score = scoreFromTT(tt_entry.score, ply);
 
-            if (ply > 0 && tt_entry.depth >= static_cast<size_t>(depth)) {
+            if (ply > 0 && tt_entry.depth >= static_cast<size_t>(depth) && excluded_move == NO_MOVE) {
                 if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) ||
                     (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
                     return tt_entry.score;
