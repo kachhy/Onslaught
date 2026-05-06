@@ -282,22 +282,13 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
     TRACE_ADD(bishop_behind_pawn, WHITE, wb_behind_pawn);
     TRACE_ADD(bishop_behind_pawn, BLACK, bb_behind_pawn);
 
-    BitBoard wp_attacks = info.pawn_attacks[WHITE];
-    BitBoard bp_attacks = info.pawn_attacks[BLACK];
     BitBoard wb = board.getPieceBB(WHITE_BISHOP);
     while (wb) {
         BitBoard attacks = info.piece_attacks[popLSB(wb)];
-        BitBoard valid_moves = attacks & ~board.getOcc(WHITE);
-        BitBoard safe_moves = valid_moves & ~bp_attacks;
 
         const uint8_t blocking_pawns = bitCount(attacks & board.getPieceBB(WHITE_PAWN));
         score += blocking_pawns * BAD_BISHOP;
         TRACE_ADD(bad_bishop, WHITE, blocking_pawns);
-
-        if (!safe_moves) {
-            score += TRAPPED_BISHOP;
-            TRACE_INC(trapped_bishop, WHITE);
-        }
 
         attacks &= ~board.getOcc(WHITE);
         const uint8_t attack_count = bitCount(attacks);
@@ -307,17 +298,10 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
     BitBoard bb = board.getPieceBB(BLACK_BISHOP);
     while (bb) {
         BitBoard attacks = info.piece_attacks[popLSB(bb)];
-        BitBoard valid_moves = attacks & ~board.getOcc(BLACK);
-        BitBoard safe_moves = valid_moves & ~wp_attacks;
 
         const uint8_t blocking_pawns = bitCount(attacks & board.getPieceBB(BLACK_PAWN));
         score -= blocking_pawns * BAD_BISHOP;
         TRACE_ADD(bad_bishop, BLACK, blocking_pawns);
-
-        if (!safe_moves) {
-            score -= TRAPPED_BISHOP;
-            TRACE_INC(trapped_bishop, BLACK);
-        }
 
         attacks &= ~board.getOcc(BLACK);
         const uint8_t attack_count = bitCount(attacks);
