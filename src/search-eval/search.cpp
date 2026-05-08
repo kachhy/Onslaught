@@ -342,7 +342,7 @@ int search(
 
         // singular extensions
         int extension = 0;
-        if (excluded_move == NO_MOVE && extensions < 12 && move == tt_entry.best_move && !in_check && tt_hit && depth >= 6 && tt_entry.depth >= depth - 3 && tt_entry.bound != UPPERBOUND && std::abs(tt_entry.score) < SCORE_MAX - MAX_GAME_MOVES) {
+        if (excluded_move == NO_MOVE && extensions < 12 && tt_hit && move == tt_entry.best_move && !in_check && depth >= 6 && tt_entry.depth >= depth - 3 && tt_entry.bound != UPPERBOUND && std::abs(tt_entry.score) < SCORE_MAX - MAX_GAME_MOVES) {
             int singular_beta = tt_entry.score - SE_MARGIN * depth;
             int singular_depth = (depth - 1) / 2;
             int singular_score = search(board, singular_depth, singular_beta - 1, singular_beta, hard_cap, max_nodes, start, ply, false, pv_table, max_ply, move, 0);
