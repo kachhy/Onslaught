@@ -178,7 +178,7 @@ static int scoreMove(Board& board, Move move, Move tt_move, int ply) {
     if (move == board.killers[ply][1]) {
         return 100000;
     }
-    return board.score_history[To(move)][MovePiece(move)];
+    return board.score_history[From(move)][To(move)];
 }
 
 int search(
@@ -380,14 +380,15 @@ int search(
             if (!Capture(best_move) && !Prom(best_move)) {
                 board.killers[ply][1] = board.killers[ply][0];
                 board.killers[ply][0] = best_move;
-                int bonus = depth * depth;
+                // int bonus = depth * depth;
+                // history heuristics:
                 // main function:
-                /*
-                board.score_history[To(best_move)][MovePiece(best_move)] =
-                    std::min(board.score_history[To(best_move)][MovePiece(best_move)] + depth * depth, MAX_HISTORY);
-                */
+                
+                board.score_history[From(best_move)][To(best_move)] =
+                    std::min(board.score_history[From(best_move)][To(best_move)] + depth * depth, MAX_HISTORY);
+                
                 // new function:
-                board.score_history[To(best_move)][MovePiece(best_move)] += bonus - board.score_history[To(best_move)][MovePiece(best_move)] * abs(bonus) / MAX_HISTORY;
+                // board.score_history[To(best_move)][MovePiece(best_move)] += bonus - board.score_history[To(best_move)][MovePiece(best_move)] * abs(bonus) / MAX_HISTORY;
                 // malus: penalize all quiet moves searched before this cutoff
                 // for (int j = 0; j < quiets_tried_count - 1; j++) {
                 //     Move m = quiets_tried[j];
