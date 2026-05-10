@@ -2,29 +2,25 @@
 #include "attacks.h"
 #include "core/movelist.h"
 
-MoveList getQuietMoves(const Board& board) {
-    MoveList out;
+void getQuietMoves(const Board& board, MoveList& moves) {
     if (multipleActiveBits(board.getCheckersMask())) {
-        addLegalKingMoves(out, board, QUIET_MOVE_MOVEGEN);
-        return out;
+        addLegalKingMoves(moves, board, QUIET_MOVE_MOVEGEN);
+        return;
     }
-    addAllQuietPieceMoves(out, board);
-    addLegalKingMoves(out, board, QUIET_MOVE_MOVEGEN);
-    addLegalPawnMoves(out, board, QUIET_MOVE_MOVEGEN);
-    return out;
+    addAllQuietPieceMoves(moves, board);
+    addLegalKingMoves(moves, board, QUIET_MOVE_MOVEGEN);
+    addLegalPawnMoves(moves, board, QUIET_MOVE_MOVEGEN);
 }
 
-MoveList getNoisyMoves(const Board& board) {
-    MoveList out;
+void getNoisyMoves(const Board& board, MoveList& moves) {
     if (multipleActiveBits(board.getCheckersMask())) {
-        addLegalKingMoves(out, board, NOISY_MOVE_MOVEGEN);
-        return out;
+        addLegalKingMoves(moves, board, NOISY_MOVE_MOVEGEN);
+        return;
     }
-    addAllNoisyPieceMoves(out, board);
-    addLegalKingMoves(out, board, NOISY_MOVE_MOVEGEN);
-    addLegalPawnMoves(out, board, NOISY_MOVE_MOVEGEN);
-    addEPLegalMoves(out, board);
-    return out;
+    addAllNoisyPieceMoves(moves, board);
+    addLegalKingMoves(moves, board, NOISY_MOVE_MOVEGEN);
+    addLegalPawnMoves(moves, board, NOISY_MOVE_MOVEGEN);
+    addEPLegalMoves(moves, board);
 }
 
 MoveList getLegalCheckingMoves(const Board& board) {
@@ -33,17 +29,15 @@ MoveList getLegalCheckingMoves(const Board& board) {
     return out;
 }
 
-MoveList getLegalMoves(const Board& board) {
-    MoveList out;
+void getLegalMoves(const Board& board, MoveList& moves) {
     if (multipleActiveBits(board.getCheckersMask())) {
-        addLegalKingMoves(out, board, LEGAL_MOVE_MOVEGEN);
-        return out;
+        addLegalKingMoves(moves, board, LEGAL_MOVE_MOVEGEN);
+        return;
     }
-    addAllLegalPieceMoves(out, board);
-    addLegalKingMoves(out, board, LEGAL_MOVE_MOVEGEN);
-    addLegalPawnMoves(out, board, LEGAL_MOVE_MOVEGEN);
-    addEPLegalMoves(out, board);
-    return out;
+    addAllLegalPieceMoves(moves, board);
+    addLegalKingMoves(moves, board, LEGAL_MOVE_MOVEGEN);
+    addLegalPawnMoves(moves, board, LEGAL_MOVE_MOVEGEN);
+    addEPLegalMoves(moves, board);
 }
 
 void addLegalPawnMoves(MoveList& moves, const Board& board, MoveFlag move_flag) {

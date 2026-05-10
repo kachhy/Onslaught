@@ -37,7 +37,9 @@ bool isMaterialDraw(const Board& board) {
 bool isFiftyMoveRuleDraw(const Board& board) {
     if (board.getFMR() > 99) {
         if (board.inCheck()) {
-            return !getLegalMoves(board).empty();
+            MoveList moves;
+            getLegalMoves(board, moves);
+            return !moves.empty();
         }
         return true;
     }
