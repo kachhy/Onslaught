@@ -92,20 +92,57 @@ void addLegalPawnMoves(MoveList& moves, const Board& board, MoveFlag move_flag) 
         }
     }
     if (move_flag & NOISY_MOVE_MOVEGEN) {
-        while (cur_pawn_bb) {
-            Square cur_from_square = static_cast<Square>(popLSB(cur_pawn_bb));
-            BitBoard pin_mask = 0;
-            if (board.getPinMask() & (BitBoard(1) << cur_from_square)) {
-                pin_mask |= line_squares[king_sq][cur_from_square];
-            } else {
-                pin_mask = ~BitBoard(0);
-            }
-            BitBoard cur_pawn_attacks =
-                (getPieceAttacks(cur_piece, cur_from_square, board.getOcc(BOTH)) & (board.getOcc(static_cast<Side>(getPieceSide(cur_piece) ^ 1)))) & legal_mask &
-                pin_mask;
+        BitBoard pin_bb = board.getPinMask();
+        BitBoard pinned_pawns = cur_pawn_bb & pin_bb;
+        BitBoard unpinned_pawns = cur_pawn_bb & ~pin_bb;
+        BitBoard enemy = board.getOcc(static_cast<Side>(cur_side ^ 1));
+        constexpr BitBoard PROMO_RANK = RANK_1 | RANK_8;
+
+        BitBoard west_caps = shiftPawnCapturesWest(unpinned_pawns, cur_side) & enemy & legal_mask;
+        BitBoard east_caps = shiftPawnCapturesEast(unpinned_pawns, cur_side) & enemy & legal_mask;
+
+        const int8_t west_delta = (cur_side == WHITE) ? 9 : -7;
+        const int8_t east_delta = (cur_side == WHITE) ? 7 : -9;
+
+        BitBoard west_promo = west_caps & PROMO_RANK;
+        BitBoard west_normal = west_caps & ~PROMO_RANK;
+        while (west_normal) {
+            Square cur_to_square = static_cast<Square>(popLSB(west_normal));
+            Square cur_from_square = static_cast<Square>(cur_to_square + west_delta);
+            moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, CAPTURE_FLAG));
+        }
+        while (west_promo) {
+            Square cur_to_square = static_cast<Square>(popLSB(west_promo));
+            Square cur_from_square = static_cast<Square>(cur_to_square + west_delta);
+            moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, KNIGHT_PROMO_FLAG | CAPTURE_FLAG));
+            moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, BISHOP_PROMO_FLAG | CAPTURE_FLAG));
+            moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, ROOK_PROMO_FLAG | CAPTURE_FLAG));
+            moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, QUEEN_PROMO_FLAG | CAPTURE_FLAG));
+        }
+
+        BitBoard east_promo = east_caps & PROMO_RANK;
+        BitBoard east_normal = east_caps & ~PROMO_RANK;
+        while (east_normal) {
+            Square cur_to_square = static_cast<Square>(popLSB(east_normal));
+            Square cur_from_square = static_cast<Square>(cur_to_square + east_delta);
+            moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, CAPTURE_FLAG));
+        }
+        while (east_promo) {
+            Square cur_to_square = static_cast<Square>(popLSB(east_promo));
+            Square cur_from_square = static_cast<Square>(cur_to_square + east_delta);
+            moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, KNIGHT_PROMO_FLAG | CAPTURE_FLAG));
+            moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, BISHOP_PROMO_FLAG | CAPTURE_FLAG));
+            moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, ROOK_PROMO_FLAG | CAPTURE_FLAG));
+            moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, QUEEN_PROMO_FLAG | CAPTURE_FLAG));
+        }
+
+        while (pinned_pawns) {
+            Square cur_from_square = static_cast<Square>(popLSB(pinned_pawns));
+            BitBoard pin_mask = line_squares[king_sq][cur_from_square];
+            BitBoard cur_pawn_attacks = getPawnAttacks(cur_from_square, cur_side) & enemy & legal_mask & pin_mask;
             while (cur_pawn_attacks) {
                 Square cur_to_square = static_cast<Square>(popLSB(cur_pawn_attacks));
-                if ((BitBoard(1) << cur_to_square) & (RANK_1 | RANK_8)) {
+                if ((BitBoard(1) << cur_to_square) & PROMO_RANK) {
                     moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, KNIGHT_PROMO_FLAG | CAPTURE_FLAG));
                     moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, BISHOP_PROMO_FLAG | CAPTURE_FLAG));
                     moves.emplace_back(GenerateMove(cur_from_square, cur_to_square, cur_piece, ROOK_PROMO_FLAG | CAPTURE_FLAG));
