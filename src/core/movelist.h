@@ -58,8 +58,11 @@ public:
 
     uint8_t size() const { return count; }
     bool empty() const { return !count; }
-    void emplace_back(const Move move);
     void sort_item(const uint8_t item);
+    inline void emplace_back(const Move move) {
+        list[count] = move;
+        ++count;
+    }
 
     // Iterators
     iterator begin() { return iterator(list); }
