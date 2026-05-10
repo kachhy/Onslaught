@@ -194,19 +194,20 @@ void addEPLegalMoves(MoveList& moves, const Board& board) {
     }
 }
 
-template <MoveFlag move_flag>
+template <MoveFlag move_flag, DefaultPiece pt>
 void addPieceLegalMoves(MoveList& moves, const Board& board, Piece piece) {
     BitBoard legal_mask = board.getLegalMask();
     Square king_sq = board.getKingSquare();
     BitBoard cur_piece_bb = board.getPieceBB(piece);
-    if (makeDefaultPiece(piece) == KNIGHT) {
-        cur_piece_bb &= ~board.getPinMask();
+    const BitBoard board_pin_mask = board.getPinMask();
+    if constexpr (pt == KNIGHT) {
+        cur_piece_bb &= ~board_pin_mask;
     }
     BitBoard occ_both = board.getOcc(BOTH);
     while (cur_piece_bb) {
         Square cur_from_square = static_cast<Square>(popLSB(cur_piece_bb));
         BitBoard pin_mask = 0;
-        if (board.getPinMask() & (BitBoard(1) << cur_from_square)) {
+        if (board_pin_mask & (BitBoard(1) << cur_from_square)) {
             pin_mask |= line_squares[king_sq][cur_from_square];
         } else {
             pin_mask = ~BitBoard(0);
@@ -227,28 +228,30 @@ void addPieceLegalMoves(MoveList& moves, const Board& board, Piece piece) {
     }
 }
 
-void addAllLegalPieceMoves(MoveList& moves, const Board& board) {
-    for (int i = makePiece(PAWN, board.getSTM()) + 1; i <= makePiece(KING, board.getSTM()) - 1; i++) {
-        addPieceLegalMoves<LEGAL_MOVE_MOVEGEN>(moves, board, static_cast<Piece>(i));
-    }
+template <MoveFlag move_flag, DefaultPiece... Pts>
+static inline void addAllPieceMovesImpl(MoveList& moves, const Board& board, Side stm) {
+    (addPieceLegalMoves<move_flag, Pts>(moves, board, makePiece(Pts, stm)), ...);
 }
 
-void addAllLegalCheckingPieceMoves(MoveList &moves, const Board &board) {
-    for (int i = makePiece(PAWN, board.getSTM()) + 1; i <= makePiece(KING, board.getSTM()) - 1; i++) {
-        addPieceLegalMoves<CHECKING_MOVE_MOVEGEN>(moves, board, static_cast<Piece>(i));
-    }
+template <MoveFlag move_flag>
+static inline void addAllPieceMoves(MoveList& moves, const Board& board) {
+    addAllPieceMovesImpl<move_flag, KNIGHT, BISHOP, ROOK, QUEEN>(moves, board, board.getSTM());
+}
+
+void addAllLegalPieceMoves(MoveList& moves, const Board& board) {
+    addAllPieceMoves<LEGAL_MOVE_MOVEGEN>(moves, board);
+}
+
+void addAllLegalCheckingPieceMoves(MoveList& moves, const Board& board) {
+    addAllPieceMoves<CHECKING_MOVE_MOVEGEN>(moves, board);
 }
 
 void addAllNoisyPieceMoves(MoveList& moves, const Board& board) {
-    for (int i = makePiece(PAWN, board.getSTM()) + 1; i <= makePiece(KING, board.getSTM()) - 1; i++) {
-        addPieceLegalMoves<NOISY_MOVE_MOVEGEN>(moves, board, static_cast<Piece>(i));
-    }
+    addAllPieceMoves<NOISY_MOVE_MOVEGEN>(moves, board);
 }
 
 void addAllQuietPieceMoves(MoveList& moves, const Board& board) {
-    for (int i = makePiece(PAWN, board.getSTM()) + 1; i <= makePiece(KING, board.getSTM()) - 1; i++) {
-        addPieceLegalMoves<QUIET_MOVE_MOVEGEN>(moves, board, static_cast<Piece>(i));
-    }
+    addAllPieceMoves<QUIET_MOVE_MOVEGEN>(moves, board);
 }
 
 void addLegalKingMoves(MoveList& moves, const Board& board, MoveFlag move_flag) {
