@@ -167,6 +167,9 @@ void addPieceLegalMoves(MoveList& moves, const Board& board, Piece piece, MoveFl
     BitBoard legal_mask = board.getLegalMask();
     Square king_sq = board.getKingSquare();
     BitBoard cur_piece_bb = board.getPieceBB(piece);
+    if (makeDefaultPiece(piece) == KNIGHT) {
+        cur_piece_bb &= ~board.getPinMask();
+    }
     BitBoard occ_both = board.getOcc(BOTH);
     while (cur_piece_bb) {
         Square cur_from_square = static_cast<Square>(popLSB(cur_piece_bb));
