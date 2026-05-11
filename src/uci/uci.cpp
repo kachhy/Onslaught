@@ -238,6 +238,7 @@ void checkStdin(std::chrono::high_resolution_clock::time_point start, long long 
         searching = false;
         return;
     }
+#ifndef SPSA_TUNE
     if (!stdinHasData()) {
         return;
     }
@@ -255,4 +256,5 @@ void checkStdin(std::chrono::high_resolution_clock::time_point start, long long 
             std::cout << "info Debug mode off\n";
         }
     }
+#endif
 }
