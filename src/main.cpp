@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
     initEval();
 
     // Run TTBench
-    benchTT();
+    // benchTT();
 
 #ifdef TUNING
     if (argc < 5) {
