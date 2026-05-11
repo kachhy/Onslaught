@@ -74,7 +74,8 @@ void printInfo(Board board, int depth, int seldepth, int score, const char* boun
                 break;
             }
 
-            MoveList moves = getLegalMoves(board);
+            MoveList moves;
+            getLegalMoves(board, moves);
             bool valid_move = false;
             for (const Move& move : moves) {
                 if (move == tt_entry.best_move) {
@@ -104,7 +105,7 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
     MoveList moves;
     if (board.inCheck()) {
         best_value = -SCORE_MAX + ply;
-        moves = getLegalMoves(board);
+        getLegalMoves(board, moves);
     } else {
         static_eval = eval(board);
         best_value = static_eval;
@@ -114,7 +115,7 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         if (best_value > alpha) {
             alpha = best_value;
         }
-        moves = getNoisyMoves(board);
+        getNoisyMoves(board, moves);
     }
 
     std::array<int, MAX_MOVES> scores;
@@ -289,7 +290,8 @@ int search(
         depth--;
     }
 
-    MoveList moves = getLegalMoves(board);
+    MoveList moves;
+    getLegalMoves(board, moves);
     if (moves.size() == 0) {
         pv_table[ply].cur_move = 0;
         return in_check ? -SCORE_MAX + ply : 0; // checkmate or stalemate
