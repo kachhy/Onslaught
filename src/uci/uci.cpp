@@ -3,22 +3,19 @@
 #include "search-eval/search.h"
 #include <sstream>
 
-
 #ifdef _WIN32
-    #include <windows.h>
+#include <windows.h>
 #else
-    #include <sys/select.h>
-    #include <unistd.h>
+#include <sys/select.h>
+#include <unistd.h>
 #endif
 
 Board board;
 bool searching = false;
-bool debug_mode = false;
+bool debug_mode = true;
 std::unordered_map<std::string, struct OptionVar> options_map;
 
-void setOptions(std::string key, struct OptionVar value){
-    options_map[key] = value;
-}
+void setOptions(std::string key, struct OptionVar value) { options_map[key] = value; }
 
 // All the different things we can change about the engine
 static inline void options() {
@@ -37,9 +34,13 @@ static inline void changeOptions() {
     std::cin >> token; // "value"
     std::cin >> token; // value
 
-    *(options_map[option_name].val) = std::stoi(token);
-    if(debug_mode) {
-        std::cout << "info Option " << option_name << " set to " << *(options_map[option_name].val) << "\n";
+    if (options_map[option_name].setter) {
+        options_map[option_name].setter(std::stoi(token));
+        if (debug_mode) {
+            std::cout << "info Option " << option_name << " set to " << token << "\n";
+        }
+    } else if (debug_mode) {
+        std::cout << "info Option " << option_name << " not set due to null setter\n";
     }
 }
 
@@ -48,6 +49,11 @@ static inline void newGame(Board& board) {
     // reset the board to the starting position
     board.clear();
     board.loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+}
+
+static inline void initOptions() {
+    setOptions("Hash", { 1, 16384, 16, [](int mb) { tt.resize(mb); } });
+    setOptions("Threads", { 1, 1, 1, nullptr });
 }
 
 static inline void position(Board& board) {
@@ -64,8 +70,12 @@ static inline void position(Board& board) {
     } else if (token == "fen") {
         std::string fen;
         while (ss >> token) {
-            if (token == "moves") break;
-            if (!fen.empty()) fen += " ";
+            if (token == "moves") {
+                break;
+            }
+            if (!fen.empty()) {
+                fen += " ";
+            }
             fen += token;
         }
         board.loadFEN(fen);
@@ -102,10 +112,10 @@ static inline void go(Board& board) {
         } else if (arg == "btime") {
             params.btime = std::stoi(buffer.substr(0, buffer.find(" ")));
             buffer = buffer.substr(buffer.find(" ") + 1);
-        } else if (arg == "winc") {//time added after each move for white
+        } else if (arg == "winc") { // time added after each move for white
             params.winc = std::stoi(buffer.substr(0, buffer.find(" ")));
             buffer = buffer.substr(buffer.find(" ") + 1);
-        } else if (arg == "binc") {//time added after each move for black
+        } else if (arg == "binc") { // time added after each move for black
             params.binc = std::stoi(buffer.substr(0, buffer.find(" ")));
             buffer = buffer.substr(buffer.find(" ") + 1);
         } else if (arg == "movestogo") {
@@ -148,6 +158,8 @@ int uciStartup() {
         return -1;
     }
 
+    initOptions();
+
     std::cout << "id name Axiom\n";
     std::cout << "id author Connor Kostiew, Kai Chung, Will Bradley\n"; // Agree on the authors name
     options();
@@ -164,13 +176,12 @@ int uciStartup() {
         } else if (buffer == "quit") {
             return 0; // quit the engine
         }
-        if(buffer == "debug") {
+        if (buffer == "debug") {
             std::cin >> buffer;
-            if(buffer == "on") {
+            if (buffer == "on") {
                 debug_mode = true;
                 std::cout << "info Debug mode on\n";
-            }
-            else if(buffer == "off") {
+            } else if (buffer == "off") {
                 debug_mode = false;
                 std::cout << "info Debug mode off\n";
             }
@@ -182,11 +193,9 @@ void uci() {
     if (uciStartup() != 1) {
         return; // quit command received
     }
+
     std::cout << "readyok\n";
-
     std::string buffer;
-
-    options(); // print options again after receiving "isready" in case the GUI missed them the first time
 
     while (1) {
         std::cin >> buffer;
@@ -210,7 +219,7 @@ void uci() {
             if (buffer == "on") {
                 debug_mode = true;
                 std::cout << "info Debug mode on\n";
-            } else if(buffer == "off") {
+            } else if (buffer == "off") {
                 debug_mode = false;
                 std::cout << "info Debug mode off\n";
             }
@@ -227,12 +236,12 @@ static bool stdinHasData() {
     fd_set fds;
     FD_ZERO(&fds);
     FD_SET(STDIN_FILENO, &fds);
-    timeval tv{0, 0};
+    timeval tv{ 0, 0 };
     return select(STDIN_FILENO + 1, &fds, nullptr, nullptr, &tv) > 0;
 #endif
 }
 
-void checkStdin( std::chrono::high_resolution_clock::time_point start, long long max_nodes, long long current_nodes, size_t hard_cap) {
+void checkStdin(std::chrono::high_resolution_clock::time_point start, long long max_nodes, long long current_nodes, size_t hard_cap) {
     auto now = std::chrono::high_resolution_clock::now();
     if (hard_cap != 0 && (size_t)std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count() >= hard_cap) {
         searching = false;

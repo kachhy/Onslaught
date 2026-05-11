@@ -8,6 +8,8 @@
 #include <chrono>
 #include <cstddef>
 #include <unordered_map>
+#include <functional>
+
 
 int uciStartup();
 void uci();
@@ -32,10 +34,10 @@ struct GoParams {
 };
 
 struct OptionVar {
-    int max = 0;
     int min = 0;
+    int max = 0;
     int norm = 0;
-    int* val = nullptr; 
+    std::function<void(int)> setter;
 };
 
 #endif // UCI_H
