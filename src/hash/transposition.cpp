@@ -86,12 +86,13 @@ bool TTable::fetch(const Board& board, Entry& entry) {
     bool found = false;
     for (uint8_t i = 0; i < bucket.count; i++) {
         if (bucket.entries[i].hash == board.hash()) {
+            std::swap(bucket.entries[0], bucket.entries[i]);
             if (!found || bucket.entries[i].depth > entry.depth) {
-                std::swap(bucket.entries[0], bucket.entries[i]);
                 entry = bucket.entries[0];
             }
-            bucket.entries[i].last_seen = table_age;
+            bucket.entries[0].last_seen = table_age;
             found = true;
+            break;
         }
     }
     return found;
