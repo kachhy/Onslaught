@@ -13,7 +13,7 @@
 
 Board board;
 bool searching = false;
-bool debug_mode = true;
+bool debug_mode = false;
 std::unordered_map<std::string, struct OptionVar> options_map;
 
 void setOptions(std::string key, struct OptionVar value) { options_map[key] = value; }
