@@ -96,8 +96,6 @@ static inline void go(Board& board) {
     std::string buffer;
     std::string arg;
     GoParams params = GoParams();
-
-    std::cin.ignore();
     std::getline(std::cin, buffer);
 
     buffer = buffer + " ";
