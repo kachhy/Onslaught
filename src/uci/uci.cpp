@@ -4,20 +4,24 @@
 #include <sstream>
 
 #ifdef _WIN32
-    #include <windows.h>
+#include <windows.h>
 #else
-    #include <sys/select.h>
-    #include <unistd.h>
+#include <sys/select.h>
+#include <unistd.h>
 #endif
 
 Board board;
 bool searching = false;
+bool debug_mode = true;
+std::unordered_map<std::string, struct OptionVar> options_map;
+
+void setOptions(std::string key, struct OptionVar value) { options_map[key] = value; }
 
 // All the different things we can change about the engine
 static inline void options() {
-    // currently does nothing for now but when we add options they will go here
-    std::cout << "option name Hash type spin default 16 min 16 max 16" << std::endl;
-    std::cout << "option name Threads type spin default 1 min 1 max 1" << std::endl;
+    for (const auto& [key, value] : options_map) {
+        std::cout << "option name " << key << " type spin default " << value.norm << " min " << value.min << " max " << value.max << "\n";
+    }
 }
 
 // actually changing the options for the engine
@@ -26,7 +30,18 @@ static inline void changeOptions() {
     std::cin >> token; // "name"
     std::cin >> token; // option name
 
-    // where all the checks for the different oprions will go
+    std::string option_name = token;
+    std::cin >> token; // "value"
+    std::cin >> token; // value
+
+    if (options_map[option_name].setter) {
+        options_map[option_name].setter(std::stoi(token));
+        if (debug_mode) {
+            std::cout << "info Option " << option_name << " set to " << token << "\n";
+        }
+    } else if (debug_mode) {
+        std::cout << "info Option " << option_name << " not set due to null setter\n";
+    }
 }
 
 // called when a new game is started, resets the bot to its original state
@@ -34,6 +49,11 @@ static inline void newGame(Board& board) {
     // reset the board to the starting position
     board.clear();
     board.loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+}
+
+static inline void initOptions() {
+    setOptions("Hash", { 1, 16384, 16, [](int mb) { tt.resize(mb); } });
+    setOptions("Threads", { 1, 1, 1, nullptr });
 }
 
 static inline void position(Board& board) {
@@ -50,8 +70,12 @@ static inline void position(Board& board) {
     } else if (token == "fen") {
         std::string fen;
         while (ss >> token) {
-            if (token == "moves") break;
-            if (!fen.empty()) fen += " ";
+            if (token == "moves") {
+                break;
+            }
+            if (!fen.empty()) {
+                fen += " ";
+            }
             fen += token;
         }
         board.loadFEN(fen);
@@ -88,10 +112,10 @@ static inline void go(Board& board) {
         } else if (arg == "btime") {
             params.btime = std::stoi(buffer.substr(0, buffer.find(" ")));
             buffer = buffer.substr(buffer.find(" ") + 1);
-        } else if (arg == "winc") {//time added after each move for white
+        } else if (arg == "winc") { // time added after each move for white
             params.winc = std::stoi(buffer.substr(0, buffer.find(" ")));
             buffer = buffer.substr(buffer.find(" ") + 1);
-        } else if (arg == "binc") {//time added after each move for black
+        } else if (arg == "binc") { // time added after each move for black
             params.binc = std::stoi(buffer.substr(0, buffer.find(" ")));
             buffer = buffer.substr(buffer.find(" ") + 1);
         } else if (arg == "movestogo") {
@@ -134,6 +158,8 @@ int uciStartup() {
         return -1;
     }
 
+    initOptions();
+
     std::cout << "id name Axiom\n";
     std::cout << "id author Connor Kostiew, Kai Chung, Will Bradley\n"; // Agree on the authors name
     options();
@@ -150,6 +176,16 @@ int uciStartup() {
         } else if (buffer == "quit") {
             return 0; // quit the engine
         }
+        if (buffer == "debug") {
+            std::cin >> buffer;
+            if (buffer == "on") {
+                debug_mode = true;
+                std::cout << "info Debug mode on\n";
+            } else if (buffer == "off") {
+                debug_mode = false;
+                std::cout << "info Debug mode off\n";
+            }
+        }
     }
 }
 
@@ -157,8 +193,8 @@ void uci() {
     if (uciStartup() != 1) {
         return; // quit command received
     }
-    std::cout << "readyok\n";
 
+    std::cout << "readyok\n";
     std::string buffer;
 
     while (1) {
@@ -178,6 +214,16 @@ void uci() {
         } else if (buffer == "quit") {
             return; // quit the engine
         }
+        if (buffer == "debug") {
+            std::cin >> buffer;
+            if (buffer == "on") {
+                debug_mode = true;
+                std::cout << "info Debug mode on\n";
+            } else if (buffer == "off") {
+                debug_mode = false;
+                std::cout << "info Debug mode off\n";
+            }
+        }
     }
 }
 
@@ -190,12 +236,12 @@ static bool stdinHasData() {
     fd_set fds;
     FD_ZERO(&fds);
     FD_SET(STDIN_FILENO, &fds);
-    timeval tv{0, 0};
+    timeval tv{ 0, 0 };
     return select(STDIN_FILENO + 1, &fds, nullptr, nullptr, &tv) > 0;
 #endif
 }
 
-void checkStdin( std::chrono::high_resolution_clock::time_point start, long long max_nodes, long long current_nodes, size_t hard_cap) {
+void checkStdin(std::chrono::high_resolution_clock::time_point start, long long max_nodes, long long current_nodes, size_t hard_cap) {
     auto now = std::chrono::high_resolution_clock::now();
     if (hard_cap != 0 && (size_t)std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count() >= hard_cap) {
         searching = false;
@@ -214,6 +260,12 @@ void checkStdin( std::chrono::high_resolution_clock::time_point start, long long
             searching = false;
         } else if (line == "quit") {
             exit(0);
+        } else if (line == "debug on") {
+            debug_mode = true;
+            std::cout << "info Debug mode on\n";
+        } else if (line == "debug off") {
+            debug_mode = false;
+            std::cout << "info Debug mode off\n";
         }
     }
 }
