@@ -67,6 +67,7 @@ static inline void position(Board& board, std::istringstream& ss) {
         ss >> token; // consume "moves" if present
     } else if (token == "fen") {
         std::string fen;
+        board.clear();
         while (ss >> token) {
             if (token == "moves") {
                 break;
