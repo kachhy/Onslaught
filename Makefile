@@ -40,7 +40,7 @@ ifneq ($(shell uname),Darwin)
 	LDFLAGS += -static
 endif
 	LDFLAGS += -flto
-	OBJDIR:=$(OBJDIR)/native
+	OBJDIR:=$(OBJDIR)/spsa
 endif
 ifneq ($(filter pg,$(MAKECMDGOALS)),)
 	CXXFLAGS += -pg
