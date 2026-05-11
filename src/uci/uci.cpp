@@ -26,14 +26,14 @@ static inline void options() {
 }
 
 // actually changing the options for the engine
-static inline void changeOptions() {
+static inline void changeOptions(std::istringstream& ss) {
     std::string token;
-    std::cin >> token; // "name"
-    std::cin >> token; // option name
+    ss >> token; // "name"
+    ss >> token; // option name
 
     std::string option_name = token;
-    std::cin >> token; // "value"
-    std::cin >> token; // value
+    ss >> token; // "value"
+    ss >> token; // value
 
     if (options_map[option_name].setter) {
         options_map[option_name].setter(std::stoi(token));
@@ -58,13 +58,8 @@ static inline void initOptions() {
     initSPSA();
 }
 
-static inline void position(Board& board) {
-    std::string line;
-    std::cin.ignore();
-    std::getline(std::cin >> std::ws, line);
-    std::istringstream ss(line);
+static inline void position(Board& board, std::istringstream& ss) {
     std::string token;
-
     ss >> token;
 
     if (token == "startpos") {
@@ -92,54 +87,34 @@ static inline void position(Board& board) {
     }
 }
 
-static inline void go(Board& board) {
-    std::string buffer;
-    std::string arg;
+static inline void go(Board& board, std::istringstream& ss) {
     GoParams params = GoParams();
-    std::getline(std::cin >> std::ws, buffer);
+    std::string token;
 
-    buffer = buffer + " ";
-
-    arg = buffer.substr(0, buffer.find(" "));
-    buffer = buffer.substr(buffer.find(" ") + 1);
-
-    while (buffer.size() > 0) {
-        arg = buffer.substr(0, buffer.find(" "));
-        buffer = buffer.substr(buffer.find(" ") + 1);
-
-        if (arg == "wtime") {
-            params.wtime = std::stoi(buffer.substr(0, buffer.find(" ")));
-            buffer = buffer.substr(buffer.find(" ") + 1);
-        } else if (arg == "btime") {
-            params.btime = std::stoi(buffer.substr(0, buffer.find(" ")));
-            buffer = buffer.substr(buffer.find(" ") + 1);
-        } else if (arg == "winc") { // time added after each move for white
-            params.winc = std::stoi(buffer.substr(0, buffer.find(" ")));
-            buffer = buffer.substr(buffer.find(" ") + 1);
-        } else if (arg == "binc") { // time added after each move for black
-            params.binc = std::stoi(buffer.substr(0, buffer.find(" ")));
-            buffer = buffer.substr(buffer.find(" ") + 1);
-        } else if (arg == "movestogo") {
-            params.movestogo = std::stoi(buffer.substr(0, buffer.find(" ")));
-            buffer = buffer.substr(buffer.find(" ") + 1);
-        } else if (arg == "depth") {
-            params.depth = std::stoi(buffer.substr(0, buffer.find(" ")));
-            buffer = buffer.substr(buffer.find(" ") + 1);
-        } else if (arg == "nodes") {
-            params.nodes = std::stoll(buffer.substr(0, buffer.find(" ")));
-            buffer = buffer.substr(buffer.find(" ") + 1);
-        } else if (arg == "movetime") {
-            params.movetime = std::stoi(buffer.substr(0, buffer.find(" ")));
-            buffer = buffer.substr(buffer.find(" ") + 1);
-        } else if (arg == "infinite") {
+    while (ss >> token) {
+        if (token == "wtime") {
+            ss >> params.wtime;
+        } else if (token == "btime") {
+            ss >> params.btime;
+        } else if (token == "winc") {
+            ss >> params.winc;
+        } else if (token == "binc") {
+            ss >> params.binc;
+        } else if (token == "movestogo") {
+            ss >> params.movestogo;
+        } else if (token == "depth") {
+            ss >> params.depth;
+        } else if (token == "nodes") {
+            ss >> params.nodes;
+        } else if (token == "movetime") {
+            ss >> params.movetime;
+        } else if (token == "infinite") {
             params.infinite = true;
-        } else if (arg == "ponder") {
+        } else if (token == "ponder") {
             params.ponder = true;
-        } else if (arg == "searchmoves") {
-            while (buffer.size() > 0) {
-                arg = buffer.substr(0, buffer.find(" "));
-                buffer = buffer.substr(buffer.find(" ") + 1);
-                params.searchmoves.push_back(arg);
+        } else if (token == "searchmoves") {
+            while (ss >> token) {
+                params.searchmoves.push_back(token);
             }
         }
     }
@@ -150,35 +125,36 @@ static inline void go(Board& board) {
     std::cout << "bestmove " << moveToStr(best_move) << std::endl;
 }
 
-int uciStartup() {
-    std::string buffer;
-    std::cin >> buffer;
-
-    if (buffer != "uci") {
-        std::cerr << "Expected 'uci' command, got '" << buffer << "'\n";
-        return -1;
+void uci() {
+    if (uciStartup() != 1) {
+        return;
     }
 
-    initOptions();
+    std::cout << "readyok\n";
+    std::string line;
 
-    std::cout << "id name Axiom\n";
-    std::cout << "id author Connor Kostiew, Kai Chung, Will Bradley\n"; // Agree on the authors name
-    options();
-    std::cout << "uciok\n";
-
-    // original setup loop
-    while (1) {
-        std::cin >> buffer;
+    while (std::getline(std::cin, line)) {
+        std::istringstream ss(line);
+        std::string buffer;
+        ss >> buffer;
 
         if (buffer == "setoption") {
-            changeOptions();
+            changeOptions(ss);
+        } else if (buffer == "go") {
+            go(board, ss);
+        } else if (buffer == "position") {
+            position(board, ss);
+        } else if (buffer == "ucinewgame") {
+            newGame(board);
+            tt.clear();
         } else if (buffer == "isready") {
-            return 1; // ready to start the game
+            std::cout << "readyok\n";
+        } else if (buffer == "spsa") {
+            printSPSAParams();
         } else if (buffer == "quit") {
-            return 0; // quit the engine
-        }
-        if (buffer == "debug") {
-            std::cin >> buffer;
+            return;
+        } else if (buffer == "debug") {
+            ss >> buffer;
             if (buffer == "on") {
                 debug_mode = true;
                 std::cout << "info Debug mode on\n";
@@ -190,35 +166,40 @@ int uciStartup() {
     }
 }
 
-void uci() {
-    if (uciStartup() != 1) {
-        return; // quit command received
+int uciStartup() {
+    std::string line;
+
+    if (!std::getline(std::cin, line)) {
+        return -1;
     }
 
-    std::cout << "readyok\n";
+    std::istringstream first(line);
     std::string buffer;
+    first >> buffer;
 
-    while (1) {
-        std::cin >> buffer;
+    if (buffer != "uci") {
+        std::cerr << "Expected 'uci' command, got '" << buffer << "'\n";
+        return -1;
+    }
+
+    initOptions();
+    std::cout << "id name Axiom\n";
+    std::cout << "id author Connor Kostiew, Kai Chung, Will Bradley\n";
+    options();
+    std::cout << "uciok\n";
+
+    while (std::getline(std::cin, line)) {
+        std::istringstream ss(line);
+        ss >> buffer;
 
         if (buffer == "setoption") {
-            changeOptions();
-        } else if (buffer == "go") {
-            go(board);
-        } else if (buffer == "position") {
-            position(board);
-        } else if (buffer == "ucinewgame") {
-            newGame(board);
-            tt.clear();
+            changeOptions(ss);
         } else if (buffer == "isready") {
-            std::cout << "readyok\n";
-        } else if (buffer == "spsa") {
-            printSPSAParams();
+            return 1;
         } else if (buffer == "quit") {
-            return; // quit the engine
-        }
-        if (buffer == "debug") {
-            std::cin >> buffer;
+            return 0;
+        } else if (buffer == "debug") {
+            ss >> buffer;
             if (buffer == "on") {
                 debug_mode = true;
                 std::cout << "info Debug mode on\n";
@@ -226,6 +207,38 @@ void uci() {
                 debug_mode = false;
                 std::cout << "info Debug mode off\n";
             }
+        }
+    }
+
+    return -1;
+}
+
+void uci() {
+    if (uciStartup() != 1) {
+        return;
+    }
+
+    std::cout << "readyok\n";
+    std::string line;
+
+    while (std::getline(std::cin, line)) {
+        std::istringstream ss(line);
+        std::string buffer;
+        ss >> buffer;
+
+        if (buffer == "setoption") {
+            // parse from ss instead of cin
+        } else if (buffer == "go") {
+            go(board, ss);
+        } else if (buffer == "position") {
+            position(board, ss);
+        } else if (buffer == "ucinewgame") {
+            newGame(board);
+            tt.clear();
+        } else if (buffer == "isready") {
+            std::cout << "readyok\n";
+        } else if (buffer == "quit") {
+            return;
         }
     }
 }
