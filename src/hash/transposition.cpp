@@ -87,7 +87,8 @@ bool TTable::fetch(const Board& board, Entry& entry) {
     for (uint8_t i = 0; i < bucket.count; i++) {
         if (bucket.entries[i].hash == board.hash()) {
             if (!found || bucket.entries[i].depth > entry.depth) {
-                entry = bucket.entries[i];
+                std::swap(bucket.entries[0], bucket.entries[i]);
+                entry = bucket.entries[0];
             }
             bucket.entries[i].last_seen = table_age;
             found = true;
