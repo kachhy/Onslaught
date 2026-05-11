@@ -3,6 +3,7 @@
 #include "search-eval/search.h"
 #include <sstream>
 
+
 #ifdef _WIN32
     #include <windows.h>
 #else
@@ -12,12 +13,18 @@
 
 Board board;
 bool searching = false;
+bool debug_mode = false;
+std::unordered_map<std::string, struct OptionVar> options_map;
+
+void setOptions(std::string key, struct OptionVar value){
+    options_map[key] = value;
+}
 
 // All the different things we can change about the engine
 static inline void options() {
-    // currently does nothing for now but when we add options they will go here
-    std::cout << "option name Hash type spin default 16 min 16 max 16" << std::endl;
-    std::cout << "option name Threads type spin default 1 min 1 max 1" << std::endl;
+    for (const auto& [key, value] : options_map) {
+        std::cout << "option name " << key << " type spin default " << value.norm << " min " << value.min << " max " << value.max << "\n";
+    }
 }
 
 // actually changing the options for the engine
@@ -26,7 +33,14 @@ static inline void changeOptions() {
     std::cin >> token; // "name"
     std::cin >> token; // option name
 
-    // where all the checks for the different oprions will go
+    std::string option_name = token;
+    std::cin >> token; // "value"
+    std::cin >> token; // value
+
+    *(options_map[option_name].val) = std::stoi(token);
+    if(debug_mode) {
+        std::cout << "info Option " << option_name << " set to " << *(options_map[option_name].val) << "\n";
+    }
 }
 
 // called when a new game is started, resets the bot to its original state
@@ -150,6 +164,17 @@ int uciStartup() {
         } else if (buffer == "quit") {
             return 0; // quit the engine
         }
+        if(buffer == "debug") {
+            std::cin >> buffer;
+            if(buffer == "on") {
+                debug_mode = true;
+                std::cout << "info Debug mode on\n";
+            }
+            else if(buffer == "off") {
+                debug_mode = false;
+                std::cout << "info Debug mode off\n";
+            }
+        }
     }
 }
 
@@ -160,6 +185,8 @@ void uci() {
     std::cout << "readyok\n";
 
     std::string buffer;
+
+    options(); // print options again after receiving "isready" in case the GUI missed them the first time
 
     while (1) {
         std::cin >> buffer;
@@ -177,6 +204,16 @@ void uci() {
             std::cout << "readyok\n";
         } else if (buffer == "quit") {
             return; // quit the engine
+        }
+        if (buffer == "debug") {
+            std::cin >> buffer;
+            if (buffer == "on") {
+                debug_mode = true;
+                std::cout << "info Debug mode on\n";
+            } else if(buffer == "off") {
+                debug_mode = false;
+                std::cout << "info Debug mode off\n";
+            }
         }
     }
 }
@@ -214,6 +251,12 @@ void checkStdin( std::chrono::high_resolution_clock::time_point start, long long
             searching = false;
         } else if (line == "quit") {
             exit(0);
+        } else if (line == "debug on") {
+            debug_mode = true;
+            std::cout << "info Debug mode on\n";
+        } else if (line == "debug off") {
+            debug_mode = false;
+            std::cout << "info Debug mode off\n";
         }
     }
 }
