@@ -1,5 +1,5 @@
 CXX ?= g++
-CXXFLAGS=-Wall -MMD -MP -Wno-switch -Isrc -std=c++17
+CXXFLAGS=-Wall -MMD -MP -Wno-switch -Isrc -std=c++17 -DSPSA_TUNE
 LDFLAGS=
 OBJDIR=build
 SRC=$(shell find src -name '*.cpp')
