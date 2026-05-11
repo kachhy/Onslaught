@@ -321,7 +321,7 @@ void populateRookAttacks() {
 }
 
 void populateBetweenSquares() {
-    uint8_t index;
+    int16_t index;
 
     for (uint8_t from = 0; from < 64; from++) {
         for (uint8_t to = from + 1; to < 64; to++) {
@@ -362,7 +362,7 @@ void populateBetweenSquares() {
 
 void populateLineSquares() {
     int8_t step;
-    uint8_t index;
+    int16_t index;
 
     for (uint8_t from = 0; from < 64; from++) {
         for (uint8_t to = from + 1; to < 64; to++) {
