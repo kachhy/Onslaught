@@ -4,7 +4,6 @@
 #include <functional>
 #include <iostream>
 
-#ifdef SPSA_TUNE
 int RFP_MARGIN = 75;
 int ASPIRATION_MARGIN = 12;
 int FUTILITY_MARGIN = 150;
@@ -16,7 +15,6 @@ int LMP_BASE = 3;
 
 static int lmr_value_scaled = 100;  // 1.0 × 100
 static int lmr_scalar_scaled = 200; // 2.0 × 100
-#endif
 
 static std::vector<SPSAParam> registry;
 
@@ -39,7 +37,6 @@ static void reg(const std::string& name, int* ptr, int def, int min, int max, do
 }
 
 void initSPSA() {
-#ifdef SPSA_TUNE
     reg("RFP_MARGIN", &RFP_MARGIN, 75, 0, 300, 15, 0.002);
     reg("ASPIRATION_MARGIN", &ASPIRATION_MARGIN, 12, 1, 50, 3, 0.002);
     reg("FUTILITY_MARGIN", &FUTILITY_MARGIN, 150, 0, 500, 25, 0.002);
@@ -57,5 +54,4 @@ void initSPSA() {
 
     reg("MAX_HISTORY", &MAX_HISTORY, 16384, 1024, 65536, 3277, 0.002);
     reg("LMP_BASE", &LMP_BASE, 3, 1, 10, 1, 0.002);
-#endif
 }
