@@ -25,7 +25,7 @@ endif
 	OBJDIR:=$(OBJDIR)/lto
 endif
 ifneq ($(filter native,$(MAKECMDGOALS)),)
-	CXXFLAGS += -O3 -flto -march=native
+	CXXFLAGS += -O3 -flto -march=native -DSPSA_TUNE
 ifneq ($(shell uname),Darwin)
 	CXXFLAGS += -mpopcnt
 	LDFLAGS += -static
