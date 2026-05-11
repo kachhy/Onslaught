@@ -14,6 +14,7 @@ struct EntryTriple {
     Entry entries[3];
     size_t count; // Default 0 after clear()
 };
+
 constexpr size_t ENTRY_TRIPLE_SIZE = sizeof(EntryTriple);
 constexpr size_t DEFAULT_TABLE_MB  = 16;
 
