@@ -61,7 +61,7 @@ static inline void initOptions() {
 static inline void position(Board& board) {
     std::string line;
     std::cin.ignore();
-    std::getline(std::cin, line);
+    std::getline(std::cin >> std::ws, line);
     std::istringstream ss(line);
     std::string token;
 
@@ -96,7 +96,7 @@ static inline void go(Board& board) {
     std::string buffer;
     std::string arg;
     GoParams params = GoParams();
-    std::getline(std::cin, buffer);
+    std::getline(std::cin >> std::ws, buffer);
 
     buffer = buffer + " ";
 
