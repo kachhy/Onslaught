@@ -213,36 +213,6 @@ int uciStartup() {
     return -1;
 }
 
-void uci() {
-    if (uciStartup() != 1) {
-        return;
-    }
-
-    std::cout << "readyok\n";
-    std::string line;
-
-    while (std::getline(std::cin, line)) {
-        std::istringstream ss(line);
-        std::string buffer;
-        ss >> buffer;
-
-        if (buffer == "setoption") {
-            // parse from ss instead of cin
-        } else if (buffer == "go") {
-            go(board, ss);
-        } else if (buffer == "position") {
-            position(board, ss);
-        } else if (buffer == "ucinewgame") {
-            newGame(board);
-            tt.clear();
-        } else if (buffer == "isready") {
-            std::cout << "readyok\n";
-        } else if (buffer == "quit") {
-            return;
-        }
-    }
-}
-
 static bool stdinHasData() {
 #ifdef _WIN32
     DWORD n = 0;
