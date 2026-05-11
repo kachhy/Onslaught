@@ -27,6 +27,7 @@ void printSPSAParams() {
         // OpenBench SPSA submission format
         std::cout << p.name << ", int, " << p.def << ", " << p.min << ", " << p.max << ", " << p.step << ", " << p.lr << "\n";
     }
+    std::cout.flush();
 }
 
 static void reg(const std::string& name, int* ptr, int def, int min, int max, double step, double lr, std::function<void(int)> setter = nullptr) {

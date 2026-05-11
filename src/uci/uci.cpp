@@ -2,7 +2,9 @@
 #include "hash/transposition.h"
 #include "search-eval/search.h"
 #include "tuning/spsa.h"
+#include <algorithm>
 #include <sstream>
+#include <vector>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -20,7 +22,14 @@ void setOptions(std::string key, struct OptionVar value) { options_map[key] = va
 
 // All the different things we can change about the engine
 static inline void options() {
-    for (const auto& [key, value] : options_map) {
+    std::vector<std::string> keys;
+    keys.reserve(options_map.size());
+    for (const auto& [key, _] : options_map) {
+        keys.push_back(key);
+    }
+    std::sort(keys.begin(), keys.end());
+    for (const auto& key : keys) {
+        const auto& value = options_map[key];
         std::cout << "option name " << key << " type spin default " << value.norm << " min " << value.min << " max " << value.max << "\n";
     }
 }
@@ -28,20 +37,51 @@ static inline void options() {
 // actually changing the options for the engine
 static inline void changeOptions(std::istringstream& ss) {
     std::string token;
-    ss >> token; // "name"
-    ss >> token; // option name
 
-    std::string option_name = token;
-    ss >> token; // "value"
-    ss >> token; // value
+    if (!(ss >> token) || token != "name") {
+        return;
+    }
 
-    if (options_map[option_name].setter) {
-        options_map[option_name].setter(std::stoi(token));
-        if (debug_mode) {
-            std::cout << "info Option " << option_name << " set to " << token << "\n";
+    std::string option_name;
+    while (ss >> token && token != "value") {
+        if (!option_name.empty()) {
+            option_name += " ";
         }
-    } else if (debug_mode) {
-        std::cout << "info Option " << option_name << " not set due to null setter\n";
+        option_name += token;
+    }
+    if (token != "value" || option_name.empty()) {
+        return;
+    }
+
+    std::string value;
+    if (!(ss >> value)) {
+        return;
+    }
+
+    auto it = options_map.find(option_name);
+    if (it == options_map.end()) {
+        if (debug_mode) {
+            std::cout << "info string Unknown option " << option_name << std::endl;
+        }
+        return;
+    }
+
+    if (!it->second.setter) {
+        if (debug_mode) {
+            std::cout << "info string Option " << option_name << " not set due to null setter" << std::endl;
+        }
+        return;
+    }
+
+    try {
+        it->second.setter(std::stoi(value));
+        if (debug_mode) {
+            std::cout << "info string Option " << option_name << " set to " << value << std::endl;
+        }
+    } catch (const std::exception&) {
+        if (debug_mode) {
+            std::cout << "info string Invalid value '" << value << "' for option " << option_name << std::endl;
+        }
     }
 }
 
@@ -131,7 +171,7 @@ void uci() {
         return;
     }
 
-    std::cout << "readyok\n";
+    std::cout << "readyok" << std::endl;
     std::string line;
 
     while (std::getline(std::cin, line)) {
@@ -149,7 +189,7 @@ void uci() {
             newGame(board);
             tt.clear();
         } else if (buffer == "isready") {
-            std::cout << "readyok\n";
+            std::cout << "readyok" << std::endl;
         } else if (buffer == "spsa") {
             printSPSAParams();
         } else if (buffer == "quit") {
@@ -158,10 +198,10 @@ void uci() {
             ss >> buffer;
             if (buffer == "on") {
                 debug_mode = true;
-                std::cout << "info Debug mode on\n";
+                std::cout << "info string Debug mode on" << std::endl;
             } else if (buffer == "off") {
                 debug_mode = false;
-                std::cout << "info Debug mode off\n";
+                std::cout << "info string Debug mode off" << std::endl;
             }
         }
     }
@@ -187,7 +227,7 @@ int uciStartup() {
     std::cout << "id name Axiom\n";
     std::cout << "id author Connor Kostiew, Kai Chung, Will Bradley\n";
     options();
-    std::cout << "uciok\n";
+    std::cout << "uciok" << std::endl;
 
     while (std::getline(std::cin, line)) {
         std::istringstream ss(line);
@@ -197,16 +237,18 @@ int uciStartup() {
             changeOptions(ss);
         } else if (buffer == "isready") {
             return 1;
+        } else if (buffer == "spsa") {
+            printSPSAParams();
         } else if (buffer == "quit") {
             return 0;
         } else if (buffer == "debug") {
             ss >> buffer;
             if (buffer == "on") {
                 debug_mode = true;
-                std::cout << "info Debug mode on\n";
+                std::cout << "info string Debug mode on" << std::endl;
             } else if (buffer == "off") {
                 debug_mode = false;
-                std::cout << "info Debug mode off\n";
+                std::cout << "info string Debug mode off" << std::endl;
             }
         }
     }
@@ -250,10 +292,10 @@ void checkStdin(std::chrono::high_resolution_clock::time_point start, long long 
             exit(0);
         } else if (line == "debug on") {
             debug_mode = true;
-            std::cout << "info Debug mode on\n";
+            std::cout << "info string Debug mode on" << std::endl;
         } else if (line == "debug off") {
             debug_mode = false;
-            std::cout << "info Debug mode off\n";
+            std::cout << "info string Debug mode off" << std::endl;
         }
     }
 #endif
