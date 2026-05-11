@@ -1,6 +1,7 @@
 #include "uci.h"
 #include "hash/transposition.h"
 #include "search-eval/search.h"
+#include "tuning/spsa.h"
 #include <sstream>
 
 #ifdef _WIN32
@@ -54,6 +55,7 @@ static inline void newGame(Board& board) {
 static inline void initOptions() {
     setOptions("Hash", { 1, 16384, 16, [](int mb) { tt.resize(mb); } });
     setOptions("Threads", { 1, 1, 1, nullptr });
+    initSPSA();
 }
 
 static inline void position(Board& board) {
@@ -211,6 +213,8 @@ void uci() {
             tt.clear();
         } else if (buffer == "isready") {
             std::cout << "readyok\n";
+        } else if (buffer == "spsa") {
+            printSPSAParams();
         } else if (buffer == "quit") {
             return; // quit the engine
         }

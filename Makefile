@@ -33,6 +33,15 @@ endif
 	LDFLAGS += -flto
 	OBJDIR:=$(OBJDIR)/native
 endif
+ifneq ($(filter spsa,$(MAKECMDGOALS)),)
+	CXXFLAGS += -O3 -flto -march=native -DSPSA_TUNE
+ifneq ($(shell uname),Darwin)
+	CXXFLAGS += -mpopcnt
+	LDFLAGS += -static
+endif
+	LDFLAGS += -flto
+	OBJDIR:=$(OBJDIR)/native
+endif
 ifneq ($(filter pg,$(MAKECMDGOALS)),)
 	CXXFLAGS += -pg
 	LDFLAGS += -pg
@@ -56,6 +65,7 @@ debug: $(EXE)
 release: $(EXE)
 lto: $(EXE)
 native: $(EXE)
+spsa: $(EXE)
 pg: $(EXE)
 tune: $(EXE)
 perft: $(EXE)
