@@ -2,8 +2,8 @@
 #include "movegen/attacks.h"
 #include "search-eval/tuning.h"
 #include "testing/perft.h"
+#include "testing/ttbench.h"
 #include "uci/uci.h"
-
 
 void initAttacks() {
     populateBetweenSquares();
@@ -28,6 +28,9 @@ int main(int argc, char** argv) {
 
     // Populate eval data
     initEval();
+
+    // Run TTBench
+    // benchTT();
 
 #ifdef TUNING
     if (argc < 5) {

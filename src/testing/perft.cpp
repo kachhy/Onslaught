@@ -95,7 +95,8 @@ unsigned long long perft_test(Board& board, int depth, PerftCache& cache) {
         return 1ULL;
     }
     unsigned long long nodes = 0;
-    MoveList m = getLegalMoves(board);
+    MoveList m;
+    getLegalMoves(board, m);
 
     if (depth == 1) {
         return static_cast<unsigned long long>(m.size());
@@ -119,7 +120,8 @@ unsigned long long perft_test_slow(Board& board, int depth) {
         return 1ULL;
     }
     unsigned long long nodes = 0;
-    MoveList m = getLegalMoves(board);
+    MoveList m;
+    getLegalMoves(board, m);
     for (size_t i = 0; i < m.size(); i++) {
         board.makeMove(m[i]);
         nodes += perft_test_slow(board, depth - 1);

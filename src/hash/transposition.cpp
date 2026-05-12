@@ -36,7 +36,7 @@ void TTable::resize(size_t megabytes) {
     table_age = 0;
 }
 
-void TTable::insert(const Board& board, Move best_move, int32_t score, TTBound bound, size_t depth) {
+void TTable::insert(const Board& board, Move best_move, int score, uint8_t bound, uint8_t depth) {
     const uint64_t hash = board.hash() & index_mask;
     EntryTriple& bucket = table[hash];
     if (bucket.count < 3) {
@@ -86,11 +86,13 @@ bool TTable::fetch(const Board& board, Entry& entry) {
     bool found = false;
     for (uint8_t i = 0; i < bucket.count; i++) {
         if (bucket.entries[i].hash == board.hash()) {
-            if (!found || bucket.entries[i].depth > entry.depth) {
-                entry = bucket.entries[i];
+            std::swap(bucket.entries[0], bucket.entries[i]);
+            if (!found || bucket.entries[0].depth > entry.depth) {
+                entry = bucket.entries[0];
             }
-            bucket.entries[i].last_seen = table_age;
+            bucket.entries[0].last_seen = table_age;
             found = true;
+            break;
         }
     }
     return found;
