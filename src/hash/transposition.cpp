@@ -38,7 +38,6 @@ void TTable::resize(size_t megabytes) {
 
 void TTable::insert(const Board& board, Move best_move, int score, uint8_t bound, uint8_t depth) {
     const uint64_t hash = board.hash() & index_mask;
-    const uint64_t pawn_hash = board.pawnHash() & index_mask;
     EntryTriple& bucket = table[hash];
     if (bucket.count < 3) {
         for (uint8_t i = 0; i < bucket.count; i++) {
@@ -50,7 +49,6 @@ void TTable::insert(const Board& board, Move best_move, int score, uint8_t bound
             }
         }
         bucket.entries[bucket.count] = { board.hash(), best_move, score, bound, depth, table_age };
-        bloom_filter |= (1 << (hash & 31)) | (1 << (pawn_hash & 31));
         bucket.count++;
         table_size++;
         return;
@@ -58,7 +56,6 @@ void TTable::insert(const Board& board, Move best_move, int score, uint8_t bound
     if (bucket.entries[0].hash == board.hash()) {
         if (depth >= bucket.entries[0].depth || bound == EXACTBOUND) {
             bucket.entries[0] = { board.hash(), best_move, score, bound, depth, table_age };
-            bloom_filter |= (1 << (hash & 31)) | (1 << (pawn_hash & 31));
         }
         return;
     }
@@ -68,7 +65,6 @@ void TTable::insert(const Board& board, Move best_move, int score, uint8_t bound
         if (bucket.entries[i].hash == board.hash()) {
             if (depth >= bucket.entries[i].depth || bound == EXACTBOUND) {
                 bucket.entries[i] = { board.hash(), best_move, score, bound, depth, table_age };
-                bloom_filter |= (1 << (hash & 31)) | (1 << (pawn_hash & 31));
             }
             return;
         }
@@ -79,16 +75,10 @@ void TTable::insert(const Board& board, Move best_move, int score, uint8_t bound
         }
     }
     bucket.entries[kickout_index] = { board.hash(), best_move, score, bound, depth, table_age };
-    bloom_filter |= (1 << (hash & 31)) | (1 << (pawn_hash & 31));
 }
 
 bool TTable::fetch(const Board& board, Entry& entry) {
     const uint64_t hash = board.hash() & index_mask;
-    const uint64_t pawn_hash = board.pawnHash() & index_mask;
-    if (!(bloom_filter & (1 << (hash & 31)))
-        || !(bloom_filter & (1 << (pawn_hash & 31)))) {
-        return false;
-    }
     EntryTriple& bucket = table[hash];
     if (!bucket.count) {
         return false;
@@ -97,7 +87,7 @@ bool TTable::fetch(const Board& board, Entry& entry) {
     for (uint8_t i = 0; i < bucket.count; i++) {
         if (bucket.entries[i].hash == board.hash()) {
             std::swap(bucket.entries[0], bucket.entries[i]);
-            if (!found || bucket.entries[i].depth > entry.depth) {
+            if (!found || bucket.entries[0].depth > entry.depth) {
                 entry = bucket.entries[0];
             }
             bucket.entries[0].last_seen = table_age;
@@ -111,7 +101,6 @@ bool TTable::fetch(const Board& board, Entry& entry) {
 void TTable::clear() {
     static_assert(std::is_trivially_copyable<EntryTriple>::value, "EntryTriple must be trivial for memset to be safe.");
     memset(table.get(), 0, sizeof(EntryTriple) * table_capacity);
-    bloom_filter = 0;
     table_size = 0;
     table_age = 0;
 }

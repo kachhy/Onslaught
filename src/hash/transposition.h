@@ -26,7 +26,6 @@ private:
     size_t index_mask;     // table_capacity - 1
     uint16_t table_age;
     size_t table_size;     // populated entry count
-    uint16_t bloom_filter;
 public:
     explicit TTable(size_t megabytes = DEFAULT_TABLE_MB);
     void resize(size_t megabytes);
