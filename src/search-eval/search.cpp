@@ -221,14 +221,12 @@ int search(
     // find if this position has already been searched at a good depth and returns its score
     Entry tt_entry;
     bool tt_hit = tt.fetch(board, tt_entry);
-    if (!is_pv) {
-        if (tt_hit) {
-            tt_entry.score = scoreFromTT(tt_entry.score, ply);
+    if (!is_pv && tt_hit) {
+        tt_entry.score = scoreFromTT(tt_entry.score, ply);
 
-            if (ply > 0 && tt_entry.depth >= static_cast<size_t>(depth)) {
-                if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) || (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
-                    return tt_entry.score;
-                }
+        if (ply > 0 && tt_entry.depth >= static_cast<size_t>(depth)) {
+            if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) || (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
+                return tt_entry.score;
             }
         }
     }
@@ -270,6 +268,7 @@ int search(
     if (!is_pv && can_make_null_move && !in_check && depth >= 3 && static_eval >= beta && non_pawn_material) {
         int nmp_reduction = 3 + depth / 6;
         board.makeNullMove();
+        tt.prefetch(board.hash());
         int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ply + 1, false, pv_table, max_ply);
         board.undoNullMove();
         if (score >= beta) {
@@ -338,6 +337,7 @@ int search(
         //     quiets_tried[quiets_tried_count++] = move;
         // }
         board.makeMove(move);
+        tt.prefetch(board.hash());
 
         // // mate extensions (replaced by check extension at top of search)
         // int extension = 0;
