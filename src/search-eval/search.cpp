@@ -87,6 +87,9 @@ void printInfo(Board board, int depth, int seldepth, int score, const char* boun
             if (valid_move) {
                 std::cout << moveToStr(tt_entry.best_move) << ' ';
                 board.makeMove(tt_entry.best_move);
+                if (isDraw(board, i)) {
+                    break;
+                }
             } else {
                 break;
             }
