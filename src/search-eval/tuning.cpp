@@ -5,13 +5,6 @@
 #include <random>
 #include <thread>
 
-static float sideToResult(const Side side) {
-    switch (side) {
-    case WHITE: return 1.0f;
-    case BLACK: return 0.0f;
-    default: return 0.5f; // draw / BOTH
-    }
-}
 
 Tuner::Tuner(const size_t dataset_size) {
     const size_t valid_cap = static_cast<size_t>(dataset_size * 0.1) + 1;
@@ -28,34 +21,35 @@ void Tuner::loadDataset(const std::string& filename, const uint32_t max) {
     const size_t valid_thres = static_cast<size_t>(max * 0.9);
     Board board;
     while (loaded < max && std::getline(in, line)) {
-        const size_t index = line.find("[");
-        const std::string res = line.substr(index + 1, 3);
-        Side winner;
-        if (res == "0.5") {
-            winner = BOTH;
-            d++;
-        } else if (res == "1.0") {
-            winner = WHITE;
-            w++;
-        } else {
-            winner = BLACK;
-            b++;
-        }
-        board.loadFEN(line.substr(0, index));
+        const size_t bracket = line.find('[');
+        const size_t end     = line.find(']', bracket);
+        const double result  = std::stod(line.substr(bracket + 1, end - bracket - 1));
+
+        board.loadFEN(line.substr(0, bracket));
         trace = {};
         eval(board);
-        trace.phase = board.phase();
-        trace.result = sideToResult(winner);
+        trace.phase  = board.phase();
+        trace.result = result;
+
         if (loaded++ < valid_thres) {
             traces.emplace_back(trace);
         } else {
             validation_traces.emplace_back(trace);
         }
+
+        if (result > 0.75) {
+            w++;
+        } else if (result < 0.25) {
+            b++;
+        } else {
+            d++;
+        }
+
         if (!(loaded % 100000)) {
             std::cout << "\tLoaded " << loaded << " positions." << std::endl;
         }
     }
-    std::cout << "\tWhite wins: " << w << ", Black wins: " << b << ", Draws: " << d << std::endl;
+    std::cout << "\tWhite winning: " << w << ", Black winning: " << b << ", Drawish: " << d << std::endl;
     std::cout << "\tTraining traces: " << traces.size() << ", validation traces: " << validation_traces.size() << std::endl;
 }
 
