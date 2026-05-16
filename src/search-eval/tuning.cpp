@@ -53,9 +53,20 @@ void Tuner::loadDataset(const std::string& filename, const uint32_t max) {
     std::cout << "\tTraining traces: " << traces.size() << ", validation traces: " << validation_traces.size() << std::endl;
 }
 
-void Tuner::run(const uint32_t epochs, const size_t num_threads) {
+void Tuner::perturb(const int amount) {
+    if (!amount) {
+        return;
+    }
+    std::cout << "[Tune] Perturbing parameters by +-" << amount << std::endl;
+    for (TunerParam& param : params) {
+        param.value += (rand() % (2 * amount + 1)) - amount;
+    }
+}
+
+void Tuner::run(const uint32_t epochs, const size_t num_threads, const int perturb_amount) {
     std::cout << "[Tune] Initializing parameters" << std::endl;
     initParams();
+    perturb(perturb_amount);
     std::cout << "[Tune] Beginning tuning" << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
     const size_t num_batches = (traces.size() + BATCH_SIZE - 1) / BATCH_SIZE;
