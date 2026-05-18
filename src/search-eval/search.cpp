@@ -113,7 +113,7 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
     int best_value;
     MoveList moves;
     if (board.inCheck()) {
-        best_value = -SCORE_MAX + ply;
+        best_value = -SCORE_MAX + std::min(ply, (int)MAX_PLY - 1);
         getLegalMoves(board, moves);
     } else {
         static_eval = eval(board);
