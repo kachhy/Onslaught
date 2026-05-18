@@ -102,10 +102,13 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
     if (ply >= seldepth) {
         seldepth = ply;
     }
+    nodes++;
     if (ply >= MAX_PLY) {
         return eval(board);
     }
-    nodes++;
+    if (ply > 0 && isDraw(board, ply)) {
+        return 0;
+    }
     int static_eval;
     int best_value;
     MoveList moves;
