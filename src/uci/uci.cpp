@@ -151,11 +151,14 @@ static inline void go(Board& board) {
 
 int uciStartup() {
     std::string buffer;
-    std::cin >> buffer;
 
-    if (buffer != "uci") {
+    while (true) {
+        std::cin >> buffer;
+        if (buffer == "uci") {
+            break;
+        }
         std::cerr << "Expected 'uci' command, got '" << buffer << "'\n";
-        return -1;
+        buffer.clear();
     }
 
     initOptions();
