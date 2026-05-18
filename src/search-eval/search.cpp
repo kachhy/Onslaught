@@ -102,6 +102,9 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
     if (ply >= seldepth) {
         seldepth = ply;
     }
+    if (ply >= MAX_PLY) {
+        return eval(board);
+    }
     nodes++;
     int static_eval;
     int best_value;
@@ -191,6 +194,9 @@ int search(
 ) {
     if (ply >= seldepth) {
         seldepth = ply;
+    }
+    if (ply >= MAX_PLY) {
+        return eval(board);
     }
 
     pv_table[ply].cur_move = 0;
@@ -417,7 +423,6 @@ int search(
 
 Move search(Board& board, int max_depth, int& best_score, const GoParams& params) {
     Move best_move = NO_MOVE;
-    const int MAX_PLY = 128;
     PVLine pv_table[MAX_PLY + 1]; // pre-allocated, indexed by ply
     nodes = 0;
     best_score = 0;
