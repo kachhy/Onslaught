@@ -150,6 +150,7 @@ static inline void go(Board& board) {
 }
 
 int uciStartup() {
+    std::cout << std::unitbuf;
     std::string buffer;
 
     while (true) {
@@ -157,7 +158,6 @@ int uciStartup() {
         if (buffer == "uci") {
             break;
         }
-        std::cerr << "Expected 'uci' command, got '" << buffer << "'\n";
         buffer.clear();
     }
 
