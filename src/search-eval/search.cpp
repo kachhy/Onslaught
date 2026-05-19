@@ -148,11 +148,17 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         seldepth = ply;
     }
     nodes++;
+    if (ply >= MAX_PLY) {
+        return eval(board);
+    }
+    if (ply > 0 && isDraw(board, ply)) {
+        return 0;
+    }
     int static_eval;
     int best_value;
     MoveList moves;
     if (board.inCheck()) {
-        best_value = -SCORE_MAX + ply;
+        best_value = -SCORE_MAX + std::min(ply, (int)MAX_PLY - 1);
         getLegalMoves(board, moves);
     } else {
         static_eval = eval(board);
@@ -236,6 +242,9 @@ int search(
 ) {
     if (ply >= seldepth) {
         seldepth = ply;
+    }
+    if (ply >= MAX_PLY) {
+        return eval(board);
     }
 
     pv_table[ply].cur_move = 0;
@@ -462,7 +471,6 @@ int search(
 
 Move search(Board& board, int max_depth, int& best_score, const GoParams& params) {
     Move best_move = NO_MOVE;
-    const int MAX_PLY = 128;
     PVLine pv_table[MAX_PLY + 1]; // pre-allocated, indexed by ply
     nodes = 0;
     best_score = 0;
