@@ -1,4 +1,6 @@
 #include "attacks.h"
+#include "core/bitboard.h"
+#include "core/types.h"
 
 BitBoard bishop_masks[64];
 BitBoard rook_masks[64];
@@ -29,6 +31,18 @@ const int rook_relevant_bits[64] = {12, 11, 11, 11, 11, 11, 11, 12,
                                     11, 10, 10, 10, 10, 10, 10, 11,
                                     11, 10, 10, 10, 10, 10, 10, 11,
                                     12, 11, 11, 11, 11, 11, 11, 12};
+
+BitBoard getAttackers(const Board& board, Square sq, BitBoard occ) {
+    BitBoard diagonal_attacks = getBishopAttacks(sq, occ);
+    BitBoard orthogonal_attacks = getRookAttacks(sq, occ);
+    BitBoard queens = board.getPieceBB(WHITE_QUEEN) | board.getPieceBB(BLACK_QUEEN);
+    return (getPawnAttacks(sq, BLACK) & board.getPieceBB(WHITE_PAWN)) |
+            (getPawnAttacks(sq, WHITE) & board.getPieceBB(BLACK_PAWN)) |
+            (getKnightAttacks(sq) & (board.getPieceBB(WHITE_KNIGHT) | board.getPieceBB(BLACK_KNIGHT))) |
+            (diagonal_attacks & (board.getPieceBB(WHITE_BISHOP) | board.getPieceBB(BLACK_BISHOP) | queens)) |
+            (orthogonal_attacks & (board.getPieceBB(WHITE_ROOK) | board.getPieceBB(BLACK_ROOK) | queens)) |
+            (getKingAttacks(sq) & (board.getPieceBB(WHITE_KING) | board.getPieceBB(BLACK_KING)));
+}
 
 BitBoard generatePawnAttacks(Square sq, Side side) {
     BitBoard attacks = BitBoard(0);

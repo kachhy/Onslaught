@@ -1,9 +1,11 @@
 #include "search.h"
 #include "board/rules.h"
+#include "core/bitboard.h"
 #include "core/move.h"
 #include "core/types.h"
 #include "eval.h"
 #include "hash/transposition.h"
+#include "movegen/attacks.h"
 #include "movegen/movegen.h"
 #include "terms.h"
 #include "uci/uci.h"
@@ -97,6 +99,49 @@ void printInfo(Board board, int depth, int seldepth, int score, const char* boun
     }
     std::cout << std::endl;
 }
+// SEE
+int staticExchangeEval(const Board& board, Move move) {
+    Square from = From(move);
+    DefaultPiece attacker = makeDefaultPiece(board.pieceAt(from));
+    Square to = To(move);
+    Piece victim = board.pieceAt(to);
+    int gain[32];
+    gain[0] = SEE_VALUES[makeDefaultPiece(victim)];
+    BitBoard occ = board.getOcc(BOTH);
+    occ ^= (BitBoard(1) << from);
+    Side stm = board.getXSTM(); // start with other side attacks (fantastic variable names)
+    Side xstm = board.getSTM();
+    BitBoard stm_occ[2] = { board.getOcc(WHITE), board.getOcc(BLACK) };
+    int depth = 0;
+    while (true) {
+        BitBoard attackers = getAttackers(board, to, occ);
+        BitBoard stm_attackers = attackers & stm_occ[stm];
+        if (!stm_attackers) {
+            break;
+        }
+        Square lva_square = NO_SQUARE;
+        DefaultPiece lva_type = KING;
+        for (int i = PAWN; i <= KING; i++) {
+            BitBoard cur_piece_attackers = board.getPieceBB(makePiece(static_cast<DefaultPiece>(i), stm)) & stm_attackers;
+            if (cur_piece_attackers) {
+                lva_square = static_cast<Square>(getLSB(cur_piece_attackers));
+                lva_type = static_cast<DefaultPiece>(i);
+                break;
+            }
+        }
+        depth++;
+        gain[depth] = SEE_VALUES[attacker] - gain[depth - 1];
+        attacker = lva_type;
+        occ ^= BitBoard(1) << lva_square;
+        stm_occ[stm] ^= BitBoard(1) << lva_square;
+        std::swap(stm, xstm);
+    }
+
+    for (; depth > 0; depth--) {
+        gain[depth - 1] = std::max(-gain[depth], gain[depth - 1]);
+    }
+    return gain[0];
+}
 
 int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
     if (ply >= seldepth) {
@@ -143,6 +188,9 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         std::swap(scores[i], scores[best_move_index]);
 
         Move noisy_move = moves[i];
+        if (!board.inCheck() && staticExchangeEval(board, noisy_move) < 0) {
+            continue;
+        }
         board.makeMove(noisy_move);
         int score = -quiesce(board, -beta, -alpha, ply + 1, qply + 1);
         board.undoMove(noisy_move);
@@ -166,10 +214,7 @@ static int scoreMove(Board& board, Move move, Move tt_move, int ply) {
     }
 
     if (Capture(move) || IsEP(move)) {
-        DefaultPiece attacker = makeDefaultPiece(MovePiece(move));
-        Piece victim_piece = IsEP(move) ? makePiece(PAWN, board.getXSTM()) : board.pieceAt(To(move));
-        DefaultPiece victim = makeDefaultPiece(victim_piece);
-        return 130000 + MVV_LVA[victim][attacker];
+        return 130000 + staticExchangeEval(board, move);
     }
 
     if (Prom(move)) {
