@@ -220,7 +220,10 @@ static int scoreMove(Board& board, Move move, Move tt_move, int ply) {
     }
 
     if (Capture(move) || IsEP(move)) {
-        return 130000 + staticExchangeEval(board, move);
+        DefaultPiece attacker = makeDefaultPiece(MovePiece(move));
+        Piece victim_piece = IsEP(move) ? makePiece(PAWN, board.getXSTM()) : board.pieceAt(To(move));
+        DefaultPiece victim = makeDefaultPiece(victim_piece);
+        return 130000 + MVV_LVA[victim][attacker];
     }
 
     if (Prom(move)) {
