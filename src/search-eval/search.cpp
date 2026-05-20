@@ -194,7 +194,7 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         std::swap(scores[i], scores[best_move_index]);
 
         Move noisy_move = moves[i];
-        if (!board.inCheck() && staticExchangeEval(board, noisy_move) < 0) {
+        if (!board.inCheck() && staticExchangeEval(board, noisy_move) < -100) {
             continue;
         }
         board.makeMove(noisy_move);
