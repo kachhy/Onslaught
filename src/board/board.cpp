@@ -2,6 +2,7 @@
 #include "core/types.h"
 #include "hash/zobrist.h"
 #include "movegen/attacks.h"
+#include <cassert>
 #include <iostream>
 #include <sstream>
 
@@ -277,8 +278,8 @@ void Board::makeMove(Move move) {
     Piece captured = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
 
     history[history_ply++] = BoardHistory(
-        castling, ep_square, fmr, captured, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash,
-        material_pst_score, eval_info
+        castling, ep_square, fmr, captured, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash, material_pst_score,
+        eval_info
     );
 
     fmr++;
@@ -443,6 +444,9 @@ void Board::makeMove(Move move) {
     std::swap(stm, xstm);
 
     setSpecials();
+    
+    assert(piece_bb[WHITE_KING] != 0ULL);
+    assert(piece_bb[BLACK_KING] != 0ULL);
 }
 
 void Board::undoMove(Move move) {
@@ -465,8 +469,8 @@ void Board::undoMove(Move move) {
     material_pst_score = hist_data.material_pst_score;
     memcpy(&eval_info, &hist_data.eval_info, sizeof(EvalInfo));
 
-    move_number -= (stm == BLACK);
     std::swap(stm, xstm);
+    move_number -= (stm == BLACK);
 
     if (Prom(move)) {
         Piece prom_piece = makePiece(promPiece(move), stm);
@@ -552,8 +556,8 @@ void Board::undoMove(Move move) {
 
 void Board::makeNullMove() {
     history[history_ply++] = BoardHistory(
-        castling, ep_square, fmr, NO_PIECE, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash,
-        material_pst_score, eval_info
+        castling, ep_square, fmr, NO_PIECE, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash, material_pst_score,
+        eval_info
     );
     if (ep_square != NO_SQUARE) {
         zobrist_hash ^= ep_keys[ep_square];

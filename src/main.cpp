@@ -2,8 +2,8 @@
 #include "movegen/attacks.h"
 #include "search-eval/tuning.h"
 #include "testing/perft.h"
+#include "testing/ttbench.h"
 #include "uci/uci.h"
-
 
 void initAttacks() {
     populateBetweenSquares();
@@ -29,9 +29,12 @@ int main(int argc, char** argv) {
     // Populate eval data
     initEval();
 
+    // Run TTBench
+    // benchTT();
+
 #ifdef TUNING
     if (argc < 5) {
-        std::cerr << "Usage: " << argv[0] << " <Tuning dataset> <Position limit> <Epochs> <Output file> [Threads = 1]" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <Tuning dataset> <Position limit> <Epochs> <Output file> [Perturb = 0] [Threads = 1]" << std::endl;
         return 1;
     }
 
@@ -39,8 +42,10 @@ int main(int argc, char** argv) {
     const uint32_t dataset_size = atol(argv[2]);
     Tuner tuner(dataset_size);
     tuner.loadDataset(argv[1], dataset_size);
-    tuner.run(atol(argv[3]), argc < 6 ? 1 : atoll(argv[5]));
+    const int perturb_amount = argc > 5 ? atoi(argv[5]) : 0;
+    tuner.run(atol(argv[3]), argc < 7 ? 1 : atoll(argv[6]), perturb_amount);
     tuner.dumpParams(tuned_params_out);
+    return 0;
 #elif PERFT
     perftTests();
     return 0;

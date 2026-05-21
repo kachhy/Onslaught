@@ -13,11 +13,11 @@ enum MoveFlag {
 
 constexpr inline BitBoard getDoublePushRank(Side side) { return side == WHITE ? RANK_4 : RANK_5; }
 
-MoveList getQuietMoves(const Board& board);
-MoveList getNoisyMoves(const Board& board);
+void getQuietMoves(const Board& board, MoveList& moves);
+void getNoisyMoves(const Board& board, MoveList& moves);
 // TODO implement when necessary:
 MoveList getLegalCheckingMoves(const Board &board);
-MoveList getLegalMoves(const Board& board);
+void getLegalMoves(const Board& board, MoveList& moves);
 
 void addLegalPawnMoves(MoveList& moves, const Board& board, MoveFlag move_flag);
 void addEPLegalMoves(MoveList& moves, const Board& board);

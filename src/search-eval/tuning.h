@@ -24,8 +24,8 @@ constexpr uint16_t BISHOP_PAIR_OFFSET = KNIGHT_PAWN_ADJ_OFFSET + 18;
 constexpr uint16_t BISHOP_CTRL_PENALTY_OFFSET = BISHOP_PAIR_OFFSET + 2;
 constexpr uint16_t BAD_BISHOP_OFFSET = BISHOP_CTRL_PENALTY_OFFSET + 2;
 constexpr uint16_t BISHOP_BLOCKING_PAWN_OFFSET = BAD_BISHOP_OFFSET + 2;
-constexpr uint16_t TRAPPED_BISHOP_OFFSET = BISHOP_BLOCKING_PAWN_OFFSET + 2;
-constexpr uint16_t ROOK_SEVENTH_OFFSET = TRAPPED_BISHOP_OFFSET + 2;
+constexpr uint16_t BISHOP_BEHIND_PAWN_OFFSET = BISHOP_BLOCKING_PAWN_OFFSET + 2;
+constexpr uint16_t ROOK_SEVENTH_OFFSET = BISHOP_BEHIND_PAWN_OFFSET + 2;
 constexpr uint16_t ROOK_OPEN_FILE_OFFSET = ROOK_SEVENTH_OFFSET + 2;
 constexpr uint16_t ROOK_SEMI_OPEN_FILE_OFFSET = ROOK_OPEN_FILE_OFFSET + 2;
 constexpr uint16_t ROOK_PAWN_ADJ_OFFSET = ROOK_SEMI_OPEN_FILE_OFFSET + 2;
@@ -44,12 +44,6 @@ constexpr uint16_t PST_OFFSET = KING_UNCASTLED_OFFSET + 2;
 // Minibatching parameters
 constexpr static uint16_t BATCH_SIZE = 16384;
 
-struct Position {
-    Board board;
-    Side result;
-    Position(const std::string& fen, const Side result) : board(fen), result(result) { }
-};
-
 struct TunerParam {
     double value = 0.0;
     double grad = 0.0;
@@ -65,9 +59,10 @@ public:
     Tuner(const size_t dataset_size);
 
     void loadDataset(const std::string& filename, const uint32_t max);
-    void run(const uint32_t epochs, const size_t num_threads);
+    void run(const uint32_t epochs, const size_t num_threads, const int perturb_amount = 0);
     void dumpParams(std::ofstream& out) const;
 private:
+    void perturb(const int amount);
     double reconstructScore(const Trace& tr) const;
     void updateGradients(const Trace& tr, double base, double phase, std::vector<double>& local_grads);
     double sigmoid(double score, double k) const { return 1.0 / (1.0 + std::exp(-k * score / 400.0)); }
@@ -78,7 +73,6 @@ private:
     void updateAdam(const uint32_t epoch);
     void initParams();
 
-    std::vector<Position> dataset;
     std::vector<Trace> traces;
     std::vector<Trace> validation_traces;
     std::vector<TunerParam> params;
