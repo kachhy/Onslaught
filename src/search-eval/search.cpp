@@ -50,9 +50,6 @@ int scoreFromTT(int score, int ply) {
 
 // Important: we copy board here
 void printInfo(Board board, int depth, int seldepth, int score, const char* bound, long long nodes, int nps, PVLine* pv) {
-#ifdef ATAGEN
-    return;
-#endif
     std::cout << "info depth " << depth << " seldepth " << seldepth;
     if (std::abs(score) < SCORE_MAX - MAX_GAME_MOVES) {
         std::cout << " score cp " << score;

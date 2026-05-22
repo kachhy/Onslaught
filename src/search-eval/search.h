@@ -6,7 +6,7 @@
 #include <cstddef>
 
 constexpr uint8_t RFP_MARGIN = 75;
-constexpr uint8_t ASPIRATION_MARGIN = 12;
+constexpr uint8_t ASPIRATION_MARGIN = 22;
 constexpr uint16_t FUTILITY_MARGIN = 150;
 constexpr uint16_t RAZOR_MARGIN = 350;
 constexpr float LMR_VALUE = 1;
