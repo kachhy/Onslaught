@@ -195,9 +195,10 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         std::swap(scores[i], scores[best_move_index]);
 
         Move noisy_move = moves[i];
-        if (!board.inCheck() && staticExchangeEval(board, noisy_move) < -100) {
-            continue;
-        }
+        // SEE
+        // if (!board.inCheck() && staticExchangeEval(board, noisy_move) < -100) {
+        //     continue;
+        // }
         board.makeMove(noisy_move);
         int score = -quiesce(board, -beta, -alpha, ply + 1, qply + 1);
         board.undoMove(noisy_move);
@@ -394,6 +395,7 @@ int search(
         if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
             continue;
         }
+        if (!in_check && moves_searched > 0 && Capture(move) && depth <= SEE_DEPTH_MAX && staticExchangeEval(board, move) < -20 * depth * depth)
         // if (is_quiet_move) {
         //     quiets_tried[quiets_tried_count++] = move;
         // }

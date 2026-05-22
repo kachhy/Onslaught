@@ -14,6 +14,7 @@ constexpr float LMR_SCALAR = 2;
 constexpr int MAX_HISTORY = 16384;
 constexpr uint8_t LMP_BASE = 3;
 constexpr int SEE_VALUES[6] = { 100, 300, 300, 500, 900, 20000 }; // PBNRQK
+constexpr int SEE_DEPTH_MAX = 6;
 
 extern uint64_t nodes;
 
