@@ -112,6 +112,7 @@ int staticExchangeEval(const Board& board, Move move) {
     Side stm = board.getXSTM(); // start with other side attacks (fantastic variable names)
     Side xstm = board.getSTM();
     BitBoard stm_occ[2] = { board.getOcc(WHITE), board.getOcc(BLACK) };
+    stm_occ[xstm] ^= from;
     int depth = 0;
     while (true) {
         BitBoard attackers = getAttackers(board, to, occ);
