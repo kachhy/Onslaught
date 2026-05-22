@@ -490,16 +490,26 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
             hard_cap = 0;
             soft_cap = 0;
         } else {
-            hard_cap = params.wtime / 20 + params.winc / 2;
-            soft_cap = params.wtime / 30 + params.winc / 3;
+            if (params.movestogo > 0) {
+                hard_cap = params.wtime / params.movestogo + params.winc;
+                soft_cap = params.wtime / params.movestogo + params.winc;
+            } else {
+                hard_cap = params.wtime / 20 + params.winc / 2;
+                soft_cap = params.wtime / 30 + params.winc / 3;
+            }
         }
     } else {
         if (params.btime == -1) {
             hard_cap = 0;
             soft_cap = 0;
         } else {
-            hard_cap = params.btime / 20 + params.binc / 2;
-            soft_cap = params.btime / 30 + params.binc / 3;
+            if (params.movestogo > 0) {
+                hard_cap = params.btime / params.movestogo + params.binc;
+                soft_cap = params.btime / params.movestogo + params.binc;
+            } else {
+                hard_cap = params.btime / 20 + params.binc / 2;
+                soft_cap = params.btime / 30 + params.binc / 3;
+            }
         }
     }
 
