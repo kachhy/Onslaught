@@ -395,7 +395,9 @@ int search(
         if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
             continue;
         }
-        if (!in_check && moves_searched > 0 && Capture(move) && depth <= SEE_DEPTH_MAX && staticExchangeEval(board, move) < -20 * depth * depth)
+        if (!in_check && moves_searched > 0 && Capture(move) && depth <= SEE_DEPTH_MAX && staticExchangeEval(board, move) < -20 * depth * depth) {
+            continue;
+        }
         // if (is_quiet_move) {
         //     quiets_tried[quiets_tried_count++] = move;
         // }
