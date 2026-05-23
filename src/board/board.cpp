@@ -444,7 +444,7 @@ void Board::makeMove(Move move) {
     std::swap(stm, xstm);
 
     setSpecials();
-    
+
     assert(piece_bb[WHITE_KING] != 0ULL);
     assert(piece_bb[BLACK_KING] != 0ULL);
 }

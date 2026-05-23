@@ -16,6 +16,7 @@ bool isMaterialDraw(const Board& board) {
     if (total_minorpc <= 1) { // KvK or KvK + minor piece
         return true;
     }
+
     if (total_minorpc == 2) {
         if (white_knights == 1 && black_knights == 1) { // KNvKN
             return true;
@@ -41,8 +42,10 @@ bool isFiftyMoveRuleDraw(const Board& board) {
             getLegalMoves(board, moves);
             return !moves.empty();
         }
+
         return true;
     }
+
     return false;
 }
 
@@ -50,6 +53,7 @@ bool isRepetitionDraw(const Board& board, uint32_t ply) {
     uint16_t distance = board.getFMR();
     uint16_t r = 0;
     const Board::BoardHistory* board_history = board.getBoardHistory();
+
     for (int32_t i = board.getHistPly() - 4; i >= 0 && i >= static_cast<int64_t>(board.getHistPly()) - distance; i -= 2) {
         if (board_history[i].zobrist_hash == board.hash()) {
             if (i > static_cast<int64_t>(board.getHistPly()) - ply) {

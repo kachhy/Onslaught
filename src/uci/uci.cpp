@@ -78,6 +78,7 @@ static inline void position(Board& board) {
             }
             fen += token;
         }
+
         board.loadFEN(fen);
     }
 
@@ -171,7 +172,6 @@ int uciStartup() {
     // original setup loop
     while (1) {
         std::cin >> buffer;
-
         if (buffer == "setoption") {
             changeOptions();
         } else if (buffer == "isready") {
@@ -179,6 +179,7 @@ int uciStartup() {
         } else if (buffer == "quit") {
             return 0; // quit the engine
         }
+
         if (buffer == "debug") {
             std::cin >> buffer;
             if (buffer == "on") {
@@ -217,6 +218,7 @@ void uci() {
         } else if (buffer == "quit") {
             return; // quit the engine
         }
+
         if (buffer == "debug") {
             std::cin >> buffer;
             if (buffer == "on") {
@@ -250,13 +252,16 @@ void checkStdin(std::chrono::high_resolution_clock::time_point start, long long 
         searching = false;
         return;
     }
+    
     if (max_nodes != -1 && current_nodes >= max_nodes) {
         searching = false;
         return;
     }
+
     if (!stdinHasData()) {
         return;
     }
+
     std::string line;
     if (std::getline(std::cin, line)) {
         if (line == "stop") {

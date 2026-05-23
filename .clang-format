@@ -38,3 +38,6 @@ AlignAfterOpenBracket: BlockIndent
 CompactNamespaces: true
 AlignConsecutiveMacros: true
 InsertBraces: true
+MaxEmptyLinesToKeep: 1
+KeepEmptyLinesAtTheStartOfBlocks: false
+KeepEmptyLinesAtEOF: false

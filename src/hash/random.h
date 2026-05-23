@@ -5,7 +5,6 @@
 
 constexpr uint64_t DEFAULT_U64_SEED = 1804289383ULL;
 
-// TODO: check if a xoshiro256** generator is faster and better for our use case
 class RNGU64 {
 private:
     std::mt19937_64 engine;

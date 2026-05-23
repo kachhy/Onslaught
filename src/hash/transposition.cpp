@@ -18,6 +18,7 @@ static size_t computeCapacity(size_t megabytes) {
     while ((pow2 << 1) <= entries) {
         pow2 <<= 1;
     }
+
     return pow2;
 }
 
@@ -48,17 +49,20 @@ void TTable::insert(const Board& board, Move best_move, int score, uint8_t bound
                 return;
             }
         }
+
         bucket.entries[bucket.count] = { board.hash(), best_move, score, bound, depth, table_age };
         bucket.count++;
         table_size++;
         return;
     }
+
     if (bucket.entries[0].hash == board.hash()) {
         if (depth >= bucket.entries[0].depth || bound == EXACTBOUND) {
             bucket.entries[0] = { board.hash(), best_move, score, bound, depth, table_age };
         }
         return;
     }
+
     uint8_t kickout_index = 0;
     int64_t best_kickout_score = bucket.entries[0].depth - (table_age - bucket.entries[0].last_seen);
     for (uint8_t i = 1; i < bucket.count; i++) {
@@ -68,21 +72,25 @@ void TTable::insert(const Board& board, Move best_move, int score, uint8_t bound
             }
             return;
         }
+
         const int64_t this_kickout_score = bucket.entries[i].depth - (table_age - bucket.entries[i].last_seen);
         if (this_kickout_score < best_kickout_score) {
             kickout_index = i;
             best_kickout_score = this_kickout_score;
         }
     }
+
     bucket.entries[kickout_index] = { board.hash(), best_move, score, bound, depth, table_age };
 }
 
 bool TTable::fetch(const Board& board, Entry& entry) {
     const uint64_t hash = board.hash() & index_mask;
     EntryTriple& bucket = table[hash];
+
     if (!bucket.count) {
         return false;
     }
+
     bool found = false;
     for (uint8_t i = 0; i < bucket.count; i++) {
         if (bucket.entries[i].hash == board.hash()) {
@@ -95,6 +103,7 @@ bool TTable::fetch(const Board& board, Entry& entry) {
             break;
         }
     }
+
     return found;
 }
 

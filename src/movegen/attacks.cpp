@@ -12,23 +12,11 @@ BitBoard king_attacks[64];
 BitBoard between_squares[64][64];
 BitBoard line_squares[64][64];
 
-const int bishop_relevant_bits[64] = {6, 5, 5, 5, 5, 5, 5, 6,
-                                      5, 5, 5, 5, 5, 5, 5, 5,
-                                      5, 5, 7, 7, 7, 7, 5, 5,
-                                      5, 5, 7, 9, 9, 7, 5, 5,
-                                      5, 5, 7, 9, 9, 7, 5, 5,
-                                      5, 5, 7, 7, 7, 7, 5, 5,
-                                      5, 5, 5, 5, 5, 5, 5, 5,
-                                      6, 5, 5, 5, 5, 5, 5, 6};
+const int bishop_relevant_bits[64] = { 6, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 7, 7, 7, 7, 5, 5, 5, 5, 7, 9, 9, 7, 5, 5,
+                                       5, 5, 7, 9, 9, 7, 5, 5, 5, 5, 7, 7, 7, 7, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 6 };
 
-const int rook_relevant_bits[64] = {12, 11, 11, 11, 11, 11, 11, 12,
-                                    11, 10, 10, 10, 10, 10, 10, 11,
-                                    11, 10, 10, 10, 10, 10, 10, 11,
-                                    11, 10, 10, 10, 10, 10, 10, 11,
-                                    11, 10, 10, 10, 10, 10, 10, 11,
-                                    11, 10, 10, 10, 10, 10, 10, 11,
-                                    11, 10, 10, 10, 10, 10, 10, 11,
-                                    12, 11, 11, 11, 11, 11, 11, 12};
+const int rook_relevant_bits[64] = { 12, 11, 11, 11, 11, 11, 11, 12, 11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11,
+                                     11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11, 12, 11, 11, 11, 11, 11, 11, 12 };
 
 BitBoard generatePawnAttacks(Square sq, Side side) {
     BitBoard attacks = BitBoard(0);
@@ -38,8 +26,7 @@ BitBoard generatePawnAttacks(Square sq, Side side) {
     if (side == WHITE) {
         attacks |= shiftNorthEast(initial);
         attacks |= shiftNorthWest(initial);
-    }
-    else {
+    } else {
         attacks |= shiftSouthEast(initial);
         attacks |= shiftSouthWest(initial);
     }
@@ -98,13 +85,9 @@ BitBoard generateKnightAttacks(Square sq) {
     return attacks;
 }
 
-BitBoard getPawnAttacks(Square sq, Side side) {
-    return pawn_attacks[side][sq];
-}
+BitBoard getPawnAttacks(Square sq, Side side) { return pawn_attacks[side][sq]; }
 
-BitBoard getKnightAttacks(Square sq) {
-    return knight_attacks[sq];
-}
+BitBoard getKnightAttacks(Square sq) { return knight_attacks[sq]; }
 
 BitBoard getBishopAttacks(Square sq, BitBoard occ) {
     occ &= bishop_masks[sq];
@@ -120,13 +103,9 @@ BitBoard getRookAttacks(Square sq, BitBoard occ) {
     return rook_attacks[sq][occ];
 }
 
-BitBoard getQueenAttacks(Square sq, BitBoard occ) {
-    return getBishopAttacks(sq, occ) | getRookAttacks(sq, occ);
-}
+BitBoard getQueenAttacks(Square sq, BitBoard occ) { return getBishopAttacks(sq, occ) | getRookAttacks(sq, occ); }
 
-BitBoard getKingAttacks(Square sq) {
-    return king_attacks[sq];
-}
+BitBoard getKingAttacks(Square sq) { return king_attacks[sq]; }
 
 BitBoard getRookMask(Square sq) {
     BitBoard attacks = BitBoard(0);
@@ -294,12 +273,12 @@ void populateKnightAttacks() {
 
 void populateBishopAttacks() {
     for (uint8_t sq = 0; sq < 64; sq++) {
-        BitBoard mask  = bishop_masks[sq];
+        BitBoard mask = bishop_masks[sq];
         uint8_t r_bits = bishop_relevant_bits[sq];
-        uint16_t n     = (1 << r_bits);
+        uint16_t n = (1 << r_bits);
 
         for (uint16_t i = 0; i < n; i++) {
-            BitBoard occ   = setPieceLayoutOcc(i, r_bits, mask);
+            BitBoard occ = setPieceLayoutOcc(i, r_bits, mask);
             uint16_t index = (occ * bishop_magics[sq]) >> (64 - r_bits);
             bishop_attacks[sq][index] = computeBishopAttacks(static_cast<Square>(sq), occ);
         }
@@ -308,12 +287,12 @@ void populateBishopAttacks() {
 
 void populateRookAttacks() {
     for (uint8_t sq = 0; sq < 64; sq++) {
-        BitBoard mask  = rook_masks[sq];
+        BitBoard mask = rook_masks[sq];
         uint8_t r_bits = rook_relevant_bits[sq];
-        uint16_t n     = (1 << r_bits);
+        uint16_t n = (1 << r_bits);
 
         for (uint16_t i = 0; i < n; i++) {
-            BitBoard occ   = setPieceLayoutOcc(i, r_bits, mask);
+            BitBoard occ = setPieceLayoutOcc(i, r_bits, mask);
             uint16_t index = (occ * rook_magics[sq]) >> (64 - r_bits);
             rook_attacks[sq][index] = computeRookAttacks(static_cast<Square>(sq), occ);
         }
@@ -421,26 +400,18 @@ void populateLineSquares() {
 
 BitBoard getPieceAttacks(Piece piece, Square sq, BitBoard occ) {
     switch (piece) {
-        case BLACK_KING:
-        case WHITE_KING:
-            return getKingAttacks(sq);
-        case BLACK_QUEEN:
-        case WHITE_QUEEN:
-            return getQueenAttacks(sq, occ);
-        case BLACK_ROOK:
-        case WHITE_ROOK:
-            return getRookAttacks(sq, occ);
-        case BLACK_BISHOP:
-        case WHITE_BISHOP:
-            return getBishopAttacks(sq, occ);
-        case BLACK_KNIGHT:
-        case WHITE_KNIGHT:
-            return getKnightAttacks(sq);
-        case BLACK_PAWN:
-            return getPawnAttacks(sq, BLACK);
-        case WHITE_PAWN:
-            return getPawnAttacks(sq, WHITE);
-        default:
-            return BitBoard(0);
+    case BLACK_KING:
+    case WHITE_KING: return getKingAttacks(sq);
+    case BLACK_QUEEN:
+    case WHITE_QUEEN: return getQueenAttacks(sq, occ);
+    case BLACK_ROOK:
+    case WHITE_ROOK: return getRookAttacks(sq, occ);
+    case BLACK_BISHOP:
+    case WHITE_BISHOP: return getBishopAttacks(sq, occ);
+    case BLACK_KNIGHT:
+    case WHITE_KNIGHT: return getKnightAttacks(sq);
+    case BLACK_PAWN: return getPawnAttacks(sq, BLACK);
+    case WHITE_PAWN: return getPawnAttacks(sq, WHITE);
+    default: return BitBoard(0);
     }
 }

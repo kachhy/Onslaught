@@ -17,7 +17,7 @@ struct alignas(64) EntryTriple {
 };
 
 constexpr size_t ENTRY_TRIPLE_SIZE = sizeof(EntryTriple);
-constexpr size_t DEFAULT_TABLE_MB  = 16;
+constexpr size_t DEFAULT_TABLE_MB = 16;
 
 class TTable {
 private:
@@ -25,7 +25,7 @@ private:
     size_t table_capacity; // number of buckets, always a power of 2
     size_t index_mask;     // table_capacity - 1
     uint16_t table_age;
-    size_t table_size;     // populated entry count
+    size_t table_size; // populated entry count
 public:
     explicit TTable(size_t megabytes = DEFAULT_TABLE_MB);
     void resize(size_t megabytes);
@@ -37,5 +37,7 @@ public:
     inline size_t capacity() const { return table_capacity; }
     inline void incAge() { table_age++; }
 };
+
 extern TTable tt;
+
 #endif // TRANSPOSITION_H

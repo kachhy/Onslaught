@@ -3,13 +3,12 @@
 
 #include "board/board.h"
 #include "core/move.h"
-#include <iostream>
-#include <string>
 #include <chrono>
 #include <cstddef>
-#include <unordered_map>
 #include <functional>
-
+#include <iostream>
+#include <string>
+#include <unordered_map>
 
 int uciStartup();
 void uci();
