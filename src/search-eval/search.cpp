@@ -112,7 +112,7 @@ int staticExchangeEval(const Board& board, Move move) {
     Side stm = board.getXSTM(); // start with other side attacks (fantastic variable names)
     Side xstm = board.getSTM();
     BitBoard stm_occ[2] = { board.getOcc(WHITE), board.getOcc(BLACK) };
-    stm_occ[xstm] ^= from;
+    stm_occ[xstm] ^= BitBoard(1) << from;
     int depth = 0;
     while (true) {
         BitBoard attackers = getAttackers(board, to, occ);
@@ -196,9 +196,9 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
 
         Move noisy_move = moves[i];
         // SEE
-        // if (!board.inCheck() && staticExchangeEval(board, noisy_move) < -100) {
-        //     continue;
-        // }
+        if (!board.inCheck() && staticExchangeEval(board, noisy_move) < 0) {
+            continue;
+        }
         board.makeMove(noisy_move);
         int score = -quiesce(board, -beta, -alpha, ply + 1, qply + 1);
         board.undoMove(noisy_move);
