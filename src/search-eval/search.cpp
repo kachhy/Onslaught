@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cmath>
 #include <iostream>
+#include <memory>
 
 uint16_t seldepth;
 uint64_t nodes;
@@ -48,8 +49,7 @@ int scoreFromTT(int score, int ply) {
     return score;
 }
 
-// Important: we copy board here
-void printInfo(Board board, int depth, int seldepth, int score, const char* bound, long long nodes, int nps, PVLine* pv) {
+void printInfo(const Board& src, int depth, int seldepth, int score, const char* bound, long long nodes, int nps, PVLine* pv) {
     std::cout << "info depth " << depth << " seldepth " << seldepth;
     if (std::abs(score) < SCORE_MAX - MAX_GAME_MOVES) {
         std::cout << " score cp " << score;
@@ -64,8 +64,9 @@ void printInfo(Board board, int depth, int seldepth, int score, const char* boun
         for (uint16_t i = 0; i < pv[0].cur_move; i++) {
             std::cout << moveToStr(pv[0].moves[i]) << ' ';
         }
-    }
-    else { // Reconstruct from TT
+    } else { // Reconstruct from TT
+        auto bp = std::make_unique<Board>(src);
+        Board& board = *bp;
         for (int i = 0; i < MAX_PLY; i++) {
             Entry tt_entry;
             bool tt_hit = tt.fetch(board, tt_entry);

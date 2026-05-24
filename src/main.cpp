@@ -1,5 +1,6 @@
 #include "hash/zobrist.h"
 #include "movegen/attacks.h"
+#include "nnue/nnue.h"
 #include "search-eval/tuning.h"
 #include "testing/perft.h"
 #include "testing/ttbench.h"
@@ -53,6 +54,11 @@ int main(int argc, char** argv) {
     if (argc > 1 && std::string(argv[1]) == "bench") {
         bench();
     } else {
+        if (!loadNNUE("nn_Q16_gen1.bin")) {
+            std::fprintf(stderr, "loadNNUE failed for nn_Q16_gen1.bin\n");
+            return 1;
+        }
+        
         uci();
     }
     return 0;
