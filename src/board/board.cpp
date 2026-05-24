@@ -78,6 +78,90 @@ std::string Board::getCastlingString() const {
     return out;
 }
 
+std::string Board::toFEN() const {
+    std::string out = "";
+
+    // Piece placement (ranks 8 -> 1)
+    for (int rank = 0; rank < 8; ++rank) {
+        int empty = 0;
+        for (int file = 0; file < 8; ++file) {
+            uint8_t sq = static_cast<uint8_t>(rank * 8 + file);
+            Piece p = piece_board[sq];
+
+            if (p == NO_PIECE) {
+                ++empty;
+                continue;
+            }
+            if (empty > 0) {
+                out += static_cast<char>('0' + empty);
+                empty = 0;
+            }
+
+            switch (p) {
+            case WHITE_PAWN: out += 'P'; break;
+            case WHITE_KNIGHT: out += 'N'; break;
+            case WHITE_BISHOP: out += 'B'; break;
+            case WHITE_ROOK: out += 'R'; break;
+            case WHITE_QUEEN: out += 'Q'; break;
+            case WHITE_KING: out += 'K'; break;
+            case BLACK_PAWN: out += 'p'; break;
+            case BLACK_KNIGHT: out += 'n'; break;
+            case BLACK_BISHOP: out += 'b'; break;
+            case BLACK_ROOK: out += 'r'; break;
+            case BLACK_QUEEN: out += 'q'; break;
+            case BLACK_KING: out += 'k'; break;
+            default: break;
+            }
+        }
+
+        if (empty > 0) {
+            out += static_cast<char>('0' + empty);
+        }
+        if (rank < 7) {
+            out += '/';
+        }
+    }
+
+    // Active color
+    out += ' ';
+    out += (stm == WHITE ? 'w' : 'b');
+
+    // Castling rights
+    out += ' ';
+    if (castling == 0) {
+        out += '-';
+    } else {
+        if (castling & WHITE_KS) {
+            out += 'K';
+        }
+        if (castling & WHITE_QS) {
+            out += 'Q';
+        }
+        if (castling & BLACK_KS) {
+            out += 'k';
+        }
+        if (castling & BLACK_QS) {
+            out += 'q';
+        }
+    }
+
+    // En-passant
+    out += ' ';
+    if (ep_square == NO_SQUARE) {
+        out += '-';
+    } else {
+        out += board_coords[ep_square];
+    }
+
+    // Halfmove and fullmove counters
+    out += ' ';
+    out += std::to_string(static_cast<int>(fmr));
+    out += ' ';
+    out += std::to_string(move_number);
+
+    return out;
+}
+
 void Board::printBoard() const {
     for (int8_t i = 0; i < 64; i++) {
         if (i % 8 == 0) {
