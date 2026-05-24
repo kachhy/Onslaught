@@ -1,6 +1,7 @@
 #include "eval.h"
 #include "board/rules.h"
 #include "movegen/attacks.h"
+#include "nnue/nnue.h"
 #include "terms.h"
 
 Trace trace;
@@ -641,30 +642,32 @@ int eval(const Board& board) {
         return 0;
     }
 
-    EvalInfo info = board.getEvalInfo();
-    PieceCounts pc = getPieceCounts(board);
-#ifdef TUNING
-    Score score = applyMaterial(pc);
-    score += applyAllPST(board);
-#else
-    Score score = board.getMaterialPST();
-#endif
-    score += evaluateKnights(board, info);
-    score += evaluateBishops(pc, board, info); // - 0.26 MNPS
-    score += evaluateRooks(board, info);       // - .198 MNPS
-    score += evaluateQueens(board, info);      // - 0.284 MNPS
-    score += evaluatePawnAdjustments(pc);      // inacc
-    score += evaluatePawns(board, info);       // - 0.322 MNPS
-    score += applyPawnProtection(board, info);
-    score += kingSafety(pc, board, info); // inacc
+    return evaluate(board.getAccumulator(), board.getSTM());
 
-    // Tempo bonus
-    score += (board.getSTM() == WHITE) ? TEMPO : -TEMPO;
-    TRACE_INC(tempo, board.getSTM());
+    //     EvalInfo info = board.getEvalInfo();
+    //     PieceCounts pc = getPieceCounts(board);
+    // #ifdef TUNING
+    //     Score score = applyMaterial(pc);
+    //     score += applyAllPST(board);
+    // #else
+    //     Score score = board.getMaterialPST();
+    // #endif
+    //     score += evaluateKnights(board, info);
+    //     score += evaluateBishops(pc, board, info); // - 0.26 MNPS
+    //     score += evaluateRooks(board, info);       // - .198 MNPS
+    //     score += evaluateQueens(board, info);      // - 0.284 MNPS
+    //     score += evaluatePawnAdjustments(pc);      // inacc
+    //     score += evaluatePawns(board, info);       // - 0.322 MNPS
+    //     score += applyPawnProtection(board, info);
+    //     score += kingSafety(pc, board, info); // inacc
 
-    const int r_score = T(score, board.phase());
+    //     // Tempo bonus
+    //     score += (board.getSTM() == WHITE) ? TEMPO : -TEMPO;
+    //     TRACE_INC(tempo, board.getSTM());
 
-    return board.getSTM() == WHITE ? r_score : -r_score;
+    //     const int r_score = T(score, board.phase());
+
+    //     return board.getSTM() == WHITE ? r_score : -r_score;
 }
 
 void initEval() {

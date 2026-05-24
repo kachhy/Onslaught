@@ -255,6 +255,7 @@ bool Board::loadFEN(const std::string& fen) {
     setPhase();
     refreshMaterialPST();
     refreshZobrist();
+    accumulator.refresh(*this);
 
     return true;
 }
@@ -270,7 +271,6 @@ BitBoard Board::getDiscoveryAttacks(const Square sq, const Side side) const {
            (rooks & getPieceAttacks(static_cast<Piece>(ROOK), sq, occ[BOTH] & ~rook_attacks));
 }
 
-// TODO: zobrist hash apply consteval functions
 void Board::makeMove(Move move) {
     Square from = From(move);
     Square to = To(move);
@@ -279,8 +279,10 @@ void Board::makeMove(Move move) {
 
     history[history_ply++] = BoardHistory(
         castling, ep_square, fmr, captured, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash, material_pst_score,
-        eval_info
+        eval_info, accumulator
     );
+
+    accumulator.onMove(move, *this);
 
     fmr++;
 
@@ -468,6 +470,7 @@ void Board::undoMove(Move move) {
     pawn_hash = hist_data.pawn_hash;
     material_pst_score = hist_data.material_pst_score;
     memcpy(&eval_info, &hist_data.eval_info, sizeof(EvalInfo));
+    memcpy(&accumulator, &hist_data.accumulator, sizeof(Accumulator));
 
     std::swap(stm, xstm);
     move_number -= (stm == BLACK);
@@ -557,7 +560,7 @@ void Board::undoMove(Move move) {
 void Board::makeNullMove() {
     history[history_ply++] = BoardHistory(
         castling, ep_square, fmr, NO_PIECE, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash, material_pst_score,
-        eval_info
+        eval_info, accumulator
     );
     if (ep_square != NO_SQUARE) {
         zobrist_hash ^= ep_keys[ep_square];
@@ -583,6 +586,7 @@ void Board::undoNullMove() {
     pawn_hash = hist_data.pawn_hash;
     material_pst_score = hist_data.material_pst_score;
     memcpy(&eval_info, &hist_data.eval_info, sizeof(EvalInfo));
+    memcpy(&accumulator, &hist_data.accumulator, sizeof(Accumulator));
     std::swap(stm, xstm);
 }
 
