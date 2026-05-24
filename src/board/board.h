@@ -47,6 +47,7 @@ public:
     BitBoard getOcc(Side side) const;
     BitBoard getDiscoveryAttacks(const Square sq, const Side side) const;
     std::string getCastlingString() const;
+    std::string toFEN() const;
     void printBoard() const;
 
     CastlingRights getCastlingRights() const { return castling; }

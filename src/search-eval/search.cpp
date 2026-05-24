@@ -503,17 +503,23 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
 
             if (iter_score <= alpha) {
                 // fail low = true score is at most alpha (upper bound)
-                printInfo(board, depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table);
+                if (!params.silent) {
+                    printInfo(board, depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table);
+                }
                 alpha = std::max(-SCORE_MAX, iter_score - delta);
                 delta += delta * 1.25;
             } else if (iter_score >= beta) {
                 // fail high = true score is at least beta (lower bound)
-                printInfo(board, depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table);
+                if (!params.silent) {
+                    printInfo(board, depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table);
+                }
                 beta = std::min(SCORE_MAX, iter_score + delta);
                 delta += delta * 1.25;
             } else {
                 best_score = iter_score;
-                printInfo(board, depth, seldepth, best_score, nullptr, nodes, nps, pv_table);
+                if (!params.silent) {
+                    printInfo(board, depth, seldepth, best_score, nullptr, nodes, nps, pv_table);
+                }
                 if (pv_table[0].cur_move > 0) {
                     best_move = pv_table[0].moves[0];
                 } else { // Fallback to TT for best move
