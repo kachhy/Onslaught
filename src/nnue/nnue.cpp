@@ -91,7 +91,9 @@ void Accumulator::onMove(Move move, const Board& board) {
     addSub(moved_dp, us, from, to);
 }
 
-int evaluate(const Accumulator& accum, const Side stm) { return accum.evaluate(stm); }
+int evaluate(const Accumulator& accum, const Side stm) {
+    return accum.evaluate(stm) * NNUE_WEIGHT_SCALAR / 100;
+}
 
 namespace {
 constexpr size_t FT_WEIGHT_COUNT = INPUT_SIZE * HIDDEN_SIZE;
