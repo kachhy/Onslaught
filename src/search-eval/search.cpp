@@ -233,10 +233,10 @@ int search(
     // find if this position has already been searched at a good depth and returns its score
     Entry tt_entry;
     bool tt_hit = tt.fetch(board, tt_entry);
-    if (!is_pv && tt_hit) {
+    if (tt_hit) {
         tt_entry.score = scoreFromTT(tt_entry.score, ply);
 
-        if (ply > 0 && tt_entry.depth >= static_cast<size_t>(depth)) {
+        if (!is_pv && ply > 0 && tt_entry.depth >= static_cast<size_t>(depth)) {
             if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) || (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
                 return tt_entry.score;
             }
