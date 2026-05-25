@@ -399,7 +399,7 @@ int search(
             if (!Capture(best_move) && !Prom(best_move)) {
                 board.killers[ply][1] = board.killers[ply][0];
                 board.killers[ply][0] = best_move;
-                const int bonus = std::min(depth * depth * 4, MAX_HISTORY);
+                const int bonus = std::min(depth * depth, MAX_HISTORY);
                 auto& h = board.score_history[board.getSTM()][From(best_move)][To(best_move)];
                 h += bonus - (h * std::abs(bonus) / MAX_HISTORY);
                 // board.score_history[To(best_move)][MovePiece(best_move)] =
