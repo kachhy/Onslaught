@@ -7,13 +7,14 @@
 
 // Architecture: (INPUT_SIZE -> HIDDEN_SIZE)x2 -> 1
 constexpr size_t INPUT_SIZE = 768;
-constexpr size_t HIDDEN_SIZE = 32;
+constexpr size_t HIDDEN_SIZE = 128;
 
 // Quantisation scales
 constexpr int32_t EVAL_SCALE = 400;
 constexpr int32_t L0_SCALE = 255; // feature-transformer activation
 constexpr int32_t L1_SCALE = 64;  // output-layer weights
 constexpr int32_t MUL_SCALE = L0_SCALE * L1_SCALE;
+constexpr int32_t NNUE_WEIGHT_SCALAR = 80;
 
 // Squared clipped ReLU: clamp(x, 0, L0)^2.
 constexpr int32_t screlu(int32_t x) {
