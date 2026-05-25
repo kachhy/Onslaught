@@ -13,8 +13,8 @@
 #include <iostream>
 #include <memory>
 
-uint16_t seldepth;
-uint64_t nodes;
+thread_local uint16_t seldepth;
+thread_local uint64_t nodes;
 
 struct PVLine {
     uint16_t cur_move;

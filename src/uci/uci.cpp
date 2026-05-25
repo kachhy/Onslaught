@@ -11,7 +11,8 @@
 #endif
 
 Board board;
-bool searching = false;
+thread_local bool searching = false;
+thread_local bool stdin_enabled = true;
 bool debug_mode = true;
 std::unordered_map<std::string, struct OptionVar> options_map;
 
@@ -255,6 +256,10 @@ void checkStdin(std::chrono::high_resolution_clock::time_point start, long long 
     
     if (max_nodes != -1 && current_nodes >= max_nodes) {
         searching = false;
+        return;
+    }
+
+    if (!stdin_enabled) {
         return;
     }
 

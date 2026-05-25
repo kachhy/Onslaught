@@ -24,10 +24,10 @@ static std::atomic<size_t> last_progress = 0;
 static std::mutex progress_mutex;
 static std::chrono::high_resolution_clock::time_point datagen_start;
 
-constexpr static int16_t DG_DEPTH = 7;
-constexpr static int32_t DG_NODES = -1;
+constexpr static int16_t DG_DEPTH = 128;
+constexpr static int32_t DG_NODES = 5000;
 constexpr static int16_t DG_RANDOM_MOVES = 8;
-constexpr static size_t DG_POSITION_GOAL = 30000000;
+constexpr static size_t DG_POSITION_GOAL = 40000000;
 constexpr static int DG_THREADS = 24;
 
 // Filtering thresholds
@@ -75,12 +75,12 @@ static void datagenWorker(int thread_id) {
 
     std::mt19937 rng(static_cast<uint32_t>(std::time(nullptr)) ^ (static_cast<uint32_t>(thread_id) * 0x9E3779B9u));
 
+    stdin_enabled = false;
+
     GoParams params;
     params.nodes = DG_NODES;
     params.silent = true;
-    if (DG_NODES != -1) {
-        params.depth = 128;
-    }
+    params.depth = DG_DEPTH;
 
     std::vector<FENScore> fen_scores;
     fen_scores.reserve(512);
@@ -136,6 +136,7 @@ static void datagenWorker(int thread_id) {
             }
 
             int score;
+            searching = true;
             Move best_move = search(board, DG_DEPTH, score, params);
             if (best_move == NO_MOVE) {
                 result = "0.5";
@@ -214,7 +215,7 @@ static void datagenWorker(int thread_id) {
         }
 
         for (const FENScore& fs : fen_scores) {
-            out << fs.fen << " [" << result << "] " << fs.score << "\n";
+            out << fs.fen << " | " << fs.score << " | " << result << "\n";
         }
         out.flush();
 
@@ -253,7 +254,6 @@ static void datagenWorker(int thread_id) {
 void runDatagen() {
     std::vector<std::thread> workers;
     workers.reserve(DG_THREADS);
-    searching = true;
     datagen_start = std::chrono::high_resolution_clock::now();
 
     for (int t = 0; t < DG_THREADS; t++) {
