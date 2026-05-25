@@ -15,7 +15,8 @@ void uci();
 void checkStdin(std::chrono::high_resolution_clock::time_point start, long long max_nodes, long long current_nodes, size_t hard_cap);
 void setOptions(std::string key, struct OptionVar value);
 
-extern bool searching;
+extern thread_local bool searching;
+extern thread_local bool stdin_enabled;
 extern bool debug_mode;
 extern std::unordered_map<std::string, struct OptionVar> options_map;
 
