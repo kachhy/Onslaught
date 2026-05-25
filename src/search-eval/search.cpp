@@ -283,6 +283,11 @@ int search(
         tt.prefetch(board.hash());
         int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ply + 1, false, pv_table, max_ply);
         board.undoNullMove();
+        
+        if (score >= SCORE_MAX - MAX_GAME_MOVES) { // Prevent including mate scores
+            score = beta;
+        }
+
         if (score >= beta) {
             return score;
         }
