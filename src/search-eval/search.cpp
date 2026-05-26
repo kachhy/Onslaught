@@ -188,7 +188,7 @@ static int scoreMove(Board& board, Move move, Move tt_move, int ply) {
     if (move == board.killers[ply][1]) {
         return 100000;
     }
-    return board.score_history[To(move)][MovePiece(move)];
+    return board.score_history[board.getSTM()][From(move)][To(move)];
 }
 
 int search(
@@ -233,10 +233,10 @@ int search(
     // find if this position has already been searched at a good depth and returns its score
     Entry tt_entry;
     bool tt_hit = tt.fetch(board, tt_entry);
-    if (!is_pv && tt_hit) {
+    if (tt_hit) {
         tt_entry.score = scoreFromTT(tt_entry.score, ply);
 
-        if (ply > 0 && tt_entry.depth >= static_cast<size_t>(depth)) {
+        if (!is_pv && ply > 0 && tt_entry.depth >= static_cast<size_t>(depth)) {
             if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) || (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
                 return tt_entry.score;
             }
@@ -321,8 +321,7 @@ int search(
     int moves_searched = 0;
 
     // history malus. apply penalties when all moves fail low
-    // MoveList quiets_tried;
-    // int quiets_tried_count = 0;
+    MoveList quiets_tried;
 
     // // futility pruning
     bool futility_pruning = !is_pv && !in_check && depth <= 5 && static_eval + FUTILITY_MARGIN * depth <= alpha;
@@ -345,9 +344,9 @@ int search(
         if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
             continue;
         }
-        // if (is_quiet_move) {
-        //     quiets_tried[quiets_tried_count++] = move;
-        // }
+        if (is_quiet_move) {
+            quiets_tried.emplace_back(move);
+        }
         board.makeMove(move);
         tt.prefetch(board.hash());
 
@@ -400,13 +399,19 @@ int search(
             if (!Capture(best_move) && !Prom(best_move)) {
                 board.killers[ply][1] = board.killers[ply][0];
                 board.killers[ply][0] = best_move;
-                board.score_history[To(best_move)][MovePiece(best_move)] =
-                    std::min(board.score_history[To(best_move)][MovePiece(best_move)] + depth * depth, MAX_HISTORY);
+                const int bonus = std::min(depth * depth, MAX_HISTORY);
+                auto& h = board.score_history[board.getSTM()][From(best_move)][To(best_move)];
+                h += bonus - (h * std::abs(bonus) / MAX_HISTORY);
+                // board.score_history[To(best_move)][MovePiece(best_move)] =
+                //     std::min(board.score_history[To(best_move)][MovePiece(best_move)] + depth * depth, MAX_HISTORY);
                 // malus: penalize all quiet moves searched before this cutoff
-                // for (int j = 0; j < quiets_tried_count - 1; j++) {
-                //     Move m = quiets_tried[j];
-                //     board.score_history[To(m)][MovePiece(m)] = std::max(board.score_history[To(m)][MovePiece(m)] - depth * depth, -MAX_HISTORY);
-                // }
+                for (const Move quiet_move : quiets_tried) {
+                    if (quiet_move == best_move) {
+                        continue;
+                    }
+                    auto& h = board.score_history[board.getSTM()][From(quiet_move)][To(quiet_move)];
+                    h += -bonus - (h * std::abs(bonus) / MAX_HISTORY);
+                }
             }
             return best_score;
         }
@@ -522,11 +527,6 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
                     }
                 }
                 break;
-            }
-        }
-        for (int (&history_score)[12] : board.score_history) {
-            for (int& score : history_score) {
-                score /= 2;
             }
         }
         if (!searching) {
