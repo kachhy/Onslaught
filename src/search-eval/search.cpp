@@ -302,7 +302,7 @@ int search(
     }
 
     // iir (no tt move)
-    if (!is_pv && depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
+    if (depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
         depth--;
     }
 
