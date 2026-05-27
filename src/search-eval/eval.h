@@ -85,6 +85,8 @@ struct Trace {
 
 extern Trace trace;
 
+extern bool use_nnue;
+
 int eval(const Board& position);
 void initEval();
 

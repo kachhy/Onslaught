@@ -1,9 +1,11 @@
 #include "eval.h"
 #include "board/rules.h"
 #include "movegen/attacks.h"
+#include "nnue/nnue.h"
 #include "terms.h"
 
 Trace trace;
+bool use_nnue = true;
 
 constexpr size_t TABLE_SIZE_MB = 4;
 constexpr size_t TARGET_BYTES = TABLE_SIZE_MB * MEGABYTE;
@@ -639,6 +641,10 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
 int eval(const Board& board) {
     if (isMaterialDraw(board)) {
         return 0;
+    }
+
+    if (use_nnue) {
+        return evaluate(board.getAccumulator(), board.getSTM());
     }
 
     EvalInfo info = board.getEvalInfo();
