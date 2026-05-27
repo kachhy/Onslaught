@@ -284,6 +284,11 @@ int search(
         tt.prefetch(board.hash());
         int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ply + 1, false, pv_table, max_ply);
         board.undoNullMove();
+        
+        if (score >= SCORE_MAX - MAX_GAME_MOVES) { // Prevent including mate scores
+            score = beta;
+        }
+
         if (score >= beta) {
             return score;
         }
@@ -298,7 +303,7 @@ int search(
     }
 
     // iir (no tt move)
-    if (!is_pv && depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
+    if (depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
         depth--;
     }
 
@@ -398,8 +403,11 @@ int search(
         if (score >= beta) {
             tt.insert(board, best_move, scoreToTT(best_score, ply), LOWERBOUND, depth);
             if (!Capture(best_move) && !Prom(best_move)) {
-                board.killers[ply][1] = board.killers[ply][0];
-                board.killers[ply][0] = best_move;
+                if (best_move != board.killers[ply][0]) { // Update killer moves
+                    board.killers[ply][1] = board.killers[ply][0];
+                    board.killers[ply][0] = best_move;
+                }
+
                 const int bonus = std::min(depth * depth, MAX_HISTORY);
                 auto& h = board.score_history[board.getSTM()][From(best_move)][To(best_move)];
                 h += bonus - (h * std::abs(bonus) / MAX_HISTORY);
@@ -435,6 +443,9 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
     PVLine pv_table[MAX_PLY + 1]; // pre-allocated, indexed by ply
     nodes = 0;
     best_score = 0;
+
+    // Clear killer moves
+    memset(board.killers, 0, sizeof(board.killers));
 
     auto start = std::chrono::high_resolution_clock::now();
     size_t hard_cap, soft_cap;
