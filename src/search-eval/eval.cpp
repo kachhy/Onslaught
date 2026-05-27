@@ -1,9 +1,11 @@
 #include "eval.h"
 #include "board/rules.h"
 #include "movegen/attacks.h"
+#include "nnue/nnue.h"
 #include "terms.h"
 
 Trace trace;
+bool use_nnue = true;
 
 constexpr size_t TABLE_SIZE_MB = 4;
 constexpr size_t TARGET_BYTES = TABLE_SIZE_MB * MEGABYTE;
@@ -53,22 +55,25 @@ static inline Score applyPST(const Board& board, const Piece piece_w, const Piec
     Score score{};
     BitBoard white_piece_bb = board.getPieceBB(piece_w);
     BitBoard black_piece_bb = board.getPieceBB(piece_b);
+
     while (white_piece_bb) {
         const uint8_t sq = popLSB(white_piece_bb);
         score += pst[piece_w][sq];
         TRACE_INC_ONLY(pst[piece_w][sq]);
     }
+
     while (black_piece_bb) {
         const uint8_t sq = popLSB(black_piece_bb);
         score -= pst[piece_b][sq];
         TRACE_INC_ONLY(pst[piece_b][sq]);
     }
+
     return score;
 }
 
 static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     Score score{};
-    
+
 #ifndef TUNING
     if (probePawns(board, score)) {
         return score;
@@ -92,6 +97,7 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
     wp_ff |= wp_ff >> 16;
     wp_ff |= wp_ff >> 32;
     const uint8_t dpw = bitCount(wp) - bitCount(wp_ff & RANK_1);
+
     BitBoard bp_ff = bp;
     bp_ff |= bp_ff >> 8;
     bp_ff |= bp_ff >> 16;
@@ -122,11 +128,14 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
             }
         }
     }
+
     BitBoard temp_bp = bp;
+
     while (temp_bp) {
         const Square sq = static_cast<Square>(popLSB(temp_bp));
         const int rank = getRank(sq);
         const BitBoard forward_ray = A_FILE << sq;
+
         if (rank >= 1 && rank <= 6 && !(forward_ray & (wp | wp_protected))) {
             score -= PASSED_PAWNS[6 - rank];
             TRACE_INC(passed_pawns[6 - rank], BLACK);
@@ -135,6 +144,7 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
             // We can re-use knight outpost table because it will cover pawns that can potentially cover us
             BitBoard potential_defenders = board.getPieceBB(BLACK_PAWN) & knight_outpost_table[WHITE][sq];
             const Square forward_sq = static_cast<Square>(static_cast<uint8_t>(sq) + 8);
+
             if (!potential_defenders && getBit(wp_protected, forward_sq)) {
                 score -= BACKWARDS_PAWN;
                 TRACE_INC(backwards_pawn, BLACK);
@@ -165,6 +175,7 @@ static inline Score applyPawnProtection(const Board& board, const EvalInfo& info
     Score score{};
     BitBoard wp_protected = info.pawn_attacks[WHITE];
     BitBoard bp_protected = info.pawn_attacks[BLACK];
+
     while (wp_protected) {
         uint8_t sq = popLSB(wp_protected);
         if (getBit(board.getOcc(WHITE), sq)) {
@@ -174,6 +185,7 @@ static inline Score applyPawnProtection(const Board& board, const EvalInfo& info
             TRACE_INC(pawn_protection[dpc], WHITE);
         }
     }
+
     while (bp_protected) {
         uint8_t sq = popLSB(bp_protected);
         if (getBit(board.getOcc(BLACK), sq)) {
@@ -183,6 +195,7 @@ static inline Score applyPawnProtection(const Board& board, const EvalInfo& info
             TRACE_INC(pawn_protection[dpc], BLACK);
         }
     }
+
     return score;
 }
 
@@ -214,6 +227,7 @@ static inline Score evaluateKnights(const Board& board, const EvalInfo& info) {
     score -= bn_behind_pawn * KNIGHT_BEHIND_PAWN;
     TRACE_ADD(knight_behind_pawn, WHITE, wn_behind_pawn);
     TRACE_ADD(knight_behind_pawn, BLACK, bn_behind_pawn);
+
     BitBoard wn = board.getPieceBB(WHITE_KNIGHT);
     while (wn) {
         uint8_t sq = popLSB(wn);
@@ -228,6 +242,7 @@ static inline Score evaluateKnights(const Board& board, const EvalInfo& info) {
         score += MOBILITY[KNIGHT] * attack_count;
         TRACE_ADD(mobility[KNIGHT], WHITE, attack_count);
     }
+
     BitBoard bn = board.getPieceBB(BLACK_KNIGHT);
     while (bn) {
         uint8_t sq = popLSB(bn);
@@ -252,10 +267,12 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
         score += BISHOP_PAIR;
         TRACE_INC(bishop_pair, WHITE);
     }
+
     if (pc.bb >= 2) {
         score -= BISHOP_PAIR;
         TRACE_INC(bishop_pair, BLACK);
     }
+
     if ((board.getPieceBB(WHITE_BISHOP) & LIGHT_SQUARES) && !(board.getPieceBB(WHITE_BISHOP) & DARK_SQUARES)) {
         const int pawns_same_color = bitCount(board.getPieceBB(WHITE_PAWN) & LIGHT_SQUARES);
         score += pawns_same_color * BISHOP_CONTROL_PENALTY;
@@ -295,6 +312,7 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
         score += MOBILITY[BISHOP] * attack_count;
         TRACE_ADD(mobility[BISHOP], WHITE, attack_count);
     }
+
     BitBoard bb = board.getPieceBB(BLACK_BISHOP);
     while (bb) {
         BitBoard attacks = info.piece_attacks[popLSB(bb)];
@@ -308,12 +326,14 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
         score -= MOBILITY[BISHOP] * attack_count;
         TRACE_ADD(mobility[BISHOP], BLACK, attack_count);
     }
+
     const uint8_t white_bishop_blockers = bitCount(shiftSouth(board.getPieceBB(WHITE_BISHOP)) & board.getPieceBB(WHITE_PAWN));
     const uint8_t black_bishop_blockers = bitCount(shiftNorth(board.getPieceBB(BLACK_BISHOP)) & board.getPieceBB(BLACK_PAWN));
     score += white_bishop_blockers * BISHOP_BLOCKING_PAWN;
     score -= black_bishop_blockers * BISHOP_BLOCKING_PAWN;
     TRACE_ADD(bishop_blocking_pawn, WHITE, white_bishop_blockers);
     TRACE_ADD(bishop_blocking_pawn, BLACK, black_bishop_blockers);
+
     return score;
 }
 
@@ -329,9 +349,11 @@ static inline Score evaluateRooks(const Board& board, const EvalInfo& info) {
     TRACE_ADD(rook_on_seventh_rank, BLACK, br_seventh_rank);
     BitBoard wr = board.getPieceBB(WHITE_ROOK);
     BitBoard br = board.getPieceBB(BLACK_ROOK);
+
     while (wr) {
         const uint8_t sq = popLSB(wr);
         const BitBoard file_mask = A_FILE << getFile(sq);
+
         if (!(wp & file_mask)) {
             if (!(bp & file_mask)) {
                 score += ROOK_ON_OPEN_FILE;
@@ -348,9 +370,11 @@ static inline Score evaluateRooks(const Board& board, const EvalInfo& info) {
         score += MOBILITY[ROOK] * attack_count;
         TRACE_ADD(mobility[ROOK], WHITE, attack_count);
     }
+
     while (br) {
         const uint8_t sq = popLSB(br);
         const BitBoard file_mask = A_FILE << getFile(sq);
+
         if (!(bp & file_mask)) {
             if (!(wp & file_mask)) {
                 score -= ROOK_ON_OPEN_FILE;
@@ -367,6 +391,7 @@ static inline Score evaluateRooks(const Board& board, const EvalInfo& info) {
         score -= MOBILITY[ROOK] * attack_count;
         TRACE_ADD(mobility[ROOK], BLACK, attack_count);
     }
+
     return score;
 }
 
@@ -420,11 +445,13 @@ static inline Score getPieceKingZoneAttacks(const Board& board, const BitBoard k
     Score score{};
     BitBoard bb = board.getPieceBB(piece);
     const DefaultPiece pc = static_cast<DefaultPiece>(makeDefaultPiece(piece) - 1); // Left by 1 since we start at KNIGHT
+
     while (bb) {
         const uint8_t count = bitCount(info.piece_attacks[popLSB(bb)] & king_zone);
         score += count * KING_ZONE_ATTACK[pc];
         TRACE_ADD(king_zone_attack[pc], attacked_side, count);
     }
+
     return score;
 }
 
@@ -440,6 +467,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
     score -= NO_OPPONENT_QUEENS * !(pc.wq);
     TRACE_ADD(no_opponent_queens, WHITE, !(pc.bq));
     TRACE_ADD(no_opponent_queens, BLACK, !(pc.wq));
+
     if (getBit(G1_H1, w_king_sq)) {
         for (const uint8_t sq : { F2, G2, H2 }) {
             if (getBit(wp, sq)) {
@@ -473,6 +501,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
             }
         }
     }
+
     if (getBit(G8_H8, b_king_sq)) {
         for (const uint8_t sq : { F7, G7, H7 }) {
             if (getBit(bp, sq)) {
@@ -521,6 +550,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
             TRACE_INC(pawn_storm[2], WHITE);
         }
     }
+
     BitBoard wp_storm = wp & king_critical_files[getFile(b_king_sq)];
     while (wp_storm) {
         const int dist = getRank(popLSB(wp_storm)) - b_king_rank;
@@ -535,6 +565,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
             TRACE_INC(pawn_storm[2], BLACK);
         }
     }
+
     const BitBoard w_file_mask = A_FILE << getFile(w_king_sq);
     if (!(wp & w_file_mask)) {
         if (!(bp & w_file_mask)) {
@@ -545,6 +576,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
             TRACE_INC(king_on_semi_open_file, WHITE);
         }
     }
+
     const BitBoard b_file_mask = A_FILE << getFile(b_king_sq);
     if (!(bp & b_file_mask)) {
         if (!(wp & b_file_mask)) {
@@ -555,7 +587,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
             TRACE_INC(king_on_semi_open_file, BLACK);
         }
     }
-    
+
     const BitBoard w_king_zone = king_zones[WHITE][w_king_sq];
     const BitBoard b_king_zone = king_zones[BLACK][b_king_sq];
 
@@ -611,6 +643,10 @@ int eval(const Board& board) {
         return 0;
     }
 
+    if (use_nnue) {
+        return evaluate(board.getAccumulator(), board.getSTM());
+    }
+
     EvalInfo info = board.getEvalInfo();
     PieceCounts pc = getPieceCounts(board);
 #ifdef TUNING
@@ -621,10 +657,10 @@ int eval(const Board& board) {
 #endif
     score += evaluateKnights(board, info);
     score += evaluateBishops(pc, board, info); // - 0.26 MNPS
-    score += evaluateRooks(board, info); // - .198 MNPS
-    score += evaluateQueens(board, info); // - 0.284 MNPS
-    score += evaluatePawnAdjustments(pc); // inacc
-    score += evaluatePawns(board, info); // - 0.322 MNPS
+    score += evaluateRooks(board, info);       // - .198 MNPS
+    score += evaluateQueens(board, info);      // - 0.284 MNPS
+    score += evaluatePawnAdjustments(pc);      // inacc
+    score += evaluatePawns(board, info);       // - 0.322 MNPS
     score += applyPawnProtection(board, info);
     score += kingSafety(pc, board, info); // inacc
 
@@ -633,6 +669,7 @@ int eval(const Board& board) {
     TRACE_INC(tempo, board.getSTM());
 
     const int r_score = T(score, board.phase());
+
     return board.getSTM() == WHITE ? r_score : -r_score;
 }
 
@@ -643,12 +680,14 @@ void initEval() {
         BitBoard above = rank > 0 ? (1ULL << (rank * 8)) - 1 : 0ULL;
         BitBoard below = rank < 7 ? (~0ULL << ((rank + 1) * 8)) : 0ULL;
         BitBoard adj_files = 0ULL;
+
         if (file > 0) {
             adj_files |= (A_FILE << (file - 1));
         }
         if (file < 7) {
             adj_files |= (A_FILE << (file + 1));
         }
+
         knight_outpost_table[WHITE][sq] = above & adj_files;
         knight_outpost_table[BLACK][sq] = below & adj_files;
 

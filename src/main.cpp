@@ -1,5 +1,7 @@
+#include "datagen/datagen.h"
 #include "hash/zobrist.h"
 #include "movegen/attacks.h"
+#include "nnue/nnue.h"
 #include "search-eval/tuning.h"
 #include "testing/perft.h"
 #include "testing/ttbench.h"
@@ -50,10 +52,24 @@ int main(int argc, char** argv) {
     perftTests();
     return 0;
 #endif
+    // Load embedded network; fall back to file if not embedded or size mismatch
+    const bool nnue_loaded = loadNNUEFromMemory(gNNUEWeightsData, gNNUEWeightsSize)
+                             || loadNNUE(nnue_path);
+
+    if (argc > 1 && std::string(argv[1]) == "datagen") {
+        if (!nnue_loaded) {
+            std::fprintf(stderr, "loadNNUE failed: no embedded net and could not load %s\n", nnue_path.c_str());
+            return 1;
+        }
+        runDatagen();
+        return 0;
+    }
+
     if (argc > 1 && std::string(argv[1]) == "bench") {
         bench();
-    } else {
-        uci();
+        return 0;
     }
+
+    uci();
     return 0;
 }

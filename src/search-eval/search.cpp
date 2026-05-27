@@ -13,9 +13,10 @@
 #include <chrono>
 #include <cmath>
 #include <iostream>
+#include <memory>
 
-uint16_t seldepth;
-uint64_t nodes;
+thread_local uint16_t seldepth;
+thread_local uint64_t nodes;
 
 struct PVLine {
     uint16_t cur_move;
@@ -50,8 +51,7 @@ int scoreFromTT(int score, int ply) {
     return score;
 }
 
-// Important: we copy board here
-void printInfo(Board board, int depth, int seldepth, int score, const char* bound, long long nodes, int nps, PVLine* pv) {
+void printInfo(const Board& src, int depth, int seldepth, int score, const char* bound, long long nodes, int nps, PVLine* pv) {
     std::cout << "info depth " << depth << " seldepth " << seldepth;
     if (std::abs(score) < SCORE_MAX - MAX_GAME_MOVES) {
         std::cout << " score cp " << score;
@@ -66,8 +66,9 @@ void printInfo(Board board, int depth, int seldepth, int score, const char* boun
         for (uint16_t i = 0; i < pv[0].cur_move; i++) {
             std::cout << moveToStr(pv[0].moves[i]) << ' ';
         }
-    }
-    else { // Reconstruct from TT
+    } else { // Reconstruct from TT
+        auto bp = std::make_unique<Board>(src);
+        Board& board = *bp;
         for (int i = 0; i < MAX_PLY; i++) {
             Entry tt_entry;
             bool tt_hit = tt.fetch(board, tt_entry);
@@ -238,7 +239,7 @@ static int scoreMove(Board& board, Move move, Move tt_move, int ply) {
     if (move == board.killers[ply][1]) {
         return 100000;
     }
-    return board.score_history[To(move)][MovePiece(move)];
+    return board.score_history[board.getSTM()][From(move)][To(move)];
 }
 
 int search(
@@ -283,10 +284,10 @@ int search(
     // find if this position has already been searched at a good depth and returns its score
     Entry tt_entry;
     bool tt_hit = tt.fetch(board, tt_entry);
-    if (!is_pv && tt_hit) {
+    if (tt_hit) {
         tt_entry.score = scoreFromTT(tt_entry.score, ply);
 
-        if (ply > 0 && tt_entry.depth >= static_cast<size_t>(depth)) {
+        if (!is_pv && ply > 0 && tt_entry.depth >= static_cast<size_t>(depth)) {
             if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) || (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
                 return tt_entry.score;
             }
@@ -333,6 +334,11 @@ int search(
         tt.prefetch(board.hash());
         int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ply + 1, false, pv_table, max_ply);
         board.undoNullMove();
+        
+        if (score >= SCORE_MAX - MAX_GAME_MOVES) { // Prevent including mate scores
+            score = beta;
+        }
+
         if (score >= beta) {
             return score;
         }
@@ -347,7 +353,7 @@ int search(
     }
 
     // iir (no tt move)
-    if (!is_pv && depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
+    if (depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
         depth--;
     }
 
@@ -371,8 +377,7 @@ int search(
     int moves_searched = 0;
 
     // history malus. apply penalties when all moves fail low
-    // MoveList quiets_tried;
-    // int quiets_tried_count = 0;
+    MoveList quiets_tried;
 
     // // futility pruning
     bool futility_pruning = !is_pv && !in_check && depth <= 5 && static_eval + FUTILITY_MARGIN * depth <= alpha;
@@ -401,6 +406,9 @@ int search(
         // if (is_quiet_move) {
         //     quiets_tried[quiets_tried_count++] = move;
         // }
+        if (is_quiet_move) {
+            quiets_tried.emplace_back(move);
+        }
         board.makeMove(move);
         tt.prefetch(board.hash());
 
@@ -451,15 +459,24 @@ int search(
         if (score >= beta) {
             tt.insert(board, best_move, scoreToTT(best_score, ply), LOWERBOUND, depth);
             if (!Capture(best_move) && !Prom(best_move)) {
-                board.killers[ply][1] = board.killers[ply][0];
-                board.killers[ply][0] = best_move;
-                board.score_history[To(best_move)][MovePiece(best_move)] =
-                    std::min(board.score_history[To(best_move)][MovePiece(best_move)] + depth * depth, MAX_HISTORY);
+                if (best_move != board.killers[ply][0]) { // Update killer moves
+                    board.killers[ply][1] = board.killers[ply][0];
+                    board.killers[ply][0] = best_move;
+                }
+
+                const int bonus = std::min(depth * depth, MAX_HISTORY);
+                auto& h = board.score_history[board.getSTM()][From(best_move)][To(best_move)];
+                h += bonus - (h * std::abs(bonus) / MAX_HISTORY);
+                // board.score_history[To(best_move)][MovePiece(best_move)] =
+                //     std::min(board.score_history[To(best_move)][MovePiece(best_move)] + depth * depth, MAX_HISTORY);
                 // malus: penalize all quiet moves searched before this cutoff
-                // for (int j = 0; j < quiets_tried_count - 1; j++) {
-                //     Move m = quiets_tried[j];
-                //     board.score_history[To(m)][MovePiece(m)] = std::max(board.score_history[To(m)][MovePiece(m)] - depth * depth, -MAX_HISTORY);
-                // }
+                for (const Move quiet_move : quiets_tried) {
+                    if (quiet_move == best_move) {
+                        continue;
+                    }
+                    auto& h = board.score_history[board.getSTM()][From(quiet_move)][To(quiet_move)];
+                    h += -bonus - (h * std::abs(bonus) / MAX_HISTORY);
+                }
             }
             return best_score;
         }
@@ -482,6 +499,9 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
     PVLine pv_table[MAX_PLY + 1]; // pre-allocated, indexed by ply
     nodes = 0;
     best_score = 0;
+
+    // Clear killer moves
+    memset(board.killers, 0, sizeof(board.killers));
 
     auto start = std::chrono::high_resolution_clock::now();
     size_t hard_cap, soft_cap;
@@ -555,17 +575,23 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
 
             if (iter_score <= alpha) {
                 // fail low = true score is at most alpha (upper bound)
-                printInfo(board, depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table);
+                if (!params.silent) {
+                    printInfo(board, depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table);
+                }
                 alpha = std::max(-SCORE_MAX, iter_score - delta);
                 delta += delta * 1.25;
             } else if (iter_score >= beta) {
                 // fail high = true score is at least beta (lower bound)
-                printInfo(board, depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table);
+                if (!params.silent) {
+                    printInfo(board, depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table);
+                }
                 beta = std::min(SCORE_MAX, iter_score + delta);
                 delta += delta * 1.25;
             } else {
                 best_score = iter_score;
-                printInfo(board, depth, seldepth, best_score, nullptr, nodes, nps, pv_table);
+                if (!params.silent) {
+                    printInfo(board, depth, seldepth, best_score, nullptr, nodes, nps, pv_table);
+                }
                 if (pv_table[0].cur_move > 0) {
                     best_move = pv_table[0].moves[0];
                 } else { // Fallback to TT for best move
@@ -575,11 +601,6 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
                     }
                 }
                 break;
-            }
-        }
-        for (int (&history_score)[12] : board.score_history) {
-            for (int& score : history_score) {
-                score /= 2;
             }
         }
         if (!searching) {

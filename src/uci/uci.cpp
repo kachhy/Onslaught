@@ -1,5 +1,7 @@
 #include "uci.h"
 #include "hash/transposition.h"
+#include "nnue/nnue.h"
+#include "search-eval/eval.h"
 #include "search-eval/search.h"
 #include <sstream>
 
@@ -11,38 +13,93 @@
 #endif
 
 Board board;
-bool searching = false;
+thread_local bool searching = false;
+thread_local bool stdin_enabled = true;
 bool debug_mode = true;
-std::unordered_map<std::string, struct OptionVar> options_map;
+std::unordered_map<std::string, UCIOption> options_map;
 
-void setOptions(std::string key, struct OptionVar value) { options_map[key] = value; }
+void setOption(std::string key, UCIOption value) { options_map[key] = std::move(value); }
 
 // All the different things we can change about the engine
 static inline void options() {
-    for (const auto& [key, value] : options_map) {
-        std::cout << "option name " << key << " type spin default " << value.norm << " min " << value.min << " max " << value.max << "\n";
+    for (const auto& [key, opt] : options_map) {
+        std::visit(
+            overloaded{ [&](const SpinOption& s) {
+            std::cout << "option name " << key << " type spin default " << s.norm << " min " << s.min << " max " << s.max << "\n";
+        }, [&](const CheckOption& c) { std::cout << "option name " << key << " type check default " << (c.norm ? "true" : "false") << "\n"; },
+                        [&](const StringOption& s) { std::cout << "option name " << key << " type string default " << s.norm << "\n"; } },
+            opt
+        );
     }
 }
 
-// actually changing the options for the engine
-static inline void changeOptions() {
+static inline CmdSetOption parseSetOption(std::istream& is) {
     std::string token;
-    std::cin >> token; // "name"
-    std::cin >> token; // option name
-
-    std::string option_name = token;
-    std::cin >> token; // "value"
-    std::cin >> token; // value
-
-    if (options_map[option_name].setter) {
-        options_map[option_name].setter(std::stoi(token));
-        if (debug_mode) {
-            std::cout << "info Option " << option_name << " set to " << token << "\n";
-        }
-    } else if (debug_mode) {
-        std::cout << "info Option " << option_name << " not set due to null setter\n";
+    is >> token;
+    is >> token;
+    CmdSetOption cmd{ token, std::nullopt };
+    if (is >> token && token == "value") {
+        is >> token;
+        cmd.value = token;
     }
+    return cmd;
 }
+
+static inline void applySetOption(const CmdSetOption& cmd) {
+    if (!cmd.value) {
+        return;
+    }
+
+    auto it = options_map.find(cmd.name);
+    if (it == options_map.end()) {
+        if (debug_mode) {
+            std::cout << "info Option " << cmd.name << " not found\n";
+        }
+        return;
+    }
+
+    std::visit(
+        overloaded{ [&](const SpinOption& s) {
+        if (!s.setter) {
+            if (debug_mode) {
+                std::cout << "info Option " << cmd.name << " not set due to null setter\n";
+            }
+            return;
+        }
+        s.setter(std::stoi(*cmd.value));
+        if (debug_mode) {
+            std::cout << "info Option " << cmd.name << " set to " << *cmd.value << "\n";
+        }
+    },
+                    [&](const CheckOption& c) {
+        if (!c.setter) {
+            if (debug_mode) {
+                std::cout << "info Option " << cmd.name << " not set due to null setter\n";
+            }
+            return;
+        }
+        c.setter(*cmd.value == "true");
+        if (debug_mode) {
+            std::cout << "info Option " << cmd.name << " set to " << *cmd.value << "\n";
+        }
+    },
+                    [&](const StringOption& s) {
+        if (!s.setter) {
+            if (debug_mode) {
+                std::cout << "info Option " << cmd.name << " not set due to null setter\n";
+            }
+            return;
+        }
+        s.setter(*cmd.value);
+        if (debug_mode) {
+            std::cout << "info Option " << cmd.name << " set to " << *cmd.value << "\n";
+        }
+    } },
+        it->second
+    );
+}
+
+static inline void changeOptions() { applySetOption(parseSetOption(std::cin)); }
 
 // called when a new game is started, resets the bot to its original state
 static inline void newGame(Board& board) {
@@ -52,8 +109,21 @@ static inline void newGame(Board& board) {
 }
 
 static inline void initOptions() {
-    setOptions("Hash", { 1, 16384, 16, [](int mb) { tt.resize(mb); } });
-    setOptions("Threads", { 1, 1, 1, nullptr });
+    setOption("Hash", SpinOption{ 1, 16384, 16, [](int mb) { tt.resize(mb); } });
+    setOption("Threads", SpinOption{ 1, 1, 1, nullptr });
+    setOption("NNUE", CheckOption{ true, [](bool val) { use_nnue = val; } });
+    setOption("EvalFile", StringOption{ "nn-0a63fbab92d2bb57-64.nnue", [](std::string path) {
+        if (path == default_net && loadNNUEFromMemory(gNNUEWeightsData, gNNUEWeightsSize)) {
+            std::cout << "info string NNUE eval by " << default_net << std::endl;
+        } else {
+            nnue_path = path;
+            if (!loadNNUE(nnue_path)) {
+                std::cout << "info string Unable to load " << nnue_path << std::endl;
+            } else {
+                std::cout << "info string NNUE eval by " << nnue_path << std::endl;
+            };
+        }
+    } });
 }
 
 static inline void position(Board& board) {
@@ -78,6 +148,7 @@ static inline void position(Board& board) {
             }
             fen += token;
         }
+
         board.loadFEN(fen);
     }
 
@@ -89,7 +160,6 @@ static inline void position(Board& board) {
     }
 }
 
-// not yet implemented,
 static inline void go(Board& board) {
     std::string buffer;
     std::string arg;
@@ -171,7 +241,6 @@ int uciStartup() {
     // original setup loop
     while (1) {
         std::cin >> buffer;
-
         if (buffer == "setoption") {
             changeOptions();
         } else if (buffer == "isready") {
@@ -179,6 +248,7 @@ int uciStartup() {
         } else if (buffer == "quit") {
             return 0; // quit the engine
         }
+
         if (buffer == "debug") {
             std::cin >> buffer;
             if (buffer == "on") {
@@ -217,6 +287,7 @@ void uci() {
         } else if (buffer == "quit") {
             return; // quit the engine
         }
+
         if (buffer == "debug") {
             std::cin >> buffer;
             if (buffer == "on") {
@@ -250,13 +321,20 @@ void checkStdin(std::chrono::high_resolution_clock::time_point start, long long 
         searching = false;
         return;
     }
+
     if (max_nodes != -1 && current_nodes >= max_nodes) {
         searching = false;
         return;
     }
+
+    if (!stdin_enabled) {
+        return;
+    }
+
     if (!stdinHasData()) {
         return;
     }
+
     std::string line;
     if (std::getline(std::cin, line)) {
         if (line == "stop") {

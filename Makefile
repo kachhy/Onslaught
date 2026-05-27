@@ -1,6 +1,10 @@
 CXX ?= g++
 CXXFLAGS=-Wall -MMD -MP -Wno-switch -Isrc -std=c++17
 LDFLAGS=
+EVALFILE=nn-0a63fbab92d2bb57-64.nnue
+
+CXXFLAGS += -DEVALFILE='"$(EVALFILE)"'
+
 OBJDIR=build
 SRC=$(shell find src -name '*.cpp')
 

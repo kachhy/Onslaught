@@ -68,3 +68,5 @@ Running all of these SPRT tests takes a lot of compute. To contribute compute to
 
 -   The [Chess Programming Wiki](https://www.chessprogramming.org) for being an invaluable resource for chess engine development.
 -   [OpenBench](https://github.com/AndyGrant/OpenBench) is a great SPRT testing framework that we heavily rely on to test changes.
+-   The [Bullet](github.com/jw1912/bullet) NNUE trainer for training our networks and being incredibly intuitive and easy to use.
+-   [Incbin](https://github.com/graphitemaster/incbin) which we use to include our networks in our binaries.

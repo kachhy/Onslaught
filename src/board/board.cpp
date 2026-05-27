@@ -78,6 +78,90 @@ std::string Board::getCastlingString() const {
     return out;
 }
 
+std::string Board::toFEN() const {
+    std::string out = "";
+
+    // Piece placement (ranks 8 -> 1)
+    for (int rank = 0; rank < 8; ++rank) {
+        int empty = 0;
+        for (int file = 0; file < 8; ++file) {
+            uint8_t sq = static_cast<uint8_t>(rank * 8 + file);
+            Piece p = piece_board[sq];
+
+            if (p == NO_PIECE) {
+                ++empty;
+                continue;
+            }
+            if (empty > 0) {
+                out += static_cast<char>('0' + empty);
+                empty = 0;
+            }
+
+            switch (p) {
+            case WHITE_PAWN: out += 'P'; break;
+            case WHITE_KNIGHT: out += 'N'; break;
+            case WHITE_BISHOP: out += 'B'; break;
+            case WHITE_ROOK: out += 'R'; break;
+            case WHITE_QUEEN: out += 'Q'; break;
+            case WHITE_KING: out += 'K'; break;
+            case BLACK_PAWN: out += 'p'; break;
+            case BLACK_KNIGHT: out += 'n'; break;
+            case BLACK_BISHOP: out += 'b'; break;
+            case BLACK_ROOK: out += 'r'; break;
+            case BLACK_QUEEN: out += 'q'; break;
+            case BLACK_KING: out += 'k'; break;
+            default: break;
+            }
+        }
+
+        if (empty > 0) {
+            out += static_cast<char>('0' + empty);
+        }
+        if (rank < 7) {
+            out += '/';
+        }
+    }
+
+    // Active color
+    out += ' ';
+    out += (stm == WHITE ? 'w' : 'b');
+
+    // Castling rights
+    out += ' ';
+    if (castling == 0) {
+        out += '-';
+    } else {
+        if (castling & WHITE_KS) {
+            out += 'K';
+        }
+        if (castling & WHITE_QS) {
+            out += 'Q';
+        }
+        if (castling & BLACK_KS) {
+            out += 'k';
+        }
+        if (castling & BLACK_QS) {
+            out += 'q';
+        }
+    }
+
+    // En-passant
+    out += ' ';
+    if (ep_square == NO_SQUARE) {
+        out += '-';
+    } else {
+        out += board_coords[ep_square];
+    }
+
+    // Halfmove and fullmove counters
+    out += ' ';
+    out += std::to_string(static_cast<int>(fmr));
+    out += ' ';
+    out += std::to_string(move_number);
+
+    return out;
+}
+
 void Board::printBoard() const {
     for (int8_t i = 0; i < 64; i++) {
         if (i % 8 == 0) {
@@ -255,6 +339,7 @@ bool Board::loadFEN(const std::string& fen) {
     setPhase();
     refreshMaterialPST();
     refreshZobrist();
+    accumulator.refresh(*this);
 
     return true;
 }
@@ -270,7 +355,6 @@ BitBoard Board::getDiscoveryAttacks(const Square sq, const Side side) const {
            (rooks & getPieceAttacks(static_cast<Piece>(ROOK), sq, occ[BOTH] & ~rook_attacks));
 }
 
-// TODO: zobrist hash apply consteval functions
 void Board::makeMove(Move move) {
     Square from = From(move);
     Square to = To(move);
@@ -279,8 +363,10 @@ void Board::makeMove(Move move) {
 
     history[history_ply++] = BoardHistory(
         castling, ep_square, fmr, captured, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash, material_pst_score,
-        eval_info
+        eval_info, accumulator
     );
+
+    accumulator.onMove(move, *this);
 
     fmr++;
 
@@ -444,7 +530,7 @@ void Board::makeMove(Move move) {
     std::swap(stm, xstm);
 
     setSpecials();
-    
+
     assert(piece_bb[WHITE_KING] != 0ULL);
     assert(piece_bb[BLACK_KING] != 0ULL);
 }
@@ -468,6 +554,7 @@ void Board::undoMove(Move move) {
     pawn_hash = hist_data.pawn_hash;
     material_pst_score = hist_data.material_pst_score;
     memcpy(&eval_info, &hist_data.eval_info, sizeof(EvalInfo));
+    memcpy(&accumulator, &hist_data.accumulator, sizeof(Accumulator));
 
     std::swap(stm, xstm);
     move_number -= (stm == BLACK);
@@ -557,7 +644,7 @@ void Board::undoMove(Move move) {
 void Board::makeNullMove() {
     history[history_ply++] = BoardHistory(
         castling, ep_square, fmr, NO_PIECE, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash, material_pst_score,
-        eval_info
+        eval_info, accumulator
     );
     if (ep_square != NO_SQUARE) {
         zobrist_hash ^= ep_keys[ep_square];
@@ -583,6 +670,7 @@ void Board::undoNullMove() {
     pawn_hash = hist_data.pawn_hash;
     material_pst_score = hist_data.material_pst_score;
     memcpy(&eval_info, &hist_data.eval_info, sizeof(EvalInfo));
+    memcpy(&accumulator, &hist_data.accumulator, sizeof(Accumulator));
     std::swap(stm, xstm);
 }
 

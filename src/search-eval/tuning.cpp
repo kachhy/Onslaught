@@ -5,7 +5,6 @@
 #include <random>
 #include <thread>
 
-
 Tuner::Tuner(const size_t dataset_size) {
     const size_t valid_cap = static_cast<size_t>(dataset_size * 0.1) + 1;
     traces.reserve(dataset_size - valid_cap);
@@ -22,13 +21,13 @@ void Tuner::loadDataset(const std::string& filename, const uint32_t max) {
     Board board;
     while (loaded < max && std::getline(in, line)) {
         const size_t bracket = line.find('[');
-        const size_t end     = line.find(']', bracket);
-        const double result  = std::stod(line.substr(bracket + 1, end - bracket - 1));
+        const size_t end = line.find(']', bracket);
+        const double result = std::stod(line.substr(bracket + 1, end - bracket - 1));
 
         board.loadFEN(line.substr(0, bracket));
         trace = {};
         eval(board);
-        trace.phase  = board.phase();
+        trace.phase = board.phase();
         trace.result = result;
 
         if (loaded++ < valid_thres) {
@@ -292,11 +291,11 @@ void Tuner::dumpParams(std::ofstream& out) const {
     // Bishop blocking pawn
     out << "constexpr Score BISHOP_BLOCKING_PAWN = S(" << static_cast<int>(std::round(params[BISHOP_BLOCKING_PAWN_OFFSET].value)) << ", "
         << static_cast<int>(std::round(params[BISHOP_BLOCKING_PAWN_OFFSET + 1].value)) << ");\n";
-        
+
     // Bishop blocking pawn
     out << "constexpr Score BISHOP_BEHIND_PAWN = S(" << static_cast<int>(std::round(params[BISHOP_BEHIND_PAWN_OFFSET].value)) << ", "
         << static_cast<int>(std::round(params[BISHOP_BEHIND_PAWN_OFFSET + 1].value)) << ");\n";
-    
+
     // Rooks
     // Rook on seventh
     out << "\nconstexpr Score ROOK_ON_SEVENTH_RANK = S(" << static_cast<int>(std::round(params[ROOK_SEVENTH_OFFSET].value)) << ", "

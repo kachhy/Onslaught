@@ -4,10 +4,11 @@
 #include "core/types.h"
 #include "search-eval/eval.h"
 #include "search-eval/terms.h"
+#include <cmath>
 #include <fstream>
 #include <string>
 #include <vector>
-#include <cmath>
+
 
 constexpr uint16_t MATERIAL_OFFSET = 0;
 constexpr uint16_t TEMPO_OFFSET = MATERIAL_OFFSET + 12;
