@@ -52,26 +52,24 @@ int main(int argc, char** argv) {
     perftTests();
     return 0;
 #endif
+    // Load embedded network; fall back to file if not embedded or size mismatch
+    const bool nnue_loaded = loadNNUEFromMemory(gNNUEWeightsData, gNNUEWeightsSize)
+                             || loadNNUE(nnue_path);
+
     if (argc > 1 && std::string(argv[1]) == "datagen") {
-        if (!loadNNUE("nn_Q16_64_gen1.bin")) {
-            std::fprintf(stderr, "loadNNUE failed for nn_Q16_64_gen1.bin\n");
+        if (!nnue_loaded) {
+            std::fprintf(stderr, "loadNNUE failed: no embedded net and could not load %s\n", nnue_path.c_str());
             return 1;
         }
-
         runDatagen();
         return 0;
     }
 
     if (argc > 1 && std::string(argv[1]) == "bench") {
         bench();
-    } else {
-        if (!loadNNUE(nnue_path)) {
-            std::fprintf(stderr, "loadNNUE failed for %s\n", nnue_path);
-        } else {
-            std::cout << "info string NNUE eval by " << nnue_path << std::endl;
-        }
-
-        uci();
+        return 0;
     }
+
+    uci();
     return 0;
 }

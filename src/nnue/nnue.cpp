@@ -1,3 +1,14 @@
+#define INCBIN_STYLE INCBIN_STYLE_CAMEL
+#include "incbin.h"
+
+#ifdef EVALFILE
+INCBIN(NNUEWeights, EVALFILE);
+#else
+// No embedded network — falls back to file loading at runtime
+extern const unsigned char gNNUEWeightsData[] = {};
+extern const unsigned int  gNNUEWeightsSize   = 0;
+#endif
+
 #include "nnue.h"
 
 #include "board/board.h"
@@ -7,6 +18,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <ios>
 
@@ -93,9 +105,7 @@ void Accumulator::onMove(Move move, const Board& board) {
     addSub(moved_dp, us, from, to);
 }
 
-int evaluate(const Accumulator& accum, const Side stm) {
-    return accum.evaluate(stm) * NNUE_WEIGHT_SCALAR / 100;
-}
+int evaluate(const Accumulator& accum, const Side stm) { return accum.evaluate(stm) * NNUE_WEIGHT_SCALAR / 100; }
 
 namespace {
 constexpr size_t FT_WEIGHT_COUNT = INPUT_SIZE * HIDDEN_SIZE;
@@ -113,6 +123,29 @@ bool readExact(std::ifstream& in, void* dst, std::size_t bytes) {
     return in.gcount() == static_cast<std::streamsize>(bytes);
 }
 } // namespace
+
+bool loadNNUEFromMemory(const unsigned char* data, size_t size) {
+    if (!data || size == 0) {
+        return false;
+    }
+    if (size != EXPECTED_BYTES && size != EXPECTED_BYTES_PADDED) {
+        std::fprintf(stderr, "loadNNUE: embedded size mismatch (%zu bytes, expected %zu or %zu padded)\n",
+                     size, EXPECTED_BYTES, EXPECTED_BYTES_PADDED);
+        return false;
+    }
+
+    const char* ptr = reinterpret_cast<const char*>(data);
+    std::memcpy(network_weights, ptr, FT_WEIGHT_COUNT * sizeof(int16_t));
+    ptr += FT_WEIGHT_COUNT * sizeof(int16_t);
+    std::memcpy(network_biases, ptr, FT_BIAS_COUNT * sizeof(int16_t));
+    ptr += FT_BIAS_COUNT * sizeof(int16_t);
+    std::memcpy(output_weights, ptr, OUT_WEIGHT_COUNT * sizeof(int16_t));
+    ptr += OUT_WEIGHT_COUNT * sizeof(int16_t);
+    std::memcpy(&output_bias, ptr, OUT_BIAS_COUNT * sizeof(int16_t));
+    board.refreshAccumulator();
+    
+    return true;
+}
 
 bool loadNNUE(const std::filesystem::path& path) {
     std::error_code ec;
