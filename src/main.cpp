@@ -53,8 +53,8 @@ int main(int argc, char** argv) {
     return 0;
 #endif
     if (argc > 1 && std::string(argv[1]) == "datagen") {
-        if (!loadNNUE("nn_Q16_128_gen1.bin")) {
-            std::fprintf(stderr, "loadNNUE failed for nn_Q16_gen1_128.bin\n");
+        if (!loadNNUE("nn_Q16_64_gen1.bin")) {
+            std::fprintf(stderr, "loadNNUE failed for nn_Q16_64_gen1.bin\n");
             return 1;
         }
 
@@ -65,9 +65,10 @@ int main(int argc, char** argv) {
     if (argc > 1 && std::string(argv[1]) == "bench") {
         bench();
     } else {
-        if (!loadNNUE("nn_Q16_128_gen1.bin")) {
-            std::fprintf(stderr, "loadNNUE failed for nn_Q16_gen1_128.bin\n");
-            return 1;
+        if (!loadNNUE(nnue_path)) {
+            std::fprintf(stderr, "loadNNUE failed for %s\n", nnue_path);
+        } else {
+            std::cout << "info string NNUE eval by " << nnue_path << std::endl;
         }
 
         uci();

@@ -5,6 +5,7 @@
 #include "terms.h"
 
 Trace trace;
+bool use_nnue = true;
 
 constexpr size_t TABLE_SIZE_MB = 4;
 constexpr size_t TARGET_BYTES = TABLE_SIZE_MB * MEGABYTE;
@@ -642,7 +643,9 @@ int eval(const Board& board) {
         return 0;
     }
 
-    // return evaluate(board.getAccumulator(), board.getSTM());
+    if (use_nnue) {
+        return evaluate(board.getAccumulator(), board.getSTM());
+    }
 
     EvalInfo info = board.getEvalInfo();
     PieceCounts pc = getPieceCounts(board);

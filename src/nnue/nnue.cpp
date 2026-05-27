@@ -13,6 +13,8 @@
 // Global game board, declared in uci.cpp
 extern Board board;
 
+std::string nnue_path = "nn_Q16_64_gen1.bin"; // Default NNUE
+
 // Network storage
 int16_t network_weights[INPUT_SIZE][HIDDEN_SIZE] = {};
 int16_t network_biases[HIDDEN_SIZE] = {};

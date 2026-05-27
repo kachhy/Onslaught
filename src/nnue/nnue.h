@@ -4,6 +4,8 @@
 #include "accumulator.h"
 #include <filesystem>
 
+extern std::string nnue_path;
+
 bool loadNNUE(const std::filesystem::path& path);
 int evaluate(const Accumulator& accum, Side stm);
 

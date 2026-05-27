@@ -7,7 +7,7 @@
 
 // Architecture: (INPUT_SIZE -> HIDDEN_SIZE)x2 -> 1
 constexpr size_t INPUT_SIZE = 768;
-constexpr size_t HIDDEN_SIZE = 128;
+constexpr size_t HIDDEN_SIZE = 64;
 
 // Quantisation scales
 constexpr int32_t EVAL_SCALE = 400;
