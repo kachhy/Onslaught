@@ -120,9 +120,11 @@ int staticExchangeEval(const Board& board, Move move, int threshold) {
     }
 
     int stm = board.getSTM();
+    
     BitBoard occ = board.getOcc(BOTH) ^ (BitBoard(1) << from) ^ (BitBoard(1) << to);
     BitBoard attackers = getAttackers(board, to, occ);
     BitBoard mine, lowest_attacker;
+
     const BitBoard diag = board.getPieceBB(WHITE_BISHOP) | board.getPieceBB(BLACK_BISHOP) | board.getPieceBB(WHITE_QUEEN) | board.getPieceBB(BLACK_QUEEN);
     const BitBoard straight = board.getPieceBB(WHITE_ROOK) | board.getPieceBB(BLACK_ROOK) | board.getPieceBB(WHITE_QUEEN) | board.getPieceBB(BLACK_QUEEN);
 
@@ -138,42 +140,28 @@ int staticExchangeEval(const Board& board, Move move, int threshold) {
 
         result ^= 1;
 
-        if ((lowest_attacker = mine & board.getPieceBB(makePiece(PAWN, static_cast<Side>(stm))))) {
-            if ((v = SEE_VALUES[PAWN] - v) < result) {
+        int pt;
+        for (pt = PAWN; pt <= QUEEN; pt++) {
+            lowest_attacker = mine & board.getPieceBB(makePiece(static_cast<DefaultPiece>(pt), static_cast<Side>(stm)));
+            if (lowest_attacker) {
                 break;
             }
+        }
 
-            occ ^= (lowest_attacker & -lowest_attacker);
-            attackers |= getBishopAttacks(to, occ) & diag;
-        } else if ((lowest_attacker = mine & board.getPieceBB(makePiece(KNIGHT, static_cast<Side>(stm))))) {
-            if ((v = SEE_VALUES[KNIGHT] - v) < result) {
-                break;
-            }
-            
-            occ ^= (lowest_attacker & -lowest_attacker);
-        } else if ((lowest_attacker = mine & board.getPieceBB(makePiece(BISHOP, static_cast<Side>(stm))))) {
-            if ((v = SEE_VALUES[BISHOP] - v) < result) {
-                break;
-            }
-
-            occ ^= (lowest_attacker & -lowest_attacker);
-            attackers |= getBishopAttacks(to, occ) & diag;
-        } else if ((lowest_attacker = mine & board.getPieceBB(makePiece(ROOK, static_cast<Side>(stm))))) {
-            if ((v = SEE_VALUES[ROOK] - v) < result) {
-                break;
-            }
-
-            occ ^= (lowest_attacker & -lowest_attacker);
-            attackers |= getRookAttacks(to, occ) & straight;
-        } else if ((lowest_attacker = mine & board.getPieceBB(makePiece(QUEEN, static_cast<Side>(stm))))) {
-            if ((v = SEE_VALUES[QUEEN] - v) < result) {
-                break;
-            }
-            
-            occ ^= (lowest_attacker & -lowest_attacker);
-            attackers |= (getBishopAttacks(to, occ) & diag) | (getRookAttacks(to, occ) & straight);
-        } else {
+        if (pt > QUEEN) {
             return (attackers & ~board.getOcc(static_cast<Side>(stm))) ? result ^ 1 : result;
+        }
+
+        if ((v = SEE_VALUES[pt] - v) < result) {
+            break;
+        }
+
+        occ ^= (lowest_attacker & -lowest_attacker);
+        if (pt == PAWN || pt == BISHOP || pt == QUEEN) {
+            attackers |= getBishopAttacks(to, occ) & diag;
+        }
+        if (pt == ROOK || pt == QUEEN) {
+            attackers |= getRookAttacks(to, occ) & straight;
         }
     }
 
