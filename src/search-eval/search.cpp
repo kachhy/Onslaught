@@ -101,48 +101,83 @@ void printInfo(const Board& src, int depth, int seldepth, int score, const char*
     std::cout << std::endl;
 }
 // SEE
-int staticExchangeEval(const Board& board, Move move) {
-    Square from = From(move);
-    DefaultPiece attacker = makeDefaultPiece(board.pieceAt(from));
-    Square to = To(move);
-    Piece victim = board.pieceAt(to);
-    int gain[32];
-    gain[0] = SEE_VALUES[makeDefaultPiece(victim)];
-    BitBoard occ = board.getOcc(BOTH);
-    occ ^= (BitBoard(1) << from);
-    Side stm = board.getXSTM(); // start with other side attacks (fantastic variable names)
-    Side xstm = board.getSTM();
-    BitBoard stm_occ[2] = { board.getOcc(WHITE), board.getOcc(BLACK) };
-    stm_occ[xstm] ^= BitBoard(1) << from;
-    int depth = 0;
-    while (true) {
-        BitBoard attackers = getAttackers(board, to, occ);
-        BitBoard stm_attackers = attackers & stm_occ[stm];
-        if (!stm_attackers) {
-            break;
-        }
-        Square lva_square = NO_SQUARE;
-        DefaultPiece lva_type = KING;
-        for (int i = PAWN; i <= KING; i++) {
-            BitBoard cur_piece_attackers = board.getPieceBB(makePiece(static_cast<DefaultPiece>(i), stm)) & stm_attackers;
-            if (cur_piece_attackers) {
-                lva_square = static_cast<Square>(getLSB(cur_piece_attackers));
-                lva_type = static_cast<DefaultPiece>(i);
-                break;
-            }
-        }
-        depth++;
-        gain[depth] = SEE_VALUES[attacker] - gain[depth - 1];
-        attacker = lva_type;
-        occ ^= BitBoard(1) << lva_square;
-        stm_occ[stm] ^= BitBoard(1) << lva_square;
-        std::swap(stm, xstm);
+int staticExchangeEval(const Board& board, Move move, int threshold) {
+    if (Castle(move) || IsEP(move) || Prom(move)) {
+        return 1;
     }
 
-    for (; depth > 0; depth--) {
-        gain[depth - 1] = std::max(-gain[depth], gain[depth - 1]);
+    Square from = From(move);
+    Square to = To(move);
+
+    int v = SEE_VALUES[makeDefaultPiece(board.pieceAt(to))] - threshold;
+    if (v < 0) {
+        return 0;
     }
-    return gain[0];
+
+    v = SEE_VALUES[makeDefaultPiece(MovePiece(move))] - v;
+    if (v <= 0) {
+        return 1;
+    }
+
+    int stm = board.getSTM();
+    BitBoard occ = board.getOcc(BOTH) ^ (BitBoard(1) << from) ^ (BitBoard(1) << to);
+    BitBoard attackers = getAttackers(board, to, occ);
+    BitBoard mine, lowest_attacker;
+    const BitBoard diag = board.getPieceBB(WHITE_BISHOP) | board.getPieceBB(BLACK_BISHOP) | board.getPieceBB(WHITE_QUEEN) | board.getPieceBB(BLACK_QUEEN);
+    const BitBoard straight = board.getPieceBB(WHITE_ROOK) | board.getPieceBB(BLACK_ROOK) | board.getPieceBB(WHITE_QUEEN) | board.getPieceBB(BLACK_QUEEN);
+
+    int result = 1;
+
+    while (true) {
+        stm ^= 1;
+        attackers &= occ;
+
+        if (!(mine = (attackers & board.getOcc(static_cast<Side>(stm))))) {
+            break;
+        }
+
+        result ^= 1;
+
+        if ((lowest_attacker = mine & board.getPieceBB(makePiece(PAWN, static_cast<Side>(stm))))) {
+            if ((v = SEE_VALUES[PAWN] - v) < result) {
+                break;
+            }
+
+            occ ^= (lowest_attacker & -lowest_attacker);
+            attackers |= getBishopAttacks(to, occ) & diag;
+        } else if ((lowest_attacker = mine & board.getPieceBB(makePiece(KNIGHT, static_cast<Side>(stm))))) {
+            if ((v = SEE_VALUES[KNIGHT] - v) < result) {
+                break;
+            }
+            
+            occ ^= (lowest_attacker & -lowest_attacker);
+        } else if ((lowest_attacker = mine & board.getPieceBB(makePiece(BISHOP, static_cast<Side>(stm))))) {
+            if ((v = SEE_VALUES[BISHOP] - v) < result) {
+                break;
+            }
+
+            occ ^= (lowest_attacker & -lowest_attacker);
+            attackers |= getBishopAttacks(to, occ) & diag;
+        } else if ((lowest_attacker = mine & board.getPieceBB(makePiece(ROOK, static_cast<Side>(stm))))) {
+            if ((v = SEE_VALUES[ROOK] - v) < result) {
+                break;
+            }
+
+            occ ^= (lowest_attacker & -lowest_attacker);
+            attackers |= getRookAttacks(to, occ) & straight;
+        } else if ((lowest_attacker = mine & board.getPieceBB(makePiece(QUEEN, static_cast<Side>(stm))))) {
+            if ((v = SEE_VALUES[QUEEN] - v) < result) {
+                break;
+            }
+            
+            occ ^= (lowest_attacker & -lowest_attacker);
+            attackers |= (getBishopAttacks(to, occ) & diag) | (getRookAttacks(to, occ) & straight);
+        } else {
+            return (attackers & ~board.getOcc(static_cast<Side>(stm))) ? result ^ 1 : result;
+        }
+    }
+
+    return result;
 }
 
 int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
@@ -197,7 +232,7 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
 
         Move noisy_move = moves[i];
         // SEE
-        if (!board.inCheck() && staticExchangeEval(board, noisy_move) < 0) {
+        if (!board.inCheck() && !staticExchangeEval(board, noisy_move, 0)) {
             continue;
         }
         board.makeMove(noisy_move);
@@ -334,7 +369,7 @@ int search(
         tt.prefetch(board.hash());
         int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ply + 1, false, pv_table, max_ply);
         board.undoNullMove();
-        
+
         if (score >= SCORE_MAX - MAX_GAME_MOVES) { // Prevent including mate scores
             score = beta;
         }
