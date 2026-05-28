@@ -2,6 +2,7 @@
 #define ATTACKS_H
 
 #include "core/bitboard.h"
+#include "board/board.h"
 
 extern BitBoard bishop_masks[64];
 extern BitBoard rook_masks[64];
@@ -14,6 +15,9 @@ extern BitBoard king_attacks[64];
 
 extern BitBoard between_squares[64][64];
 extern BitBoard line_squares[64][64];
+
+// SEE
+BitBoard getAttackers(const Board& board, Square sq, BitBoard occ);
 
 // OTF attack generation
 BitBoard generateKingAttacks(Square sq);

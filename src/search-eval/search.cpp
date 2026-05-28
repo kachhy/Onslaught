@@ -1,9 +1,11 @@
 #include "search.h"
 #include "board/rules.h"
+#include "core/bitboard.h"
 #include "core/move.h"
 #include "core/types.h"
 #include "eval.h"
 #include "hash/transposition.h"
+#include "movegen/attacks.h"
 #include "movegen/movegen.h"
 #include "terms.h"
 #include "uci/uci.h"
@@ -98,6 +100,73 @@ void printInfo(const Board& src, int depth, int seldepth, int score, const char*
     }
     std::cout << std::endl;
 }
+// SEE
+int staticExchangeEval(const Board& board, Move move, int threshold) {
+    if (Castle(move) || IsEP(move) || Prom(move)) {
+        return 1;
+    }
+
+    Square from = From(move);
+    Square to = To(move);
+
+    int v = SEE_VALUES[makeDefaultPiece(board.pieceAt(to))] - threshold;
+    if (v < 0) {
+        return 0;
+    }
+
+    v = SEE_VALUES[makeDefaultPiece(MovePiece(move))] - v;
+    if (v <= 0) {
+        return 1;
+    }
+
+    int stm = board.getSTM();
+    
+    BitBoard occ = board.getOcc(BOTH) ^ (BitBoard(1) << from) ^ (BitBoard(1) << to);
+    BitBoard attackers = getAttackers(board, to, occ);
+    BitBoard mine, lowest_attacker;
+
+    const BitBoard diag = board.getPieceBB(WHITE_BISHOP) | board.getPieceBB(BLACK_BISHOP) | board.getPieceBB(WHITE_QUEEN) | board.getPieceBB(BLACK_QUEEN);
+    const BitBoard straight = board.getPieceBB(WHITE_ROOK) | board.getPieceBB(BLACK_ROOK) | board.getPieceBB(WHITE_QUEEN) | board.getPieceBB(BLACK_QUEEN);
+
+    int result = 1;
+
+    while (true) {
+        stm ^= 1;
+        attackers &= occ;
+
+        if (!(mine = (attackers & board.getOcc(static_cast<Side>(stm))))) {
+            break;
+        }
+
+        result ^= 1;
+
+        int pt;
+        for (pt = PAWN; pt <= QUEEN; pt++) {
+            lowest_attacker = mine & board.getPieceBB(makePiece(static_cast<DefaultPiece>(pt), static_cast<Side>(stm)));
+            if (lowest_attacker) {
+                break;
+            }
+        }
+
+        if (pt > QUEEN) {
+            return (attackers & ~board.getOcc(static_cast<Side>(stm))) ? result ^ 1 : result;
+        }
+
+        if ((v = SEE_VALUES[pt] - v) < result) {
+            break;
+        }
+
+        occ ^= (lowest_attacker & -lowest_attacker);
+        if (pt == PAWN || pt == BISHOP || pt == QUEEN) {
+            attackers |= getBishopAttacks(to, occ) & diag;
+        }
+        if (pt == ROOK || pt == QUEEN) {
+            attackers |= getRookAttacks(to, occ) & straight;
+        }
+    }
+
+    return result;
+}
 
 int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
     if (ply >= seldepth) {
@@ -150,6 +219,10 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         std::swap(scores[i], scores[best_move_index]);
 
         Move noisy_move = moves[i];
+        // SEE
+        if (!board.inCheck() && !staticExchangeEval(board, noisy_move, 0)) {
+            continue;
+        }
         board.makeMove(noisy_move);
         int score = -quiesce(board, -beta, -alpha, ply + 1, qply + 1);
         board.undoMove(noisy_move);
@@ -284,7 +357,7 @@ int search(
         tt.prefetch(board.hash());
         int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ply + 1, false, pv_table, max_ply);
         board.undoNullMove();
-        
+
         if (score >= SCORE_MAX - MAX_GAME_MOVES) { // Prevent including mate scores
             score = beta;
         }
@@ -350,6 +423,12 @@ int search(
         if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
             continue;
         }
+        // if (!in_check && moves_searched > 0 && Capture(move) && depth <= SEE_DEPTH_MAX && staticExchangeEval(board, move) < -20 * depth * depth) {
+        //     continue;
+        // }
+        // if (is_quiet_move) {
+        //     quiets_tried[quiets_tried_count++] = move;
+        // }
         if (is_quiet_move) {
             quiets_tried.emplace_back(move);
         }
