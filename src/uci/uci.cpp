@@ -15,7 +15,7 @@
 Board board;
 thread_local bool searching = false;
 thread_local bool stdin_enabled = true;
-bool debug_mode = true;
+bool debug_mode = false;
 std::unordered_map<std::string, UCIOption> options_map;
 
 void setOption(std::string key, UCIOption value) { options_map[key] = std::move(value); }
