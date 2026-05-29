@@ -351,7 +351,7 @@ int search(
 
     // nmp
     BitBoard non_pawn_material = board.getOcc(board.getSTM()) & ~board.getPieceBB(makePiece(PAWN, board.getSTM())) & ~board.getPieceBB(makePiece(KING, board.getSTM()));
-    if (!is_pv && can_make_null_move && !in_check && depth >= 3 && static_eval >= beta && non_pawn_material) {
+    if (!is_pv && can_make_null_move && !in_check && depth >= NMP_DEPTH_CUTOFF && static_eval >= beta && non_pawn_material) {
         int nmp_reduction = 3 + depth / 6;
         board.makeNullMove();
         tt.prefetch(board.hash());
@@ -368,7 +368,7 @@ int search(
     }
 
     // razoring = save movegen cost on pruned nodes by checking if it can beat alpha with quiesce, otherwise fail low
-    if (!is_pv && !in_check && depth <= 3 && static_eval + RAZOR_MARGIN * depth < alpha) {
+    if (!is_pv && !in_check && depth <= RAZORING_DEPTH_MAX && static_eval + RAZOR_MARGIN * depth < alpha) {
         int quiescent_score = quiesce(board, alpha - 1, alpha, ply + 1, 0);
         if (quiescent_score < alpha) {
             return quiescent_score;
@@ -376,7 +376,7 @@ int search(
     }
 
     // iir (no tt move)
-    if (depth >= 4 && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
+    if (depth >= IIR_DEPTH_CUTOFF && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
         depth--;
     }
 
@@ -402,8 +402,8 @@ int search(
     // history malus. apply penalties when all moves fail low
     MoveList quiets_tried;
 
-    // // futility pruning
-    bool futility_pruning = !is_pv && !in_check && depth <= 5 && static_eval + FUTILITY_MARGIN * depth <= alpha;
+    // futility pruning
+    bool futility_pruning = !is_pv && !in_check && depth <= FP_DEPTH_MAX && static_eval + FUTILITY_MARGIN * depth <= alpha;
 
     for (uint8_t i = 0; i < moves.size(); i++) {
         // move ordering
@@ -448,7 +448,7 @@ int search(
             score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
         } else {
             // lmr
-            if (moves_searched >= 3 && depth >= 3 && !Capture(move) && !Prom(move) && !in_check) {
+            if (moves_searched >= LMR_MOVES_CUTOFF && depth >= LMR_DEPTH_CUTOFF && !Capture(move) && !Prom(move) && !in_check) {
                 // TODO tune this function
                 // improving flag = search more carefully when good position is improving (less reduction)
                 int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2) /* - improving*/);
@@ -571,7 +571,7 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
         int delta = ASPIRATION_MARGIN;
         int alpha;
         int beta;
-        if (depth >= 5) {
+        if (depth >= ASPIRATION_DEPTH_CUTOFF) {
             alpha = best_score - delta;
             beta = best_score + delta;
         } else {
@@ -602,14 +602,14 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
                     printInfo(board, depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table);
                 }
                 alpha = std::max(-SCORE_MAX, iter_score - delta);
-                delta += delta * 1.25;
+                delta *= (1 + ASPIRATION_SCALAR);
             } else if (iter_score >= beta) {
                 // fail high = true score is at least beta (lower bound)
                 if (!params.silent) {
                     printInfo(board, depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table);
                 }
                 beta = std::min(SCORE_MAX, iter_score + delta);
-                delta += delta * 1.25;
+                delta *= (1 + ASPIRATION_SCALAR);
             } else {
                 best_score = iter_score;
                 if (!params.silent) {
