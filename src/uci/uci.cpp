@@ -234,7 +234,7 @@ int uciStartup() {
     initOptions();
 
     std::cout << "id name Axiom\n";
-    std::cout << "id author Connor Kostiew, Kai Chung, Will Bradley\n"; // Agree on the authors name
+    std::cout << "id author Connor Kostiew, Kai Chung, Will Bradley\n";
     options();
     std::cout << "uciok\n";
 

@@ -66,10 +66,18 @@ int main(int argc, char** argv) {
     }
 
     if (argc > 1 && std::string(argv[1]) == "bench") {
+        if (!nnue_loaded) {
+            std::fprintf(stderr, "loadNNUE failed: no embedded net and could not load %s\n", nnue_path.c_str());
+            return 1;
+        }
         bench();
         return 0;
     }
 
+    if (!nnue_loaded) {
+        std::fprintf(stderr, "info string NNUE load failed. Falling back to HCE.\n");
+        use_nnue = false;
+    }
     uci();
     return 0;
 }
