@@ -3,9 +3,18 @@
 #include "movegen/attacks.h"
 #include "nnue/nnue.h"
 #include "terms.h"
+#include <array>
 
 Trace trace;
 bool use_nnue = true;
+
+static const std::array<int, 201> fmr_scale = [](){
+    std::array<int, 201> t;
+    for (int i = 0; i <= 200; i++) {
+        t[i] = 200 - i;
+    }
+    return t;
+}();
 
 constexpr size_t TABLE_SIZE_MB = 4;
 constexpr size_t TARGET_BYTES = TABLE_SIZE_MB * MEGABYTE;
@@ -644,7 +653,9 @@ int eval(const Board& board) {
     }
 
     if (use_nnue) {
-        return evaluate(board.getAccumulator(), board.getSTM());
+        int nnue_score = evaluate(board.getAccumulator(), board.getSTM());
+        nnue_score = nnue_score * fmr_scale[board.getFMR()] / 200;
+        return nnue_score;
     }
 
     EvalInfo info = board.getEvalInfo();
@@ -668,7 +679,8 @@ int eval(const Board& board) {
     score += (board.getSTM() == WHITE) ? TEMPO : -TEMPO;
     TRACE_INC(tempo, board.getSTM());
 
-    const int r_score = T(score, board.phase());
+    int r_score = T(score, board.phase());
+    r_score = r_score * fmr_scale[board.getFMR()] / 200;
 
     return board.getSTM() == WHITE ? r_score : -r_score;
 }
