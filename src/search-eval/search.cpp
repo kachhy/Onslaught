@@ -530,7 +530,7 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
     size_t hard_cap, soft_cap;
 
     if (params.movetime != -1) {
-        hard_cap = params.movetime;
+        hard_cap = std::max(params.movetime, 1);
         soft_cap = params.movetime;
     } else if (board.getSTM() == WHITE) {
         if (params.wtime == -1) {
@@ -538,10 +538,10 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
             soft_cap = 0;
         } else {
             if (params.movestogo > 0) {
-                hard_cap = params.wtime / params.movestogo + params.winc;
+                hard_cap = std::max(params.wtime / params.movestogo + params.winc, 1);
                 soft_cap = params.wtime / params.movestogo + params.winc;
             } else {
-                hard_cap = params.wtime / 20 + params.winc / 2;
+                hard_cap = std::max(params.wtime / 20 + params.winc / 2, 1);
                 soft_cap = params.wtime / 30 + params.winc / 3;
             }
         }
@@ -551,10 +551,10 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
             soft_cap = 0;
         } else {
             if (params.movestogo > 0) {
-                hard_cap = params.btime / params.movestogo + params.binc;
+                hard_cap = std::max(params.btime / params.movestogo + params.binc, 1);
                 soft_cap = params.btime / params.movestogo + params.binc;
             } else {
-                hard_cap = params.btime / 20 + params.binc / 2;
+                hard_cap = std::max(params.btime / 20 + params.binc / 2, 1);
                 soft_cap = params.btime / 30 + params.binc / 3;
             }
         }
