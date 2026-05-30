@@ -1,4 +1,5 @@
 #include "transposition.h"
+#include "uci/uci.h"
 #include <cstring>
 
 TTable tt;
@@ -29,6 +30,10 @@ TTable::TTable(size_t megabytes) : table_age(0), table_size(0) {
 }
 
 void TTable::resize(size_t megabytes) {
+    if (searching) {
+        return;
+    }
+
     const size_t new_capacity = computeCapacity(megabytes);
     table.reset(new EntryTriple[new_capacity]());
     table_capacity = new_capacity;
