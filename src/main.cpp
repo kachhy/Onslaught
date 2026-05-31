@@ -21,6 +21,20 @@ void initAttacks() {
     populateRookAttacks();
 }
 
+void bench() {
+    Board b;
+    auto start = std::chrono::high_resolution_clock::now();
+    int best_score;
+    searching = true;
+    std::streambuf* original_buffer = std::cout.rdbuf(nullptr); // Silence cout
+    search(b, 14, best_score, GoParams{});
+    std::cout.rdbuf(original_buffer);
+    searching = false;
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    std::cout << nodes << " nodes " << static_cast<size_t>((static_cast<double>(nodes) / duration.count()) * 1000) << " nps" << std::endl;
+}
+
 int main(int argc, char** argv) {
     // Populate attacks
     initAttacks();
@@ -30,9 +44,6 @@ int main(int argc, char** argv) {
 
     // Populate eval data
     initEval();
-
-    // Run TTBench
-    // benchTT();
 
 #ifdef TUNING
     if (argc < 5) {

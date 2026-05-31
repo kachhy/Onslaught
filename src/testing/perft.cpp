@@ -170,12 +170,3 @@ void perftTests() {
     runTimePerftTest(depths[4], nodes_position_5, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
     runTimePerftTest(depths[5], nodes_position_6, "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10");
 }
-
-void bench() {
-    Board b;
-    auto start = std::chrono::high_resolution_clock::now();
-    size_t nodes = perft_test_slow(b, 5);
-    auto stop = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-    std::cout << nodes << " nodes " << static_cast<size_t>((static_cast<double>(nodes) / duration.count()) * 1000) << " nps" << std::endl;
-}
