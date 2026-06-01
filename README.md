@@ -13,7 +13,7 @@
 
 ## 📖 Overview
 
-Axiom is a Universal Chess Interface (UCI) compliant chess engine developed in C++. Designed for performance and adherence to standard chess engine protocols, Axiom can be integrated with various UCI-compatible chess graphical user interfaces (GUIs) to play, analyze, and find optimal moves in positions.
+Axiom is a Universal Chess Interface (UCI) compliant chess engine developed in C++. Designed for performance, Axiom can be used with various UCI-compatible chess graphical user interfaces (GUIs) to play, analyze, and find optimal moves in standard chess positions.
 
 ## 🚀 Quick Start
 
@@ -35,7 +35,7 @@ Follow these steps to build and run the Axiom chess engine.
 2.  **Build the engine**
     The `Makefile` will compile the source code and create the `axiom` executable.
     ```bash
-    make
+    make release
     ```
     To compile with debug symbols for easier debugging:
     ```bash
