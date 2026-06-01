@@ -110,6 +110,7 @@ inline int32_t Accumulator::evaluate(Side stm) const {
         sum += static_cast<int64_t>(screlu(accumulator[us][i])) * output_weights[i];
         sum += static_cast<int64_t>(screlu(accumulator[them][i])) * output_weights[HIDDEN_SIZE + i];
     }
+    
     // Quant pipeline:
     //   sum            scale = L0^2 * L1
     //   sum / L0       scale = L0   * L1  (matches output_bias)
