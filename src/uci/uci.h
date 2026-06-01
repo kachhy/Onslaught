@@ -13,6 +13,9 @@
 #include <variant>
 #include <vector>
 
+// Version descriptor
+constexpr std::string_view version = "1.0";
+
 // Variadic overload helper for std::visit
 template<class... Ts>
 struct overloaded : Ts... { using Ts::operator()...; };
