@@ -17,7 +17,7 @@ struct alignas(64) EntryTriple {
 };
 
 constexpr size_t ENTRY_TRIPLE_SIZE = sizeof(EntryTriple);
-constexpr size_t DEFAULT_TABLE_MB = 16;
+constexpr size_t DEFAULT_TABLE_MB = 256;
 
 class TTable {
 private:
