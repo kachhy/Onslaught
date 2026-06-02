@@ -120,7 +120,7 @@ int staticExchangeEval(const Board& board, Move move, int threshold) {
     }
 
     int stm = board.getSTM();
-    
+
     BitBoard occ = board.getOcc(BOTH) ^ (BitBoard(1) << from) ^ (BitBoard(1) << to);
     BitBoard attackers = getAttackers(board, to, occ);
     BitBoard mine, lowest_attacker;
@@ -303,6 +303,7 @@ int search(
 
     nodes++;
     bool is_pv = beta - alpha != 1;
+    bool root_node = ss->ply == 0;
 
     // Set up next ply's stack entry before any recursion (NMP recurses below)
     (ss + 1)->ply = ss->ply + 1;
@@ -420,6 +421,11 @@ int search(
         std::swap(scores[i], scores[best_move_index]);
 
         Move move = moves[i];
+
+        if (move == ss->excluded_move) {
+            continue;
+        }
+
         bool is_quiet_move = !Capture(move) && !Prom(move);
         bool gives_check = givesCheck(board, move);
         // futility pruning: if static_eval + margin <= alpha, prune quiet moves bc they are unlikely to improve position
@@ -429,26 +435,37 @@ int search(
         if (!in_check && moves_searched > 0 && Capture(move) && depth <= SEE_DEPTH_MAX && !staticExchangeEval(board, move, -20 * depth * depth)) {
             continue;
         }
-        // if (is_quiet_move) {
-        //     quiets_tried[quiets_tried_count++] = move;
-        // }
+
+        // Extensions
+        int extension = 0;
+        if (!root_node && tt_hit && ss->excluded_move == NO_MOVE && depth >= SE_DEPTH_CUTOFF && move == tt_entry.best_move && tt_entry.depth > depth - 3 &&
+            tt_entry.bound == LOWERBOUND && tt_entry.score < SCORE_MAX - MAX_PLY) {
+            int singular_beta = tt_entry.score - SE_MARGIN * depth;
+            int singular_depth = (depth - 1) / 2;
+
+            ss->excluded_move = move;
+            int singular_score = search(board, singular_depth, singular_beta - 1, singular_beta, hard_cap, max_nodes, start, ss, true, pv_table, max_ply);
+            ss->excluded_move = NO_MOVE;
+
+            if (singular_score < singular_beta) {
+                extension = (singular_score < singular_beta - DOUBLE_EXT_MARGIN) ? 2 : 1;
+            } else if (singular_beta >= beta) { // Multi-cut pruning
+                return singular_beta;
+            }
+        }
+
         if (is_quiet_move) {
             quiets_tried.emplace_back(move);
         }
+
         board.makeMove(move);
         tt.prefetch(board.hash());
-
-        // // mate extensions (replaced by check extension at top of search)
-        // int extension = 0;
-        // if (gives_check && depth <= 2) {
-        //     extension = 1;
-        // }
 
         int score;
         bool do_full_search = false;
 
         if (moves_searched == 0) {
-            score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ss + 1, true, pv_table, max_ply);
+            score = -search(board, depth - 1 + extension, -beta, -alpha, hard_cap, max_nodes, start, ss + 1, true, pv_table, max_ply);
         } else {
             // lmr
             if (moves_searched >= LMR_MOVES_CUTOFF && depth >= LMR_DEPTH_CUTOFF && !Capture(move) && !Prom(move) && !in_check) {
