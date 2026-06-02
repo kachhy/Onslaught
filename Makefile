@@ -56,8 +56,8 @@ OBJ=$(patsubst src/%.cpp,$(OBJDIR)/%.o,$(SRC))
 DEPS=$(OBJ:.o=.d)
 EXE ?= $(OBJDIR)/Axiom
 
-debug: $(EXE)
 release: $(EXE)
+debug: $(EXE)
 lto: $(EXE)
 native: $(EXE)
 pg: $(EXE)
