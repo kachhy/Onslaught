@@ -9,7 +9,7 @@ OBJDIR=build
 SRC=$(shell find src -name '*.cpp')
 
 ifeq ($(MAKECMDGOALS),)
-	MAKECMDGOALS += debug
+	MAKECMDGOALS += release
 endif
 
 ifneq ($(filter debug,$(MAKECMDGOALS)),)
