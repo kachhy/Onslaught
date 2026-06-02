@@ -449,9 +449,12 @@ int search(
         } else {
             // lmr
             if (moves_searched >= LMR_MOVES_CUTOFF && depth >= LMR_DEPTH_CUTOFF && !Capture(move) && !Prom(move) && !in_check) {
-                // TODO tune this function
-                // improving flag = search more carefully when good position is improving (less reduction)
                 int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2) /* - improving*/);
+                
+                if (Capture(tt_entry.best_move) || Prom(tt_entry.best_move)) {
+                    lmr_reduction++;
+                }
+
                 score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
