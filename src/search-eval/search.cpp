@@ -306,6 +306,9 @@ int search(
     nodes++;
     bool is_pv = beta - alpha != 1;
 
+    // Set up next ply's stack entry before any recursion (NMP recurses below)
+    (ss + 1)->ply = ss->ply + 1;
+
     // find if this position has already been searched at a good depth and returns its score
     Entry tt_entry;
     bool tt_hit = tt.fetch(board, tt_entry);
@@ -406,9 +409,6 @@ int search(
 
     // futility pruning
     bool futility_pruning = !is_pv && !in_check && depth <= FP_DEPTH_MAX && static_eval + FUTILITY_MARGIN * depth <= alpha;
-
-    // Set up search stack for the next recursive step
-    (ss + 1)->ply = ss->ply + 1;
 
     for (uint8_t i = 0; i < moves.size(); i++) {
         // move ordering
