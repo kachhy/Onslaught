@@ -27,7 +27,12 @@ extern thread_local uint64_t nodes;
 
 struct GoParams;
 
-int search(Board& board, int depth, int alpha, int beta, size_t hard_cap, long long max_nodes, std::chrono::high_resolution_clock::time_point start, int ply = 0);
+struct SearchStack {
+    int static_eval;
+    Move killers[2];
+    int ply;
+};
+
 Move search(Board& board, int max_depth, int& best_score, const GoParams& params);
 
 #endif // SEARCH_H
