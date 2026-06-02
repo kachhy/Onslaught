@@ -451,7 +451,7 @@ int search(
             if (moves_searched >= LMR_MOVES_CUTOFF && depth >= LMR_DEPTH_CUTOFF && !Capture(move) && !Prom(move) && !in_check) {
                 int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2) /* - improving*/);
                 
-                if (Capture(tt_entry.best_move) || Prom(tt_entry.best_move)) {
+                if (tt_hit && (Capture(tt_entry.best_move) || Prom(tt_entry.best_move))) {
                     lmr_reduction++;
                 }
 
