@@ -118,10 +118,6 @@ public:
         }
     };
     const BoardHistory* getBoardHistory() const { return history; }
-
-    // Search
-    Move killers[MAX_PLY][2];
-    int static_evals[MAX_PLY]; // for improving
 private:
 
     // Private member functions
