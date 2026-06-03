@@ -29,7 +29,6 @@ struct GoParams;
 struct SearchStack {
     int static_eval;
     Move killers[2];
-    int ply;
 };
 
 Move search(Board& board, int max_depth, int& best_score, const GoParams& params);

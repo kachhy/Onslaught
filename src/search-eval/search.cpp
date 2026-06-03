@@ -268,17 +268,17 @@ static int scoreMove(Board& board, Move move, Move tt_move, SearchStack* ss) {
 }
 
 int search(
-    Board& board, int depth, int alpha, int beta, size_t hard_cap, long long max_nodes, std::chrono::high_resolution_clock::time_point start, SearchStack* ss,
+    Board& board, int depth, int alpha, int beta, size_t hard_cap, long long max_nodes, std::chrono::high_resolution_clock::time_point start, int ply, SearchStack* ss,
     bool can_make_null_move, PVLine pv_table[], int max_ply
 ) {
-    if (ss->ply >= seldepth) {
-        seldepth = ss->ply;
+    if (ply >= seldepth) {
+        seldepth = ply;
     }
-    if (ss->ply >= MAX_PLY) {
+    if (ply >= MAX_PLY) {
         return eval(board);
     }
 
-    pv_table[ss->ply].cur_move = 0;
+    pv_table[ply].cur_move = 0;
 
     if (!(nodes & 4095)) {
         checkStdin(start, max_nodes, nodes, hard_cap);
@@ -287,35 +287,32 @@ int search(
         }
     }
 
-    if (ss->ply > 0 && isDraw(board, ss->ply)) {
+    if (ply > 0 && isDraw(board, ply)) {
         return 0;
     }
     // mdp
-    alpha = std::max(alpha, -SCORE_MAX + ss->ply);
-    beta = std::min(beta, SCORE_MAX - ss->ply - 1);
+    alpha = std::max(alpha, -SCORE_MAX + ply);
+    beta = std::min(beta, SCORE_MAX - ply - 1);
     if (alpha >= beta) {
         return alpha;
     }
     // quiesce on depth <= 0
 
     if (depth <= 0) {
-        pv_table[ss->ply].cur_move = 0;
-        return quiesce(board, alpha, beta, ss->ply + 1, 0);
+        pv_table[ply].cur_move = 0;
+        return quiesce(board, alpha, beta, ply + 1, 0);
     }
 
     nodes++;
     bool is_pv = beta - alpha != 1;
 
-    // Set up next ply's stack entry before any recursion (NMP recurses below)
-    (ss + 1)->ply = ss->ply + 1;
-
     // find if this position has already been searched at a good depth and returns its score
     Entry tt_entry;
     bool tt_hit = tt.fetch(board, tt_entry);
     if (tt_hit) {
-        tt_entry.score = scoreFromTT(tt_entry.score, ss->ply);
+        tt_entry.score = scoreFromTT(tt_entry.score, ply);
 
-        if (!is_pv && ss->ply > 0 && tt_entry.depth >= static_cast<size_t>(depth)) {
+        if (!is_pv && ply > 0 && tt_entry.depth >= static_cast<size_t>(depth)) {
             if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) || (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
                 return tt_entry.score;
             }
@@ -327,7 +324,7 @@ int search(
         depth++; // check extension
     }
     if (in_check) { // important; this prevents the improving flag from being false after check sequence finsishes
-        ss->static_eval = (ss->ply >= 2 ? (ss - 2)->static_eval : 0);
+        ss->static_eval = (ply >= 2 ? (ss - 2)->static_eval : 0);
     } else {
         if (tt_hit) {
             if (tt_entry.bound == EXACTBOUND) {
@@ -360,7 +357,7 @@ int search(
         int nmp_reduction = 3 + depth / 6;
         board.makeNullMove();
         tt.prefetch(board.hash());
-        int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ss + 1, false, pv_table, max_ply);
+        int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ply + 1, ss + 1, false, pv_table, max_ply);
         board.undoNullMove();
 
         if (score >= SCORE_MAX - MAX_GAME_MOVES) { // Prevent including mate scores
@@ -374,7 +371,7 @@ int search(
 
     // razoring = save movegen cost on pruned nodes by checking if it can beat alpha with quiesce, otherwise fail low
     if (!is_pv && !in_check && depth <= RAZORING_DEPTH_MAX && static_eval + RAZOR_MARGIN * depth < alpha) {
-        int quiescent_score = quiesce(board, alpha - 1, alpha, ss->ply + 1, 0);
+        int quiescent_score = quiesce(board, alpha - 1, alpha, ply + 1, 0);
         if (quiescent_score < alpha) {
             return quiescent_score;
         }
@@ -388,8 +385,8 @@ int search(
     MoveList moves;
     getLegalMoves(board, moves);
     if (moves.size() == 0) {
-        pv_table[ss->ply].cur_move = 0;
-        return in_check ? -SCORE_MAX + ss->ply : 0; // checkmate or stalemate
+        pv_table[ply].cur_move = 0;
+        return in_check ? -SCORE_MAX + ply : 0; // checkmate or stalemate
     }
 
     std::array<int, MAX_MOVES> scores;
@@ -450,23 +447,23 @@ int search(
         bool do_full_search = false;
 
         if (moves_searched == 0) {
-            score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ss + 1, true, pv_table, max_ply);
+            score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
         } else {
             // lmr
             if (moves_searched >= LMR_MOVES_CUTOFF && depth >= LMR_DEPTH_CUTOFF && !Capture(move) && !Prom(move) && !in_check) {
                 // TODO tune this function
                 // improving flag = search more carefully when good position is improving (less reduction)
                 int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2) /* - improving*/);
-                score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ss + 1, true, pv_table, max_ply);
+                score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
                 do_full_search = true;
             }
             // pvs at full depth
             if (do_full_search) {
-                score = -search(board, depth - 1, -alpha - 1, -alpha, hard_cap, max_nodes, start, ss + 1, true, pv_table, max_ply);
+                score = -search(board, depth - 1, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
                 if (score > alpha && score < beta) {
-                    score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ss + 1, true, pv_table, max_ply);
+                    score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
                 }
             }
         }
@@ -479,13 +476,13 @@ int search(
             if (score > alpha) {
                 alpha = score;
                 // Update PV for this ply from the pre-allocated table
-                pv_table[ss->ply].moves[0] = move;
-                memcpy(pv_table[ss->ply].moves + 1, pv_table[ss->ply + 1].moves, pv_table[ss->ply + 1].cur_move * sizeof(Move));
-                pv_table[ss->ply].cur_move = pv_table[ss->ply + 1].cur_move + 1;
+                pv_table[ply].moves[0] = move;
+                memcpy(pv_table[ply].moves + 1, pv_table[ply + 1].moves, pv_table[ply + 1].cur_move * sizeof(Move));
+                pv_table[ply].cur_move = pv_table[ply + 1].cur_move + 1;
             }
         }
         if (score >= beta) {
-            tt.insert(board, best_move, scoreToTT(best_score, ss->ply), LOWERBOUND, depth);
+            tt.insert(board, best_move, scoreToTT(best_score, ply), LOWERBOUND, depth);
             if (!Capture(best_move) && !Prom(best_move)) {
                 if (best_move != ss->killers[0]) { // Update killer moves
                     ss->killers[1] = ss->killers[0];
@@ -499,7 +496,7 @@ int search(
     }
 
     TTBound bound = (best_score > original_alpha) ? EXACTBOUND : UPPERBOUND;
-    tt.insert(board, best_move, scoreToTT(best_score, ss->ply), bound, depth);
+    tt.insert(board, best_move, scoreToTT(best_score, ply), bound, depth);
     return best_score;
 }
 
@@ -576,7 +573,7 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
                 pv_table[i].cur_move = 0;
             }
 
-            iter_score = search(board, depth, alpha, beta, hard_cap, params.nodes, start, sstack, true, pv_table, MAX_PLY);
+            iter_score = search(board, depth, alpha, beta, hard_cap, params.nodes, start, 0, sstack, true, pv_table, MAX_PLY);
             if (!searching) {
                 break;
             }
