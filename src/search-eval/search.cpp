@@ -349,13 +349,13 @@ int search(
 
     // rfp (prune worse positions harder with improving position)
     // TODO Tune the rfp margin constant
-    if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * (depth /* - (improving && depth > 1)*/) >= beta) {
+    if (!is_pv && !in_check && ss->excluded_move == NO_MOVE && depth <= 6 && static_eval - RFP_MARGIN * (depth /* - (improving && depth > 1)*/) >= beta) {
         return static_eval;
     }
 
     // nmp
     BitBoard non_pawn_material = board.getOcc(board.getSTM()) & ~board.getPieceBB(makePiece(PAWN, board.getSTM())) & ~board.getPieceBB(makePiece(KING, board.getSTM()));
-    if (!is_pv && can_make_null_move && !in_check && depth >= NMP_DEPTH_CUTOFF && static_eval >= beta && non_pawn_material) {
+    if (!is_pv && can_make_null_move && !in_check && ss->excluded_move == NO_MOVE && depth >= NMP_DEPTH_CUTOFF && static_eval >= beta && non_pawn_material) {
         int nmp_reduction = 3 + depth / 6;
         board.makeNullMove();
         tt.prefetch(board.hash());
@@ -372,7 +372,7 @@ int search(
     }
 
     // razoring = save movegen cost on pruned nodes by checking if it can beat alpha with quiesce, otherwise fail low
-    if (!is_pv && !in_check && depth <= RAZORING_DEPTH_MAX && static_eval + RAZOR_MARGIN * depth < alpha) {
+    if (!is_pv && !in_check && ss->excluded_move == NO_MOVE && depth <= RAZORING_DEPTH_MAX && static_eval + RAZOR_MARGIN * depth < alpha) {
         int quiescent_score = quiesce(board, alpha - 1, alpha, ss->ply + 1, 0);
         if (quiescent_score < alpha) {
             return quiescent_score;
