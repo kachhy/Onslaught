@@ -449,9 +449,9 @@ int search(
 
             if (singular_score < singular_beta) {
                 extension = (singular_score < singular_beta - DOUBLE_EXT_MARGIN) ? 2 : 1;
-            } else if (singular_beta >= beta) { // Multi-cut pruning
-                return singular_beta;
             }
+            // Multi-cut pruning disabled for bisection:
+            // else if (singular_beta >= beta) { return singular_beta; }
         }
 
         if (is_quiet_move) {
