@@ -22,7 +22,7 @@ constexpr float ASPIRATION_SCALAR = 1.290771;
 constexpr int MAX_HISTORY = 8192;
 constexpr int SEE_VALUES[6] = { 100, 300, 300, 500, 900, 20000 }; // PBNRQK
 constexpr uint8_t SEE_DEPTH_MAX = 8;
-constexpr uint8_t SE_DEPTH_CUTOFF = 6;
+constexpr uint8_t SE_DEPTH_CUTOFF = 8;
 constexpr int SE_MARGIN = 4;
 constexpr int DOUBLE_EXT_MARGIN = 200;
 
