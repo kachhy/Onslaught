@@ -5,6 +5,7 @@
 #include "core/types.h"
 #include "eval.h"
 #include "hash/transposition.h"
+#include "history.h"
 #include "movegen/attacks.h"
 #include "movegen/movegen.h"
 #include "terms.h"
@@ -120,7 +121,7 @@ int staticExchangeEval(const Board& board, Move move, int threshold) {
     }
 
     int stm = board.getSTM();
-    
+
     BitBoard occ = board.getOcc(BOTH) ^ (BitBoard(1) << from) ^ (BitBoard(1) << to);
     BitBoard attackers = getAttackers(board, to, occ);
     BitBoard mine, lowest_attacker;
@@ -262,7 +263,8 @@ static int scoreMove(Board& board, Move move, Move tt_move, int ply) {
     if (move == board.killers[ply][1]) {
         return 100000;
     }
-    return board.score_history[board.getSTM()][From(move)][To(move)];
+
+    return getScoreHistory(board.getSTM(), move);
 }
 
 int search(
@@ -487,32 +489,13 @@ int search(
                     board.killers[ply][0] = best_move;
                 }
 
-                const int bonus = std::min(depth * depth, MAX_HISTORY);
-                auto& h = board.score_history[board.getSTM()][From(best_move)][To(best_move)];
-                h += bonus - (h * std::abs(bonus) / MAX_HISTORY);
-                // board.score_history[To(best_move)][MovePiece(best_move)] =
-                //     std::min(board.score_history[To(best_move)][MovePiece(best_move)] + depth * depth, MAX_HISTORY);
-                // malus: penalize all quiet moves searched before this cutoff
-                for (const Move quiet_move : quiets_tried) {
-                    if (quiet_move == best_move) {
-                        continue;
-                    }
-                    auto& h = board.score_history[board.getSTM()][From(quiet_move)][To(quiet_move)];
-                    h += -bonus - (h * std::abs(bonus) / MAX_HISTORY);
-                }
+                updateScoreHistory(depth, board.getSTM(), best_move, quiets_tried);
             }
             return best_score;
         }
     }
 
     TTBound bound = (best_score > original_alpha) ? EXACTBOUND : UPPERBOUND;
-    // history malus for when no beta cutoffs
-    // if (bound == UPPERBOUND) {
-    //     for (int j = 0; j < quiets_tried_count; j++) {
-    //         Move m = quiets_tried[j];
-    //         board.score_history[To(m)][MovePiece(m)] = std::max(board.score_history[To(m)][MovePiece(m)] - depth * depth, -MAX_HISTORY);
-    //     }
-    // }
     tt.insert(board, best_move, scoreToTT(best_score, ply), bound, depth);
     return best_score;
 }
@@ -525,6 +508,9 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
 
     // Clear killer moves
     memset(board.killers, 0, sizeof(board.killers));
+
+    // Reset history
+    resetHistory();
 
     auto start = std::chrono::high_resolution_clock::now();
     size_t hard_cap, soft_cap;

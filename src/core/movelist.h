@@ -54,6 +54,53 @@ public:
         Move* ptr;
     };
 
+    struct const_iterator {
+        using iterator_category = std::random_access_iterator_tag;
+        using value_type = Move;
+        using difference_type = std::ptrdiff_t;
+        using pointer = const Move*;
+        using reference = const Move&;
+
+        const_iterator(const Move* ptr) : ptr(ptr) { }
+
+        reference operator*() const { return *ptr; }
+        pointer operator->() const { return ptr; }
+
+        const_iterator& operator++() {
+            ++ptr;
+            return *this;
+        }
+        const_iterator operator++(int) {
+            const_iterator tmp = *this;
+            ++ptr;
+            return tmp;
+        }
+        const_iterator& operator--() {
+            --ptr;
+            return *this;
+        }
+        const_iterator operator--(int) {
+            const_iterator tmp = *this;
+            --ptr;
+            return tmp;
+        }
+
+        const_iterator operator+(difference_type n) const { return const_iterator(ptr + n); }
+        const_iterator operator-(difference_type n) const { return const_iterator(ptr - n); }
+        difference_type operator-(const const_iterator& other) const { return ptr - other.ptr; }
+
+        reference operator[](difference_type n) const { return ptr[n]; }
+
+        bool operator==(const const_iterator& other) const { return ptr == other.ptr; }
+        bool operator!=(const const_iterator& other) const { return ptr != other.ptr; }
+        bool operator<(const const_iterator& other) const { return ptr < other.ptr; }
+        bool operator>(const const_iterator& other) const { return ptr > other.ptr; }
+        bool operator<=(const const_iterator& other) const { return ptr <= other.ptr; }
+        bool operator>=(const const_iterator& other) const { return ptr >= other.ptr; }
+    private:
+        const Move* ptr;
+    };
+
     MoveList() : count(0), sel_sort_index(0) { };
 
     uint8_t size() const { return count; }
@@ -67,6 +114,10 @@ public:
     // Iterators
     iterator begin() { return iterator(list); }
     iterator end() { return iterator(list + count); }
+    const_iterator begin() const { return const_iterator(list); }
+    const_iterator end() const { return const_iterator(list + count); }
+    const_iterator cbegin() const { return const_iterator(list); }
+    const_iterator cend() const { return const_iterator(list + count); }
 
     Move operator[](const uint8_t index) const { return list[index]; }
     Move& operator[](const uint8_t index) { return list[index]; }

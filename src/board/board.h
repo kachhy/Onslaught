@@ -122,7 +122,6 @@ public:
     // Search
     Move killers[MAX_PLY][2];
     int static_evals[MAX_PLY]; // for improving
-    int score_history[2][64][64]; // [stm][from][to] (butterfly history)
 private:
 
     // Private member functions
