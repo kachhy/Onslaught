@@ -448,7 +448,8 @@ int search(
             ss->excluded_move = NO_MOVE;
 
             if (singular_score < singular_beta) {
-                extension = (singular_score < singular_beta - DOUBLE_EXT_MARGIN) ? 2 : 1;
+                extension = 1; // bisection: single extension only (double ext disabled)
+                // extension = (singular_score < singular_beta - DOUBLE_EXT_MARGIN) ? 2 : 1;
             }
             // Multi-cut pruning disabled for bisection:
             // else if (singular_beta >= beta) { return singular_beta; }
