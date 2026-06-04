@@ -241,7 +241,7 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
     return best_value;
 }
 
-static int scoreMove(Board& board, Move move, Move tt_move, int ply) {
+static int scoreMove(Board& board, Move move, Move tt_move, SearchStack* ss) {
     if (move == tt_move) {
         return 150000; // priority to existing best move
     }
@@ -257,18 +257,20 @@ static int scoreMove(Board& board, Move move, Move tt_move, int ply) {
         return 120000;
     }
 
-    if (move == board.killers[ply][0]) {
+    if (move == ss->killers[0]) {
         return 110000;
     }
-    if (move == board.killers[ply][1]) {
+    if (move == ss->killers[1]) {
         return 100000;
     }
 
-    return getScoreHistory(board.getSTM(), move);
+    int history = getScoreHistory(board.getSTM(), move) + getContHist(ss, board.getSTM(), move);
+
+    return history;
 }
 
 int search(
-    Board& board, int depth, int alpha, int beta, size_t hard_cap, long long max_nodes, std::chrono::high_resolution_clock::time_point start, int ply,
+    Board& board, int depth, int alpha, int beta, size_t hard_cap, long long max_nodes, std::chrono::high_resolution_clock::time_point start, int ply, SearchStack* ss,
     bool can_make_null_move, PVLine pv_table[], int max_ply
 ) {
     if (ply >= seldepth) {
@@ -324,23 +326,23 @@ int search(
         depth++; // check extension
     }
     if (in_check) { // important; this prevents the improving flag from being false after check sequence finsishes
-        board.static_evals[ply] = (ply >= 2 ? board.static_evals[ply - 2] : 0);
+        ss->static_eval = (ply >= 2 ? (ss - 2)->static_eval : 0);
     } else {
         if (tt_hit) {
             if (tt_entry.bound == EXACTBOUND) {
-                board.static_evals[ply] = tt_entry.score;
+                ss->static_eval = tt_entry.score;
             } else {
-                board.static_evals[ply] = eval(board);
-                if (tt_entry.bound == (tt_entry.score > board.static_evals[ply] ? LOWERBOUND : UPPERBOUND)) {
-                    board.static_evals[ply] = tt_entry.score;
+                ss->static_eval = eval(board);
+                if (tt_entry.bound == (tt_entry.score > ss->static_eval ? LOWERBOUND : UPPERBOUND)) {
+                    ss->static_eval = tt_entry.score;
                 }
             }
         } else {
-            board.static_evals[ply] = eval(board);
+            ss->static_eval = eval(board);
         }
     }
 
-    int static_eval = board.static_evals[ply];
+    int static_eval = ss->static_eval;
 
     // imrpoving checks
     // bool improving = !in_check && ply >= 2 && static_eval > board.static_evals[ply - 2];
@@ -355,9 +357,10 @@ int search(
     BitBoard non_pawn_material = board.getOcc(board.getSTM()) & ~board.getPieceBB(makePiece(PAWN, board.getSTM())) & ~board.getPieceBB(makePiece(KING, board.getSTM()));
     if (!is_pv && can_make_null_move && !in_check && depth >= NMP_DEPTH_CUTOFF && static_eval >= beta && non_pawn_material) {
         int nmp_reduction = 3 + depth / 6;
+        ss->move = NO_MOVE;
         board.makeNullMove();
         tt.prefetch(board.hash());
-        int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ply + 1, false, pv_table, max_ply);
+        int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ply + 1, ss + 1, false, pv_table, max_ply);
         board.undoNullMove();
 
         if (score >= SCORE_MAX - MAX_GAME_MOVES) { // Prevent including mate scores
@@ -391,7 +394,7 @@ int search(
 
     std::array<int, MAX_MOVES> scores;
     for (uint8_t i = 0; i < moves.size(); i++) {
-        scores[i] = scoreMove(board, moves[i], tt_hit ? tt_entry.best_move : NO_MOVE, ply);
+        scores[i] = scoreMove(board, moves[i], tt_hit ? tt_entry.best_move : NO_MOVE, ss);
     }
 
     int original_alpha = alpha;
@@ -425,15 +428,22 @@ int search(
         if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
             continue;
         }
+
+        // late move pruning: at low depth, once enough moves are tried, skip the remaining
+        // quiets. Relies on move ordering placing good quiets early.
+        if (!is_pv && !in_check && is_quiet_move && !gives_check && depth <= LMP_DEPTH_MAX && moves_searched >= LMP_BASE + depth * depth) {
+            continue;
+        }
+
         if (!in_check && moves_searched > 0 && Capture(move) && depth <= SEE_DEPTH_MAX && !staticExchangeEval(board, move, -20 * depth * depth)) {
             continue;
         }
-        // if (is_quiet_move) {
-        //     quiets_tried[quiets_tried_count++] = move;
-        // }
+
         if (is_quiet_move) {
             quiets_tried.emplace_back(move);
         }
+
+        ss->move = move;
         board.makeMove(move);
         tt.prefetch(board.hash());
 
@@ -447,23 +457,26 @@ int search(
         bool do_full_search = false;
 
         if (moves_searched == 0) {
-            score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
+            score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
         } else {
             // lmr
             if (moves_searched >= LMR_MOVES_CUTOFF && depth >= LMR_DEPTH_CUTOFF && !Capture(move) && !Prom(move) && !in_check) {
                 // TODO tune this function
                 // improving flag = search more carefully when good position is improving (less reduction)
                 int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2) /* - improving*/);
-                score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
+                // history-based reduction: reduce good-history quiets less, bad-history more.
+                const int move_hist = getScoreHistory(board.getXSTM(), move) + getContHist(ss, board.getXSTM(), move);
+                lmr_reduction = std::max(0, std::min(lmr_reduction - move_hist / HIST_LMR_DIVISOR, depth - 2));
+                score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
                 do_full_search = true;
             }
             // pvs at full depth
             if (do_full_search) {
-                score = -search(board, depth - 1, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
+                score = -search(board, depth - 1, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
                 if (score > alpha && score < beta) {
-                    score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, true, pv_table, max_ply);
+                    score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
                 }
             }
         }
@@ -484,12 +497,15 @@ int search(
         if (score >= beta) {
             tt.insert(board, best_move, scoreToTT(best_score, ply), LOWERBOUND, depth);
             if (!Capture(best_move) && !Prom(best_move)) {
-                if (best_move != board.killers[ply][0]) { // Update killer moves
-                    board.killers[ply][1] = board.killers[ply][0];
-                    board.killers[ply][0] = best_move;
+                if (best_move != ss->killers[0]) { // Update killer moves
+                    ss->killers[1] = ss->killers[0];
+                    ss->killers[0] = best_move;
                 }
 
                 updateScoreHistory(depth, board.getSTM(), best_move, quiets_tried);
+                if (ply >= 1) {
+                    updateContHistory(depth, board.getSTM(), best_move, ss, quiets_tried);
+                }
             }
             return best_score;
         }
@@ -506,8 +522,10 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
     nodes = 0;
     best_score = 0;
 
-    // Clear killer moves
-    memset(board.killers, 0, sizeof(board.killers));
+    // Setup search stack. Pad the front by 4 so continuation history can read
+    // (ss - 1/2/4) at low plies without underflowing; padding is zero-init (NO_MOVE).
+    SearchStack sstack_buf[MAX_PLY + 5] = {};
+    SearchStack* sstack = sstack_buf + 4;
 
     // Reset history
     resetHistory();
@@ -573,7 +591,7 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
                 pv_table[i].cur_move = 0;
             }
 
-            iter_score = search(board, depth, alpha, beta, hard_cap, params.nodes, start, 0, true, pv_table, MAX_PLY);
+            iter_score = search(board, depth, alpha, beta, hard_cap, params.nodes, start, 0, sstack, true, pv_table, MAX_PLY);
             if (!searching) {
                 break;
             }
