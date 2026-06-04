@@ -123,18 +123,25 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
         const Square sq = static_cast<Square>(popLSB(temp_wp));
         const int rank = getRank(sq);
         const BitBoard forward_ray = H_FILE >> (63 - sq);
+        const BitBoard flanks = board.getPieceBB(WHITE_PAWN) & knight_outpost_table[BLACK][sq];
+
         if (rank >= 1 && rank <= 6 && !(forward_ray & (bp | bp_protected))) {
             score += PASSED_PAWNS[rank - 1];
             TRACE_INC(passed_pawns[rank - 1], WHITE);
         } else if (sq < 56) {
             // Backwards pawns
             // We can re-use knight outpost table because it will cover pawns that can potentially cover us
-            BitBoard potential_defenders = board.getPieceBB(WHITE_PAWN) & knight_outpost_table[BLACK][sq];
             const Square forward_sq = static_cast<Square>(static_cast<uint8_t>(sq) - 8);
-            if (!potential_defenders && getBit(bp_protected, forward_sq)) {
+            if (!flanks && getBit(bp_protected, forward_sq)) {
                 score += BACKWARDS_PAWN;
                 TRACE_INC(backwards_pawn, WHITE);
             }
+        }
+        
+        // Isolated pawn
+        if (!flanks) {
+            score += ISOLATED_PAWN;
+            TRACE_INC(isolated_pawn, WHITE);
         }
     }
 
@@ -144,6 +151,7 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
         const Square sq = static_cast<Square>(popLSB(temp_bp));
         const int rank = getRank(sq);
         const BitBoard forward_ray = A_FILE << sq;
+        const BitBoard flanks = board.getPieceBB(BLACK_PAWN) & knight_outpost_table[WHITE][sq];
 
         if (rank >= 1 && rank <= 6 && !(forward_ray & (wp | wp_protected))) {
             score -= PASSED_PAWNS[6 - rank];
@@ -151,13 +159,17 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
         } else if (sq >= 8) {
             // Backwards pawns
             // We can re-use knight outpost table because it will cover pawns that can potentially cover us
-            BitBoard potential_defenders = board.getPieceBB(BLACK_PAWN) & knight_outpost_table[WHITE][sq];
             const Square forward_sq = static_cast<Square>(static_cast<uint8_t>(sq) + 8);
-
-            if (!potential_defenders && getBit(wp_protected, forward_sq)) {
+            if (!flanks && getBit(wp_protected, forward_sq)) {
                 score -= BACKWARDS_PAWN;
                 TRACE_INC(backwards_pawn, BLACK);
             }
+        }
+
+        // Isolated pawn
+        if (!flanks) {
+            score -= ISOLATED_PAWN;
+            TRACE_INC(isolated_pawn, BLACK);
         }
     }
 

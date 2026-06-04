@@ -30,6 +30,7 @@ struct Trace {
     int16_t pawn_phalanx[2];       // [side] //
     int16_t doubled_pawns[2];      // [side] //
     int16_t backwards_pawn[2];     // [side] //
+    int16_t isolated_pawn[2];     // [side] //
     int16_t pawn_protection[6][2]; // [piece_being_protected][side] //
     int16_t passed_pawns[8][2];    // [rank][side] //
 

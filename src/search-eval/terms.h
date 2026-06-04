@@ -67,6 +67,7 @@ constexpr Score MOBILITY[5] = {
 constexpr Score PAWN_PHALANX = S(16, 42);
 constexpr Score DOUBLED_PAWNS = S(21, 40);
 constexpr Score BACKWARDS_PAWN = S(-5, -16);
+constexpr Score ISOLATED_PAWN = S(-3, -10);
 constexpr Score PAWN_PROTECTION[6] = {
     S(24, 36), S(0, 19), S(4, 35), S(-5, 8), S(-15, 31), S(-36, 17),
 };

@@ -242,6 +242,10 @@ void Tuner::dumpParams(std::ofstream& out) const {
     out << "constexpr Score BACKWARDS_PAWN = S(" << static_cast<int>(std::round(params[BACKWARDS_PAWN_OFFSET].value)) << ", "
         << static_cast<int>(std::round(params[BACKWARDS_PAWN_OFFSET + 1].value)) << ");\n";
 
+    // Isolated pawn
+    out << "constexpr Score ISOLATED_PAWN = S(" << static_cast<int>(std::round(params[ISOLATED_PAWN_OFFSET].value)) << ", "
+        << static_cast<int>(std::round(params[ISOLATED_PAWN_OFFSET + 1].value)) << ");\n";
+
     // Pawn protection
     out << "constexpr Score PAWN_PROTECTION[6] = {\n";
     for (int p = 0; p < 6; p++) {
@@ -432,6 +436,11 @@ double Tuner::reconstructScore(const Trace& tr) const {
     int backwards = tr.backwards_pawn[WHITE] - tr.backwards_pawn[BLACK];
     mg += backwards * params[BACKWARDS_PAWN_OFFSET].value;
     eg += backwards * params[BACKWARDS_PAWN_OFFSET + 1].value;
+
+    // Isolated pawn
+    int isolated = tr.isolated_pawn[WHITE] - tr.isolated_pawn[BLACK];
+    mg += isolated * params[ISOLATED_PAWN_OFFSET].value;
+    eg += isolated * params[ISOLATED_PAWN_OFFSET + 1].value;
 
     // Pawn protection
     for (int p = 0; p < 6; p++) {
@@ -625,6 +634,11 @@ void Tuner::updateGradients(const Trace& tr, double base, double phase, std::vec
     local_grads[BACKWARDS_PAWN_OFFSET] += base * backwards * phase;
     local_grads[BACKWARDS_PAWN_OFFSET + 1] += base * backwards * (1.0 - phase);
 
+    // Isolated pawn
+    int isolated = tr.isolated_pawn[WHITE] - tr.isolated_pawn[BLACK];
+    local_grads[ISOLATED_PAWN_OFFSET] += base * isolated * phase;
+    local_grads[ISOLATED_PAWN_OFFSET + 1] += base * isolated * (1.0 - phase);
+
     // Pawn protection
     for (int p = 0; p < 6; p++) {
         int coeff = tr.pawn_protection[p][WHITE] - tr.pawn_protection[p][BLACK];
@@ -807,6 +821,9 @@ void Tuner::initParams() {
 
     params.push_back({ (double)MG(BACKWARDS_PAWN) });
     params.push_back({ (double)EG(BACKWARDS_PAWN) });
+
+    params.push_back({ (double)MG(ISOLATED_PAWN) });
+    params.push_back({ (double)EG(ISOLATED_PAWN) });
 
     // Pawn protection [6 pieces x 2]
     for (int p = 0; p < 6; p++) {
