@@ -521,9 +521,6 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
     SearchStack sstack_buf[MAX_PLY + 5] = {};
     SearchStack* sstack = sstack_buf + 4;
 
-    // Reset history
-    resetHistory();
-
     auto start = std::chrono::high_resolution_clock::now();
     size_t hard_cap, soft_cap;
 
