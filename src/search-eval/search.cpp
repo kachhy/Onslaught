@@ -264,7 +264,9 @@ static int scoreMove(Board& board, Move move, Move tt_move, SearchStack* ss) {
         return 100000;
     }
 
-    return getScoreHistory(board.getSTM(), move);
+    int history = getScoreHistory(board.getSTM(), move) + getContHist(ss, board.getSTM(), move);
+
+    return history;
 }
 
 int search(
@@ -355,6 +357,7 @@ int search(
     BitBoard non_pawn_material = board.getOcc(board.getSTM()) & ~board.getPieceBB(makePiece(PAWN, board.getSTM())) & ~board.getPieceBB(makePiece(KING, board.getSTM()));
     if (!is_pv && can_make_null_move && !in_check && depth >= NMP_DEPTH_CUTOFF && static_eval >= beta && non_pawn_material) {
         int nmp_reduction = 3 + depth / 6;
+        ss->move = NO_MOVE;
         board.makeNullMove();
         tt.prefetch(board.hash());
         int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ply + 1, ss + 1, false, pv_table, max_ply);
@@ -425,15 +428,16 @@ int search(
         if (futility_pruning && moves_searched > 0 && is_quiet_move && !gives_check) {
             continue;
         }
+
         if (!in_check && moves_searched > 0 && Capture(move) && depth <= SEE_DEPTH_MAX && !staticExchangeEval(board, move, -20 * depth * depth)) {
             continue;
         }
-        // if (is_quiet_move) {
-        //     quiets_tried[quiets_tried_count++] = move;
-        // }
+
         if (is_quiet_move) {
             quiets_tried.emplace_back(move);
         }
+
+        ss->move = move;
         board.makeMove(move);
         tt.prefetch(board.hash());
 
@@ -490,6 +494,9 @@ int search(
                 }
 
                 updateScoreHistory(depth, board.getSTM(), best_move, quiets_tried);
+                if (ply >= 1) {
+                    updateContHistory(depth, board.getSTM(), best_move, ss, quiets_tried);
+                }
             }
             return best_score;
         }
@@ -506,8 +513,10 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
     nodes = 0;
     best_score = 0;
 
-    // Setup search stack
-    SearchStack sstack[MAX_PLY + 1] = {};
+    // Setup search stack. Pad the front by 4 so continuation history can read
+    // (ss - 1/2/4) at low plies without underflowing; padding is zero-init (NO_MOVE).
+    SearchStack sstack_buf[MAX_PLY + 5] = {};
+    SearchStack* sstack = sstack_buf + 4;
 
     // Reset history
     resetHistory();
