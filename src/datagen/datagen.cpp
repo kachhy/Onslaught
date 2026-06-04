@@ -4,7 +4,6 @@
 #include "hash/transposition.h"
 #include "movegen/movegen.h"
 #include "search-eval/eval.h"
-#include "search-eval/history.h"
 #include "search-eval/search.h"
 #include "uci/uci.h"
 #include <atomic>
@@ -117,7 +116,6 @@ static void datagenWorker(int thread_id) {
         bool discard_game = false;
 
         tt.clear();
-        resetHistory();
 
         while (1) { // Run game
             if (isDraw(board, 0)) {

@@ -2,7 +2,6 @@
 #include "hash/transposition.h"
 #include "nnue/nnue.h"
 #include "search-eval/eval.h"
-#include "search-eval/history.h"
 #include "search-eval/search.h"
 #include <sstream>
 
@@ -283,7 +282,6 @@ void uci() {
         } else if (buffer == "ucinewgame") {
             newGame(board);
             tt.clear();
-            resetHistory();
         } else if (buffer == "isready") {
             std::cout << "readyok\n";
         } else if (buffer == "quit") {
