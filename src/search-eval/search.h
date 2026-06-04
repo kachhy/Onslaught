@@ -11,6 +11,7 @@ constexpr uint16_t FUTILITY_MARGIN = 90;
 constexpr uint16_t RAZOR_MARGIN = 492;
 constexpr float LMR_VALUE = 0.828061;
 constexpr float LMR_SCALAR = 2.172229;
+constexpr int HIST_LMR_DIVISOR = 8192; // history score -> LMR reduction adjustment
 constexpr uint8_t NMP_DEPTH_CUTOFF = 3;
 constexpr uint8_t RAZORING_DEPTH_MAX = 2;
 constexpr uint8_t IIR_DEPTH_CUTOFF = 3;

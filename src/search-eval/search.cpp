@@ -458,6 +458,9 @@ int search(
                 // TODO tune this function
                 // improving flag = search more carefully when good position is improving (less reduction)
                 int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2) /* - improving*/);
+                // history-based reduction: reduce good-history quiets less, bad-history more.
+                const int move_hist = getScoreHistory(board.getXSTM(), move) + getContHist(ss, board.getXSTM(), move);
+                lmr_reduction = std::max(0, std::min(lmr_reduction - move_hist / HIST_LMR_DIVISOR, depth - 2));
                 score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
