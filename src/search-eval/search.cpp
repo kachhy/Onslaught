@@ -429,6 +429,12 @@ int search(
             continue;
         }
 
+        // late move pruning: at low depth, once enough moves are tried, skip the remaining
+        // quiets. Relies on move ordering placing good quiets early.
+        if (!is_pv && !in_check && is_quiet_move && !gives_check && depth <= LMP_DEPTH_MAX && moves_searched >= LMP_BASE + depth * depth) {
+            continue;
+        }
+
         if (!in_check && moves_searched > 0 && Capture(move) && depth <= SEE_DEPTH_MAX && !staticExchangeEval(board, move, -20 * depth * depth)) {
             continue;
         }
