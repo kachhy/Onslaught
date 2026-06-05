@@ -466,7 +466,14 @@ int search(
                 int lmr_reduction = std::max(0, std::min((int)(LMR_VALUE + (log(depth)) * log(moves_searched) / LMR_SCALAR), depth - 2) /* - improving*/);
                 // history-based reduction: reduce good-history quiets less, bad-history more.
                 const int move_hist = getScoreHistory(board.getXSTM(), move) + getContHist(ss, board.getXSTM(), move);
-                lmr_reduction = std::max(0, std::min(lmr_reduction - move_hist / HIST_LMR_DIVISOR, depth - 2));
+                lmr_reduction = lmr_reduction - move_hist / HIST_LMR_DIVISOR;
+
+                // If the current best move is a loud move, all late quiet moves apart from killers get reduced extra
+                if ((Capture(best_move) || Prom(best_move)) && is_quiet_move && move != ss->killers[0] && move != ss->killers[1]) {
+                    lmr_reduction++;
+                }
+
+                lmr_reduction = std::max(0, std::min(lmr_reduction, depth - 2));
                 score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
