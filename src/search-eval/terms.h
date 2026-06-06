@@ -123,6 +123,13 @@ constexpr Score KING_CASTLED[2] = {
 };
 constexpr Score KING_LOST_ONE_CASTLING_RIGHT = S(21, -32);
 constexpr Score KING_UNCASTLED_RIGHTS_REMAIN = S(54, -18);
+constexpr Score SAFE_CHECK[5] = {
+	S(0, 0),
+	S(56, -15),
+	S(24, 14),
+	S(93, -6),
+	S(38, 13),
+};
 extern const Score pst[12][64];
 
 constexpr int MVV_LVA[6][6] = {

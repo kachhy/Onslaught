@@ -41,7 +41,8 @@ constexpr uint16_t KING_ZONE_ATTACK_OFFSET = PAWN_STORM_OFFSET + 6;
 constexpr uint16_t KING_CASTLED_OFFSET = KING_ZONE_ATTACK_OFFSET + 8;
 constexpr uint16_t KING_LOST_CASTLE_OFFSET = KING_CASTLED_OFFSET + 4;
 constexpr uint16_t KING_UNCASTLED_OFFSET = KING_LOST_CASTLE_OFFSET + 2;
-constexpr uint16_t PST_OFFSET = KING_UNCASTLED_OFFSET + 2;
+constexpr uint16_t SAFE_CHECK_OFFSET = KING_UNCASTLED_OFFSET + 2;
+constexpr uint16_t PST_OFFSET = SAFE_CHECK_OFFSET + 10;
 
 // Minibatching parameters
 constexpr static uint16_t BATCH_SIZE = 16384;

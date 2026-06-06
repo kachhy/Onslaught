@@ -91,8 +91,8 @@ static inline Score evaluatePawns(const Board& board, const EvalInfo& info) {
 
     BitBoard wp = board.getPieceBB(WHITE_PAWN);
     BitBoard bp = board.getPieceBB(BLACK_PAWN);
-    BitBoard wp_protected = info.pawn_attacks[WHITE];
-    BitBoard bp_protected = info.pawn_attacks[BLACK];
+    BitBoard wp_protected = info.piece_attacks[WHITE_PAWN];
+    BitBoard bp_protected = info.piece_attacks[BLACK_PAWN];
 
     const uint8_t wp_phalanx = bitCount(shiftWest(wp) & wp);
     const uint8_t bp_phalanx = bitCount(shiftWest(bp) & bp);
@@ -194,8 +194,8 @@ static inline Score applyAllPST(const Board& board) {
 
 static inline Score applyPawnProtection(const Board& board, const EvalInfo& info) {
     Score score{};
-    BitBoard wp_protected = info.pawn_attacks[WHITE];
-    BitBoard bp_protected = info.pawn_attacks[BLACK];
+    BitBoard wp_protected = info.piece_attacks[WHITE_PAWN];
+    BitBoard bp_protected = info.piece_attacks[BLACK_PAWN];
 
     while (wp_protected) {
         uint8_t sq = popLSB(wp_protected);
@@ -257,7 +257,7 @@ static inline Score evaluateKnights(const Board& board, const EvalInfo& info) {
             score += (!potential_attackers) * KNIGHT_OUTPOST;
             TRACE_ADD(knight_outpost, WHITE, (!potential_attackers));
         }
-        BitBoard attacks = info.piece_attacks[sq];
+        BitBoard attacks = info.square_attacks[sq];
         attacks &= ~board.getOcc(WHITE);
         const uint8_t attack_count = bitCount(attacks);
         score += MOBILITY[KNIGHT] * attack_count;
@@ -272,7 +272,7 @@ static inline Score evaluateKnights(const Board& board, const EvalInfo& info) {
             score -= (!potential_attackers) * KNIGHT_OUTPOST;
             TRACE_ADD(knight_outpost, BLACK, (!potential_attackers));
         }
-        BitBoard attacks = info.piece_attacks[sq];
+        BitBoard attacks = info.square_attacks[sq];
         attacks &= ~board.getOcc(BLACK);
         const uint8_t attack_count = bitCount(attacks);
         score -= MOBILITY[KNIGHT] * attack_count;
@@ -322,7 +322,7 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
 
     BitBoard wb = board.getPieceBB(WHITE_BISHOP);
     while (wb) {
-        BitBoard attacks = info.piece_attacks[popLSB(wb)];
+        BitBoard attacks = info.square_attacks[popLSB(wb)];
 
         const uint8_t blocking_pawns = bitCount(attacks & board.getPieceBB(WHITE_PAWN));
         score += blocking_pawns * BAD_BISHOP;
@@ -336,7 +336,7 @@ static inline Score evaluateBishops(const PieceCounts& pc, const Board& board, c
 
     BitBoard bb = board.getPieceBB(BLACK_BISHOP);
     while (bb) {
-        BitBoard attacks = info.piece_attacks[popLSB(bb)];
+        BitBoard attacks = info.square_attacks[popLSB(bb)];
 
         const uint8_t blocking_pawns = bitCount(attacks & board.getPieceBB(BLACK_PAWN));
         score -= blocking_pawns * BAD_BISHOP;
@@ -385,7 +385,7 @@ static inline Score evaluateRooks(const Board& board, const EvalInfo& info) {
             }
         }
 
-        BitBoard attacks = info.piece_attacks[sq];
+        BitBoard attacks = info.square_attacks[sq];
         attacks &= ~board.getOcc(WHITE);
         const uint8_t attack_count = bitCount(attacks);
         score += MOBILITY[ROOK] * attack_count;
@@ -406,7 +406,7 @@ static inline Score evaluateRooks(const Board& board, const EvalInfo& info) {
             }
         }
 
-        BitBoard attacks = info.piece_attacks[sq];
+        BitBoard attacks = info.square_attacks[sq];
         attacks &= ~board.getOcc(BLACK);
         const uint8_t attack_count = bitCount(attacks);
         score -= MOBILITY[ROOK] * attack_count;
@@ -427,7 +427,7 @@ static inline Score evaluateQueens(const Board& board, const EvalInfo& info) {
             TRACE_INC(queen_rel_pin, WHITE);
         }
 
-        BitBoard attacks = info.piece_attacks[sq];
+        BitBoard attacks = info.square_attacks[sq];
         attacks &= ~board.getOcc(WHITE);
         const uint8_t attack_count = bitCount(attacks);
         score += MOBILITY[QUEEN] * attack_count;
@@ -440,7 +440,7 @@ static inline Score evaluateQueens(const Board& board, const EvalInfo& info) {
             TRACE_INC(queen_rel_pin, BLACK);
         }
 
-        BitBoard attacks = info.piece_attacks[sq];
+        BitBoard attacks = info.square_attacks[sq];
         attacks &= ~board.getOcc(BLACK);
         const uint8_t attack_count = bitCount(attacks);
         score -= MOBILITY[QUEEN] * attack_count;
@@ -468,7 +468,7 @@ static inline Score getPieceKingZoneAttacks(const Board& board, const BitBoard k
     const DefaultPiece pc = static_cast<DefaultPiece>(makeDefaultPiece(piece) - 1); // Left by 1 since we start at KNIGHT
 
     while (bb) {
-        const uint8_t count = bitCount(info.piece_attacks[popLSB(bb)] & king_zone);
+        const uint8_t count = bitCount(info.square_attacks[popLSB(bb)] & king_zone);
         score += count * KING_ZONE_ATTACK[pc];
         TRACE_ADD(king_zone_attack[pc], attacked_side, count);
     }
@@ -656,6 +656,49 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
         TRACE_INC(king_uncastled_rights_remain, BLACK);
     }
 
+    // Safe checks
+    const BitBoard occ = board.getOcc(BOTH);
+
+    // White pieces delivering check to the black king (good for White).
+    BitBoard safe_black = ~board.getThreatenedBy(BLACK) | (info.piece_attacks[WHITE_PAWN] & ~info.multi_defended[BLACK]);
+    BitBoard w_rook_checks = getPieceAttacks(WHITE_ROOK, static_cast<Square>(b_king_sq), occ) & safe_black;
+    BitBoard w_bishop_checks = getPieceAttacks(WHITE_BISHOP, static_cast<Square>(b_king_sq), occ) & safe_black;
+    BitBoard w_knight_checks = getPieceAttacks(WHITE_KNIGHT, static_cast<Square>(b_king_sq), occ) & safe_black;
+    BitBoard w_queen_checks = getPieceAttacks(WHITE_QUEEN, static_cast<Square>(b_king_sq), occ) & safe_black;
+
+    const int w_knight_count = bitCount(w_knight_checks & info.piece_attacks[WHITE_KNIGHT]);
+    const int w_bishop_count = bitCount(w_bishop_checks & info.piece_attacks[WHITE_BISHOP]);
+    const int w_rook_count = bitCount(w_rook_checks & info.piece_attacks[WHITE_ROOK]);
+    const int w_queen_count = bitCount(w_queen_checks & info.piece_attacks[WHITE_QUEEN]);
+    score += SAFE_CHECK[KNIGHT] * w_knight_count;
+    score += SAFE_CHECK[BISHOP] * w_bishop_count;
+    score += SAFE_CHECK[ROOK] * w_rook_count;
+    score += SAFE_CHECK[QUEEN] * w_queen_count;
+    TRACE_ADD(safe_check[KNIGHT], WHITE, w_knight_count);
+    TRACE_ADD(safe_check[BISHOP], WHITE, w_bishop_count);
+    TRACE_ADD(safe_check[ROOK], WHITE, w_rook_count);
+    TRACE_ADD(safe_check[QUEEN], WHITE, w_queen_count);
+
+    // Black pieces delivering check to the white king (bad for White).
+    BitBoard safe_white = ~board.getThreatenedBy(WHITE) | (info.piece_attacks[BLACK_PAWN] & ~info.multi_defended[WHITE]);
+    BitBoard b_rook_checks = getPieceAttacks(BLACK_ROOK, static_cast<Square>(w_king_sq), occ) & safe_white;
+    BitBoard b_bishop_checks = getPieceAttacks(BLACK_BISHOP, static_cast<Square>(w_king_sq), occ) & safe_white;
+    BitBoard b_knight_checks = getPieceAttacks(BLACK_KNIGHT, static_cast<Square>(w_king_sq), occ) & safe_white;
+    BitBoard b_queen_checks = getPieceAttacks(BLACK_QUEEN, static_cast<Square>(w_king_sq), occ) & safe_white;
+
+    const int b_knight_count = bitCount(b_knight_checks & info.piece_attacks[BLACK_KNIGHT]);
+    const int b_bishop_count = bitCount(b_bishop_checks & info.piece_attacks[BLACK_BISHOP]);
+    const int b_rook_count = bitCount(b_rook_checks & info.piece_attacks[BLACK_ROOK]);
+    const int b_queen_count = bitCount(b_queen_checks & info.piece_attacks[BLACK_QUEEN]);
+    score -= SAFE_CHECK[KNIGHT] * b_knight_count;
+    score -= SAFE_CHECK[BISHOP] * b_bishop_count;
+    score -= SAFE_CHECK[ROOK] * b_rook_count;
+    score -= SAFE_CHECK[QUEEN] * b_queen_count;
+    TRACE_ADD(safe_check[KNIGHT], BLACK, b_knight_count);
+    TRACE_ADD(safe_check[BISHOP], BLACK, b_bishop_count);
+    TRACE_ADD(safe_check[ROOK], BLACK, b_rook_count);
+    TRACE_ADD(safe_check[QUEEN], BLACK, b_queen_count);
+
     return score;
 }
 
@@ -664,11 +707,11 @@ int eval(const Board& board) {
         return 0;
     }
 
-    if (use_nnue) {
-        int nnue_score = evaluate(board.getAccumulator(), board.getSTM());
-        nnue_score = nnue_score * fmr_scale[board.getFMR()] / 200;
-        return nnue_score;
-    }
+    // if (use_nnue) {
+    //     int nnue_score = evaluate(board.getAccumulator(), board.getSTM());
+    //     nnue_score = nnue_score * fmr_scale[board.getFMR()] / 200;
+    //     return nnue_score;
+    // }
 
     EvalInfo info = board.getEvalInfo();
     PieceCounts pc = getPieceCounts(board);

@@ -74,6 +74,9 @@ struct Trace {
     int16_t king_lost_one_castling_right[2]; // [side] //
     int16_t king_uncastled_rights_remain[2]; // [side] //
 
+    // King safety - safe checks (indexed by PieceType KNIGHT..QUEEN; PAWN slot unused)
+    int16_t safe_check[5][2]; // [piece][side] //
+
     // PST
     int16_t pst[12][64]; // [piece*2+side][square] //
 

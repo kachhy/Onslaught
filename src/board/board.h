@@ -30,8 +30,9 @@ constexpr uint16_t MAX_PLY = 256;
 constexpr inline Side getPieceSide(Piece piece) { return piece <= WHITE_KING ? WHITE : BLACK; }
 
 struct EvalInfo {
-    BitBoard pawn_attacks[2];
-    BitBoard piece_attacks[64];
+    BitBoard piece_attacks[12];
+    BitBoard square_attacks[64];
+    BitBoard multi_defended[2];
 };
 
 class Board {
