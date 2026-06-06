@@ -20,11 +20,14 @@ void Tuner::loadDataset(const std::string& filename, const uint32_t max) {
     const size_t valid_thres = static_cast<size_t>(max * 0.9);
     Board board;
     while (loaded < max && std::getline(in, line)) {
-        const size_t bracket = line.find('[');
-        const size_t end = line.find(']', bracket);
-        const double result = std::stod(line.substr(bracket + 1, end - bracket - 1));
+        const size_t first_bar = line.find('|');
+        const size_t last_bar = line.rfind('|');
+        if (first_bar == std::string::npos || last_bar == first_bar) {
+            continue;
+        }
+        const double result = std::stod(line.substr(last_bar + 1));
 
-        board.loadFEN(line.substr(0, bracket));
+        board.loadFEN(line.substr(0, first_bar));
         trace = {};
         eval(board);
         trace.phase = board.phase();
@@ -379,6 +382,14 @@ void Tuner::dumpParams(std::ofstream& out) const {
     out << "constexpr Score KING_UNCASTLED_RIGHTS_REMAIN = S(" << static_cast<int>(std::round(params[KING_UNCASTLED_OFFSET].value)) << ", "
         << static_cast<int>(std::round(params[KING_UNCASTLED_OFFSET + 1].value)) << ");\n";
 
+    // Safe checks
+    out << "constexpr Score SAFE_CHECK[5] = {\n";
+    for (int i = 0; i < 5; i++) {
+        out << "\tS(" << static_cast<int>(std::round(params[SAFE_CHECK_OFFSET + 2 * i].value)) << ", "
+            << static_cast<int>(std::round(params[SAFE_CHECK_OFFSET + 2 * i + 1].value)) << "),\n";
+    }
+    out << "};\n";
+
     // PST
     out << "const Score pst[12][64] = {\n";
     for (int p = 0; p < 12; p++) {
@@ -583,6 +594,13 @@ double Tuner::reconstructScore(const Trace& tr) const {
     mg += kucr * params[KING_UNCASTLED_OFFSET].value;
     eg += kucr * params[KING_UNCASTLED_OFFSET + 1].value;
 
+    // Safe checks
+    for (int i = 0; i < 5; i++) {
+        int coeff = tr.safe_check[i][WHITE] - tr.safe_check[i][BLACK];
+        mg += coeff * params[SAFE_CHECK_OFFSET + i * 2].value;
+        eg += coeff * params[SAFE_CHECK_OFFSET + i * 2 + 1].value;
+    }
+
     // PST
     for (int p = 0; p < 6; p++) {
         for (int sq = 0; sq < 64; sq++) {
@@ -780,6 +798,13 @@ void Tuner::updateGradients(const Trace& tr, double base, double phase, std::vec
     local_grads[KING_UNCASTLED_OFFSET] += base * kucr * phase;
     local_grads[KING_UNCASTLED_OFFSET + 1] += base * kucr * (1.0 - phase);
 
+    // Safe checks
+    for (int i = 0; i < 5; i++) {
+        int coeff = tr.safe_check[i][WHITE] - tr.safe_check[i][BLACK];
+        local_grads[SAFE_CHECK_OFFSET + i * 2] += base * coeff * phase;
+        local_grads[SAFE_CHECK_OFFSET + i * 2 + 1] += base * coeff * (1.0 - phase);
+    }
+
     // PST
     for (int p = 0; p < 6; p++) {
         for (int sq = 0; sq < 64; sq++) {
@@ -925,6 +950,12 @@ void Tuner::initParams() {
 
     params.push_back({ (double)MG(KING_UNCASTLED_RIGHTS_REMAIN) });
     params.push_back({ (double)EG(KING_UNCASTLED_RIGHTS_REMAIN) });
+
+    // Safe checks [5 piece slots x 2]
+    for (int i = 0; i < 5; i++) {
+        params.push_back({ (double)MG(SAFE_CHECK[i]) });
+        params.push_back({ (double)EG(SAFE_CHECK[i]) });
+    }
 
     // PST [6 piece types x 64 squares x 2]
     for (int p = 0; p < 6; p++) {

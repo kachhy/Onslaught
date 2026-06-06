@@ -764,24 +764,35 @@ void Board::refreshMaterialPST() {
 void Board::setThreatened() {
     threatened_by[WHITE] = BitBoard(0);
     threatened_by[BLACK] = BitBoard(0);
-    eval_info.pawn_attacks[WHITE] = shiftPawnAttacks(piece_bb[WHITE_PAWN], WHITE);
-    eval_info.pawn_attacks[BLACK] = shiftPawnAttacks(piece_bb[BLACK_PAWN], BLACK);
-    threatened_by[WHITE] |= eval_info.pawn_attacks[WHITE];
-    threatened_by[BLACK] |= eval_info.pawn_attacks[BLACK];
+    eval_info.piece_attacks[WHITE_PAWN] = shiftPawnAttacks(piece_bb[WHITE_PAWN], WHITE);
+    eval_info.piece_attacks[BLACK_PAWN] = shiftPawnAttacks(piece_bb[BLACK_PAWN], BLACK);
+
+    // Pawn double-attacks: both diagonals must overlap
+    eval_info.multi_defended[WHITE] = shiftPawnCapturesWest(piece_bb[WHITE_PAWN], WHITE) & shiftPawnCapturesEast(piece_bb[WHITE_PAWN], WHITE);
+    eval_info.multi_defended[BLACK] = shiftPawnCapturesWest(piece_bb[BLACK_PAWN], BLACK) & shiftPawnCapturesEast(piece_bb[BLACK_PAWN], BLACK);
+
+    threatened_by[WHITE] |= eval_info.piece_attacks[WHITE_PAWN];
+    threatened_by[BLACK] |= eval_info.piece_attacks[BLACK_PAWN];
     for (int white_index = WHITE_PAWN + 1, black_index = BLACK_PAWN + 1; white_index <= WHITE_KING; white_index++, black_index++) {
+        eval_info.piece_attacks[white_index] = BitBoard(0);
+        eval_info.piece_attacks[black_index] = BitBoard(0);
         BitBoard cur_piece_bb = piece_bb[white_index];
         while (cur_piece_bb) {
             Square cur_square = static_cast<Square>(popLSB(cur_piece_bb));
             const BitBoard attacks = getPieceAttacks(static_cast<Piece>(white_index), cur_square, occ[BOTH]);
+            eval_info.multi_defended[WHITE] |= threatened_by[WHITE] & attacks;
             threatened_by[WHITE] |= attacks;
-            eval_info.piece_attacks[cur_square] = attacks;
+            eval_info.piece_attacks[white_index] |= attacks;
+            eval_info.square_attacks[cur_square] = attacks;
         }
         cur_piece_bb = piece_bb[black_index];
         while (cur_piece_bb) {
             Square cur_square = static_cast<Square>(popLSB(cur_piece_bb));
             const BitBoard attacks = getPieceAttacks(static_cast<Piece>(black_index), cur_square, occ[BOTH]);
+            eval_info.multi_defended[BLACK] |= threatened_by[BLACK] & attacks;
             threatened_by[BLACK] |= attacks;
-            eval_info.piece_attacks[cur_square] = attacks;
+            eval_info.piece_attacks[black_index] |= attacks;
+            eval_info.square_attacks[cur_square] = attacks;
         }
     }
 }
