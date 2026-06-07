@@ -707,11 +707,11 @@ int eval(const Board& board) {
         return 0;
     }
 
-    // if (use_nnue) {
-    //     int nnue_score = evaluate(board.getAccumulator(), board.getSTM());
-    //     nnue_score = nnue_score * fmr_scale[board.getFMR()] / 200;
-    //     return nnue_score;
-    // }
+    if (use_nnue) {
+        int nnue_score = evaluate(board.getAccumulator(), board.getSTM());
+        nnue_score = nnue_score * fmr_scale[board.getFMR()] / 200;
+        return nnue_score;
+    }
 
     EvalInfo info = board.getEvalInfo();
     PieceCounts pc = getPieceCounts(board);
