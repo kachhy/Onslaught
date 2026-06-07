@@ -664,7 +664,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
     BitBoard w_rook_checks = getPieceAttacks(WHITE_ROOK, static_cast<Square>(b_king_sq), occ) & safe_black;
     BitBoard w_bishop_checks = getPieceAttacks(WHITE_BISHOP, static_cast<Square>(b_king_sq), occ) & safe_black;
     BitBoard w_knight_checks = getPieceAttacks(WHITE_KNIGHT, static_cast<Square>(b_king_sq), occ) & safe_black;
-    BitBoard w_queen_checks = getPieceAttacks(WHITE_QUEEN, static_cast<Square>(b_king_sq), occ) & safe_black;
+    BitBoard w_queen_checks = (getPieceAttacks(WHITE_QUEEN, static_cast<Square>(b_king_sq), occ) & safe_black) & ~(w_rook_checks | w_bishop_checks);
 
     const int w_knight_count = bitCount(w_knight_checks & info.piece_attacks[WHITE_KNIGHT]);
     const int w_bishop_count = bitCount(w_bishop_checks & info.piece_attacks[WHITE_BISHOP]);
@@ -684,7 +684,7 @@ static inline Score kingSafety(const PieceCounts& pc, const Board& board, const 
     BitBoard b_rook_checks = getPieceAttacks(BLACK_ROOK, static_cast<Square>(w_king_sq), occ) & safe_white;
     BitBoard b_bishop_checks = getPieceAttacks(BLACK_BISHOP, static_cast<Square>(w_king_sq), occ) & safe_white;
     BitBoard b_knight_checks = getPieceAttacks(BLACK_KNIGHT, static_cast<Square>(w_king_sq), occ) & safe_white;
-    BitBoard b_queen_checks = getPieceAttacks(BLACK_QUEEN, static_cast<Square>(w_king_sq), occ) & safe_white;
+    BitBoard b_queen_checks = (getPieceAttacks(BLACK_QUEEN, static_cast<Square>(w_king_sq), occ) & safe_white) & ~(b_rook_checks | b_bishop_checks);
 
     const int b_knight_count = bitCount(b_knight_checks & info.piece_attacks[BLACK_KNIGHT]);
     const int b_bishop_count = bitCount(b_bishop_checks & info.piece_attacks[BLACK_BISHOP]);

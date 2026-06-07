@@ -179,6 +179,8 @@ void Tuner::computeGradients(const size_t batch_start, const size_t batch_end, c
 }
 
 void Tuner::findOptimalK() {
+    K = 1.33778;
+    return;
     double low = 0.0;
     double high = 5.0;
     double phi = (sqrt(5.0) - 1.0) / 2.0; // golden ratio
