@@ -2,23 +2,64 @@
 #include "core/bitboard.h"
 #include "core/types.h"
 
+#include <array>
+
+#if defined(__BMI2__)
+#include <immintrin.h>
+#endif
+
 BitBoard bishop_masks[64];
 BitBoard rook_masks[64];
 
 BitBoard pawn_attacks[2][64];
 BitBoard knight_attacks[64];
-BitBoard bishop_attacks[64][512];
-BitBoard rook_attacks[64][4096];
 BitBoard king_attacks[64];
 
 BitBoard between_squares[64][64];
 BitBoard line_squares[64][64];
 
-const int bishop_relevant_bits[64] = { 6, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 7, 7, 7, 7, 5, 5, 5, 5, 7, 9, 9, 7, 5, 5,
+constexpr int bishop_relevant_bits[64] = { 6, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 7, 7, 7, 7, 5, 5, 5, 5, 7, 9, 9, 7, 5, 5,
                                        5, 5, 7, 9, 9, 7, 5, 5, 5, 5, 7, 7, 7, 7, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 6 };
 
-const int rook_relevant_bits[64] = { 12, 11, 11, 11, 11, 11, 11, 12, 11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11,
+constexpr int rook_relevant_bits[64] = { 12, 11, 11, 11, 11, 11, 11, 12, 11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11,
                                      11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11, 12, 11, 11, 11, 11, 11, 11, 12 };
+
+constexpr size_t sumTable(const int bits[64]) {
+    size_t s = 0;
+    for (int i = 0; i < 64; i++) {
+        s += (size_t(1) << bits[i]);
+    }
+    return s;
+}
+
+constexpr size_t BISHOP_TABLE_SIZE = sumTable(bishop_relevant_bits);
+constexpr size_t ROOK_TABLE_SIZE = sumTable(rook_relevant_bits);
+
+// Per-square start offset into the flat tables.
+constexpr std::array<size_t, 64> makeOffsets(const int bits[64]) {
+    std::array<size_t, 64> off{};
+    size_t acc = 0;
+    for (int i = 0; i < 64; i++) {
+        off[i] = acc;
+        acc += (size_t(1) << bits[i]);
+    }
+    return off;
+}
+
+constexpr std::array<size_t, 64> bishop_offset = makeOffsets(bishop_relevant_bits);
+constexpr std::array<size_t, 64> rook_offset = makeOffsets(rook_relevant_bits);
+
+static inline uint64_t sliderIndex(BitBoard occ, BitBoard mask, BitBoard magic, int bits) {
+#if defined(__BMI2__)
+    (void)magic; (void)bits;
+    return _pext_u64(occ, mask);
+#else
+    return ((occ & mask) * magic) >> (64 - bits);
+#endif
+}
+
+BitBoard bishop_table[BISHOP_TABLE_SIZE];
+BitBoard rook_table[ROOK_TABLE_SIZE];
 
 BitBoard getAttackers(const Board& board, Square sq, BitBoard occ) {
     BitBoard diagonal_attacks = getBishopAttacks(sq, occ);
@@ -104,17 +145,10 @@ BitBoard getPawnAttacks(Square sq, Side side) { return pawn_attacks[side][sq]; }
 BitBoard getKnightAttacks(Square sq) { return knight_attacks[sq]; }
 
 BitBoard getBishopAttacks(Square sq, BitBoard occ) {
-    occ &= bishop_masks[sq];
-    occ *= bishop_magics[sq];
-    occ >>= 64 - (bishop_relevant_bits[sq]);
-    return bishop_attacks[sq][occ];
+    return bishop_table[bishop_offset[sq] + sliderIndex(occ, bishop_masks[sq], bishop_magics[sq], bishop_relevant_bits[sq])];
 }
-
 BitBoard getRookAttacks(Square sq, BitBoard occ) {
-    occ &= rook_masks[sq];
-    occ *= rook_magics[sq];
-    occ >>= 64 - (rook_relevant_bits[sq]);
-    return rook_attacks[sq][occ];
+    return rook_table[rook_offset[sq] + sliderIndex(occ, rook_masks[sq], rook_magics[sq], rook_relevant_bits[sq])];
 }
 
 BitBoard getQueenAttacks(Square sq, BitBoard occ) { return getBishopAttacks(sq, occ) | getRookAttacks(sq, occ); }
@@ -287,28 +321,24 @@ void populateKnightAttacks() {
 
 void populateBishopAttacks() {
     for (uint8_t sq = 0; sq < 64; sq++) {
-        BitBoard mask = bishop_masks[sq];
-        uint8_t r_bits = bishop_relevant_bits[sq];
-        uint16_t n = (1 << r_bits);
+        const int bits = bishop_relevant_bits[sq];
+        const BitBoard mask = bishop_masks[sq];
 
-        for (uint16_t i = 0; i < n; i++) {
-            BitBoard occ = setPieceLayoutOcc(i, r_bits, mask);
-            uint16_t index = (occ * bishop_magics[sq]) >> (64 - r_bits);
-            bishop_attacks[sq][index] = computeBishopAttacks(static_cast<Square>(sq), occ);
+        for (uint16_t i = 0; i < (1u << bits); i++) {
+            BitBoard occ = setPieceLayoutOcc(i, bits, mask);
+            bishop_table[bishop_offset[sq] + sliderIndex(occ, mask, bishop_magics[sq], bits)] = computeBishopAttacks(static_cast<Square>(sq), occ);
         }
     }
 }
 
 void populateRookAttacks() {
     for (uint8_t sq = 0; sq < 64; sq++) {
-        BitBoard mask = rook_masks[sq];
-        uint8_t r_bits = rook_relevant_bits[sq];
-        uint16_t n = (1 << r_bits);
+        const int bits = rook_relevant_bits[sq];
+        const BitBoard mask = rook_masks[sq];
 
-        for (uint16_t i = 0; i < n; i++) {
-            BitBoard occ = setPieceLayoutOcc(i, r_bits, mask);
-            uint16_t index = (occ * rook_magics[sq]) >> (64 - r_bits);
-            rook_attacks[sq][index] = computeRookAttacks(static_cast<Square>(sq), occ);
+        for (uint16_t i = 0; i < (1u << bits); i++) {
+            BitBoard occ = setPieceLayoutOcc(i, bits, mask);
+            rook_table[rook_offset[sq] + sliderIndex(occ, mask, rook_magics[sq], bits)] = computeRookAttacks(static_cast<Square>(sq), occ);
         }
     }
 }

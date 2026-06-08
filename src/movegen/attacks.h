@@ -9,8 +9,6 @@ extern BitBoard rook_masks[64];
 
 extern BitBoard pawn_attacks[2][64];
 extern BitBoard knight_attacks[64];
-extern BitBoard bishop_attacks[64][512];
-extern BitBoard rook_attacks[64][4096];
 extern BitBoard king_attacks[64];
 
 extern BitBoard between_squares[64][64];
