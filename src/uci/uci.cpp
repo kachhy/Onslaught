@@ -112,7 +112,7 @@ static inline void initOptions() {
     setOption("Hash", SpinOption{ 1, 16384, 256, [](int mb) { tt.resize(mb); } });
     setOption("Threads", SpinOption{ 1, 1, 1, nullptr });
     setOption("NNUE", CheckOption{ true, [](bool val) { use_nnue = val; } });
-    setOption("EvalFile", StringOption{ "nn-0a63fbab92d2bb57-64.nnue", [](std::string path) {
+    setOption("EvalFile", StringOption{ "evo3_1024.nnue", [](std::string path) {
         if (path == default_net && loadNNUEFromMemory(gNNUEWeightsData, gNNUEWeightsSize)) {
             std::cout << "info string NNUE eval by " << default_net << std::endl;
         } else {
