@@ -3,9 +3,10 @@
 #include "movegen/attacks.h"
 #include "nnue/nnue.h"
 #include "search-eval/tuning.h"
-#include "testing/perft.h"
 #include "testing/ttbench.h"
 #include "uci/uci.h"
+
+#include <memory>
 
 void initAttacks() {
     populateBetweenSquares();
@@ -21,8 +22,9 @@ void initAttacks() {
     populateRookAttacks();
 }
 
-void bench() {
-    Board b;
+static inline void bench() {
+    auto bp = std::make_unique<Board>();
+    Board& b = *bp;
     auto start = std::chrono::high_resolution_clock::now();
     int best_score;
     searching = true;
