@@ -364,7 +364,7 @@ void Board::makeMove(Move move) {
         eval_info, accumulator
     );
 
-    accumulator.onMove(move, *this);
+    const bool needs_refresh = accumulator.onMove(move, *this);
 
     fmr++;
 
@@ -528,6 +528,11 @@ void Board::makeMove(Move move) {
     std::swap(stm, xstm);
 
     setSpecials();
+
+    // Accumulator full refresh on king crossing into another bucket
+    if (needs_refresh) {
+        accumulator.refresh(*this);
+    }
 
     assert(piece_bb[WHITE_KING] != 0ULL);
     assert(piece_bb[BLACK_KING] != 0ULL);

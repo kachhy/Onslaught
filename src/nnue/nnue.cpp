@@ -25,16 +25,18 @@ extern const unsigned int  gNNUEWeightsSize   = 0;
 // Global game board, declared in uci.cpp
 extern Board board;
 
-std::string nnue_path = "nn-0a63fbab92d2bb57-64.nnue"; // Default NNUE
+std::string nnue_path = "nn-1697fd3fc841dc25-v2.nnue"; // Default NNUE
 
 // Network storage
-alignas(64) int16_t network_weights[INPUT_SIZE][HIDDEN_SIZE] = {};
+alignas(64) int16_t network_weights[INPUT_SIZE * NUM_KING_BUCKETS][HIDDEN_SIZE] = {};
 int16_t network_biases[HIDDEN_SIZE] = {};
-alignas(64) int16_t output_weights[2 * HIDDEN_SIZE] = {};
-int16_t output_bias = 0;
+alignas(64) int16_t output_weights[NUM_OUTPUT_BUCKETS][2 * HIDDEN_SIZE] = {};
+int16_t output_bias[NUM_OUTPUT_BUCKETS] = {};
 
 void Accumulator::refresh(const Board& board) {
     reset();
+    king_sq[WHITE] = static_cast<uint8_t>(getLSB(board.getPieceBB(WHITE_KING)));
+    king_sq[BLACK] = static_cast<uint8_t>(getLSB(board.getPieceBB(BLACK_KING)));
     for (uint8_t sq = 0; sq < 64; sq++) {
         const Piece pc = board.pieceAt(sq);
         if (pc == NO_PIECE) {
@@ -45,13 +47,26 @@ void Accumulator::refresh(const Board& board) {
     }
 }
 
-void Accumulator::onMove(Move move, const Board& board) {
+bool Accumulator::onMove(Move move, const Board& board) {
     const Piece moved_piece = MovePiece(move);
     const DefaultPiece moved_dp = makeDefaultPiece(moved_piece);
     const Side us = board.getSTM();
     const Side them = static_cast<Side>(us ^ 1);
     const Square from = From(move);
     const Square to = To(move);
+
+    // Board not yet mutated here, so these are the pre-move king squares
+    king_sq[WHITE] = static_cast<uint8_t>(getLSB(board.getPieceBB(WHITE_KING)));
+    king_sq[BLACK] = static_cast<uint8_t>(getLSB(board.getPieceBB(BLACK_KING)));
+
+    if (moved_dp == KING) {
+        const bool cross = (kingBucket(from, us) != kingBucket(to, us)) || (kingNeedsMirror(from) != kingNeedsMirror(to));
+        if (cross) { // King changing bucket or mirror invalidates the whole perspective
+            return true;
+        }
+        
+        king_sq[us] = static_cast<uint8_t>(to); // same bucket + mirror
+    }
 
     if (Castle(move)) {
         Square rook_from = NO_SQUARE, rook_to = NO_SQUARE;
@@ -72,11 +87,11 @@ void Accumulator::onMove(Move move, const Board& board) {
             rook_from = A8;
             rook_to = D8;
             break;
-        default: return;
+        default: return false;
         }
 
         addAddSubSub(KING, us, to, ROOK, us, rook_to, KING, us, from, ROOK, us, rook_from);
-        return;
+        return false;
     }
 
     if (Prom(move)) {
@@ -86,7 +101,7 @@ void Accumulator::onMove(Move move, const Board& board) {
             sub(makeDefaultPiece(board.pieceAt(to)), them, to);
         }
 
-        return;
+        return false;
     }
 
     if (IsEP(move)) {
@@ -94,24 +109,27 @@ void Accumulator::onMove(Move move, const Board& board) {
         sub(PAWN, us, from);
         add(PAWN, us, to);
         sub(PAWN, them, cap_sq);
-        return;
+        return false;
     }
 
     if (Capture(move)) {
         addSubSub(moved_dp, us, from, makeDefaultPiece(board.pieceAt(to)), to);
-        return;
+        return false;
     }
 
     addSub(moved_dp, us, from, to);
+    return false;
 }
 
-int evaluate(const Accumulator& accum, const Side stm) { return accum.evaluate(stm) * NNUE_WEIGHT_SCALAR / 100; }
+int evaluate(const Accumulator& accum, const Side stm, const int piece_count) {
+    return accum.evaluate(stm, outputBucket(piece_count)) * NNUE_WEIGHT_SCALAR / 100;
+}
 
 namespace {
-constexpr size_t FT_WEIGHT_COUNT = INPUT_SIZE * HIDDEN_SIZE;
+constexpr size_t FT_WEIGHT_COUNT = INPUT_SIZE * HIDDEN_SIZE * NUM_KING_BUCKETS;
 constexpr size_t FT_BIAS_COUNT = HIDDEN_SIZE;
-constexpr size_t OUT_WEIGHT_COUNT = 2 * HIDDEN_SIZE;
-constexpr size_t OUT_BIAS_COUNT = 1;
+constexpr size_t OUT_WEIGHT_COUNT = NUM_OUTPUT_BUCKETS * 2 * HIDDEN_SIZE;
+constexpr size_t OUT_BIAS_COUNT = NUM_OUTPUT_BUCKETS;
 constexpr size_t EXPECTED_BYTES = (FT_WEIGHT_COUNT + FT_BIAS_COUNT + OUT_WEIGHT_COUNT + OUT_BIAS_COUNT) * sizeof(std::int16_t);
 
 // Bullet pads the dumped Parameters struct to a 64-byte boundary, so we accept either the exact count OR to the next 64 bytes
@@ -141,7 +159,7 @@ bool loadNNUEFromMemory(const unsigned char* data, size_t size) {
     ptr += FT_BIAS_COUNT * sizeof(int16_t);
     std::memcpy(output_weights, ptr, OUT_WEIGHT_COUNT * sizeof(int16_t));
     ptr += OUT_WEIGHT_COUNT * sizeof(int16_t);
-    std::memcpy(&output_bias, ptr, OUT_BIAS_COUNT * sizeof(int16_t));
+    std::memcpy(output_bias, ptr, OUT_BIAS_COUNT * sizeof(int16_t));
     board.refreshAccumulator();
     
     return true;
@@ -184,7 +202,7 @@ bool loadNNUE(const std::filesystem::path& path) {
     if (!readExact(in, output_weights, OUT_WEIGHT_COUNT * sizeof(std::int16_t))) {
         return false;
     }
-    if (!readExact(in, &output_bias, OUT_BIAS_COUNT * sizeof(std::int16_t))) {
+    if (!readExact(in, output_bias, OUT_BIAS_COUNT * sizeof(std::int16_t))) {
         return false;
     }
 
