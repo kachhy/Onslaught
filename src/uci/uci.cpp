@@ -3,6 +3,7 @@
 #include "nnue/nnue.h"
 #include "search-eval/eval.h"
 #include "search-eval/search.h"
+#include "tuning/spsa.h"
 #include <sstream>
 
 #ifdef _WIN32
@@ -124,6 +125,7 @@ static inline void initOptions() {
             };
         }
     } });
+    initSPSA();
 }
 
 static inline void position(Board& board) {
