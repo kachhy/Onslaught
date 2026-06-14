@@ -4,7 +4,7 @@
 #ifdef EVALFILE
 INCBIN(NNUEWeights, EVALFILE);
 #else
-// No embedded network — falls back to file loading at runtime
+// No embedded network - falls back to file loading at runtime
 extern const unsigned char gNNUEWeightsData[] = {};
 extern const unsigned int  gNNUEWeightsSize   = 0;
 #endif
@@ -28,9 +28,9 @@ extern Board board;
 std::string nnue_path = "nn-0a63fbab92d2bb57-64.nnue"; // Default NNUE
 
 // Network storage
-int16_t network_weights[INPUT_SIZE][HIDDEN_SIZE] = {};
+alignas(64) int16_t network_weights[INPUT_SIZE][HIDDEN_SIZE] = {};
 int16_t network_biases[HIDDEN_SIZE] = {};
-int16_t output_weights[2 * HIDDEN_SIZE] = {};
+alignas(64) int16_t output_weights[2 * HIDDEN_SIZE] = {};
 int16_t output_bias = 0;
 
 void Accumulator::refresh(const Board& board) {

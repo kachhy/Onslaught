@@ -4,6 +4,7 @@
 #include "core/bitboard.h"
 #include "core/move.h"
 #include "features.h"
+#include "simd.h"
 #include <cstdint>
 
 class Board;
@@ -34,22 +35,39 @@ public:
     void refresh(const Board& board);
     void onMove(Move move, const Board& board);
 
+    template <int N_ADD, int N_SUB>
+    inline void apply(int16_t* acc, const int16_t* const* adds, const int16_t* const* subs) {
+        for (size_t i = 0; i < HIDDEN_SIZE; i += VEC_I16) {
+            vepi16 v = vecLoad(acc + i);
+
+            for (int a = 0; a < N_ADD; ++a) {
+                v = vecAdd(v, vecLoad(adds[a] + i));
+            }
+
+            for (int s = 0; s < N_SUB; ++s) {
+                v = vecSub(v, vecLoad(subs[s] + i));
+            }
+
+            vecStore(acc + i, v);
+        }
+    }
+
     void add(DefaultPiece piece, Side color, Square sq) {
         const int wi = featureIndex<WHITE>(piece, color, sq);
         const int bi = featureIndex<BLACK>(piece, color, sq);
-        for (size_t i = 0; i < HIDDEN_SIZE; i++) {
-            accumulator[WHITE][i] += network_weights[wi][i];
-            accumulator[BLACK][i] += network_weights[bi][i];
-        }
+        const int16_t* wa[1] = { network_weights[wi] };
+        const int16_t* ba[1] = { network_weights[bi] };
+        apply<1, 0>(accumulator[WHITE], wa, nullptr);
+        apply<1, 0>(accumulator[BLACK], ba, nullptr);
     }
 
     void sub(DefaultPiece piece, Side color, Square sq) {
         const int wi = featureIndex<WHITE>(piece, color, sq);
         const int bi = featureIndex<BLACK>(piece, color, sq);
-        for (size_t i = 0; i < HIDDEN_SIZE; i++) {
-            accumulator[WHITE][i] -= network_weights[wi][i];
-            accumulator[BLACK][i] -= network_weights[bi][i];
-        }
+        const int16_t* ws[1] = { network_weights[wi] };
+        const int16_t* bs[1] = { network_weights[bi] };
+        apply<0, 1>(accumulator[WHITE], nullptr, ws);
+        apply<0, 1>(accumulator[BLACK], nullptr, bs);
     }
 
     // Quiet move.
@@ -58,10 +76,12 @@ public:
         const int bf = featureIndex<BLACK>(piece, color, from_sq);
         const int wt = featureIndex<WHITE>(piece, color, to_sq);
         const int bt = featureIndex<BLACK>(piece, color, to_sq);
-        for (size_t i = 0; i < HIDDEN_SIZE; i++) {
-            accumulator[WHITE][i] += network_weights[wt][i] - network_weights[wf][i];
-            accumulator[BLACK][i] += network_weights[bt][i] - network_weights[bf][i];
-        }
+        const int16_t* wa[1] = { network_weights[wt] };
+        const int16_t* ba[1] = { network_weights[bt] };
+        const int16_t* ws[1] = { network_weights[wf] };
+        const int16_t* bs[1] = { network_weights[bf] };
+        apply<1, 1>(accumulator[WHITE], wa, ws);
+        apply<1, 1>(accumulator[BLACK], ba, bs);
     }
 
     // Capture
@@ -73,10 +93,12 @@ public:
         const int bt = featureIndex<BLACK>(piece, color, to_sq);
         const int wc = featureIndex<WHITE>(captured_piece, xcolor, to_sq);
         const int bc = featureIndex<BLACK>(captured_piece, xcolor, to_sq);
-        for (size_t i = 0; i < HIDDEN_SIZE; i++) {
-            accumulator[WHITE][i] += network_weights[wt][i] - network_weights[wf][i] - network_weights[wc][i];
-            accumulator[BLACK][i] += network_weights[bt][i] - network_weights[bf][i] - network_weights[bc][i];
-        }
+        const int16_t* wa[1] = { network_weights[wt] };
+        const int16_t* ba[1] = { network_weights[bt] };
+        const int16_t* ws[2] = { network_weights[wf], network_weights[wc] };
+        const int16_t* bs[2] = { network_weights[bf], network_weights[bc] };
+        apply<1, 2>(accumulator[WHITE], wa, ws);
+        apply<1, 2>(accumulator[BLACK], ba, bs);
     }
 
     // Castling
@@ -92,10 +114,12 @@ public:
         const int bs1 = featureIndex<BLACK>(sub1_piece, sub1_color, sub1_sq);
         const int ws2 = featureIndex<WHITE>(sub2_piece, sub2_color, sub2_sq);
         const int bs2 = featureIndex<BLACK>(sub2_piece, sub2_color, sub2_sq);
-        for (size_t i = 0; i < HIDDEN_SIZE; i++) {
-            accumulator[WHITE][i] += network_weights[wa1][i] + network_weights[wa2][i] - network_weights[ws1][i] - network_weights[ws2][i];
-            accumulator[BLACK][i] += network_weights[ba1][i] + network_weights[ba2][i] - network_weights[bs1][i] - network_weights[bs2][i];
-        }
+        const int16_t* wa[2] = { network_weights[wa1], network_weights[wa2] };
+        const int16_t* ba[2] = { network_weights[ba1], network_weights[ba2] };
+        const int16_t* ws[2] = { network_weights[ws1], network_weights[ws2] };
+        const int16_t* bs[2] = { network_weights[bs1], network_weights[bs2] };
+        apply<2, 2>(accumulator[WHITE], wa, ws);
+        apply<2, 2>(accumulator[BLACK], ba, bs);
     }
 
     const int16_t* values(Side persp) const { return accumulator[persp]; }
@@ -105,11 +129,20 @@ inline int32_t Accumulator::evaluate(Side stm) const {
     const Side us = stm;
     const Side them = static_cast<Side>(stm ^ 1);
 
-    int64_t sum = 0;
-    for (size_t i = 0; i < HIDDEN_SIZE; i++) {
-        sum += static_cast<int64_t>(screlu(accumulator[us][i])) * output_weights[i];
-        sum += static_cast<int64_t>(screlu(accumulator[them][i])) * output_weights[HIDDEN_SIZE + i];
+    vepi32 acc_us = vecZero32();
+    vepi32 acc_them = vecZero32();
+    const vepi16 lo = vecSet1(0), hi = vecSet1(L0_SCALE);
+    for (size_t i = 0; i < HIDDEN_SIZE; i += VEC_I16) {
+        const vepi16 cu = vecMin(vecMax(vecLoad(accumulator[us] + i), lo), hi);
+        const vepi16 wu = vecLoad(output_weights + i);
+        acc_us = vecAdd32(acc_us, vecMAdd(vecMullo(cu, wu), cu));
+
+        const vepi16 ct = vecMin(vecMax(vecLoad(accumulator[them] + i), lo), hi);
+        const vepi16 wt = vecLoad(output_weights + HIDDEN_SIZE + i);
+        acc_them = vecAdd32(acc_them, vecMAdd(vecMullo(ct, wt), ct));
     }
+
+    int64_t sum = static_cast<int64_t>(vecReduce(acc_us)) + vecReduce(acc_them);
     
     // Quant pipeline:
     //   sum            scale = L0^2 * L1
