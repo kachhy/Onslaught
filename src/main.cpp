@@ -6,6 +6,7 @@
 #include "testing/perft.h"
 #include "testing/ttbench.h"
 #include "uci/uci.h"
+#include <memory>
 
 void initAttacks() {
     populateBetweenSquares();
@@ -22,12 +23,12 @@ void initAttacks() {
 }
 
 void bench() {
-    Board b;
+    std::unique_ptr<Board> b = std::make_unique<Board>();
     auto start = std::chrono::high_resolution_clock::now();
     int best_score;
     searching = true;
     std::streambuf* original_buffer = std::cout.rdbuf(nullptr); // Silence cout
-    search(b, 14, best_score, GoParams{});
+    search(*b, 14, best_score, GoParams{});
     std::cout.rdbuf(original_buffer);
     searching = false;
     auto stop = std::chrono::high_resolution_clock::now();

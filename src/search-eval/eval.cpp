@@ -708,7 +708,7 @@ int eval(const Board& board) {
     }
 
     if (use_nnue) {
-        int nnue_score = evaluate(board.getAccumulator(), board.getSTM());
+        int nnue_score = evaluate(board.getAccumulator(), board.getSTM(), bitCount(board.getOcc(BOTH)));
         nnue_score = nnue_score * fmr_scale[board.getFMR()] / 200;
         return nnue_score;
     }
