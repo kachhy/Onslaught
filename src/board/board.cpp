@@ -354,6 +354,8 @@ BitBoard Board::getDiscoveryAttacks(const Square sq, const Side side) const {
 }
 
 void Board::makeMove(Move move) {
+    accumulator.flush(*this); // Settle any existing accumulator invalidation as this will overwrite the move
+
     Square from = From(move);
     Square to = To(move);
     Piece piece = MovePiece(move);
@@ -364,7 +366,7 @@ void Board::makeMove(Move move) {
         eval_info, accumulator
     );
 
-    const bool needs_refresh = accumulator.onMove(move, *this);
+    accumulator.onMove(move, *this);
 
     fmr++;
 
@@ -529,11 +531,6 @@ void Board::makeMove(Move move) {
 
     setSpecials();
 
-    // Accumulator full refresh on king crossing into another bucket
-    if (needs_refresh) {
-        accumulator.refresh(*this);
-    }
-
     assert(piece_bb[WHITE_KING] != 0ULL);
     assert(piece_bb[BLACK_KING] != 0ULL);
 }
@@ -645,6 +642,9 @@ void Board::undoMove(Move move) {
 }
 
 void Board::makeNullMove() {
+    // Settle any owed lazy delta before passing the position to the opponent.
+    accumulator.flush(*this);
+
     history[history_ply++] = BoardHistory(
         castling, ep_square, fmr, NO_PIECE, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash, material_pst_score,
         eval_info, accumulator

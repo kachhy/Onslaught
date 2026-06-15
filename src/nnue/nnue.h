@@ -14,6 +14,6 @@ extern const unsigned int  gNNUEWeightsSize;
 
 bool loadNNUE(const std::filesystem::path& path);
 bool loadNNUEFromMemory(const unsigned char* data, size_t size);
-int evaluate(const Accumulator& accum, Side stm, int piece_count);
+int evaluate(const Board& board);
 
 #endif // NNUE_H

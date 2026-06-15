@@ -19,6 +19,8 @@ class alignas(64) Accumulator {
 private:
     int16_t accumulator[2][HIDDEN_SIZE]; // [perspective]
     uint8_t king_sq[2]; // [side]
+    bool accumulator_dirty = false;
+    Move pending_move; // Move whose delta is owed when accumulator_dirty
 public:
     Accumulator() = default;
 
@@ -27,13 +29,24 @@ public:
             accumulator[WHITE][i] = network_biases[i];
             accumulator[BLACK][i] = network_biases[i];
         }
+        accumulator_dirty = false;
     }
 
     int32_t evaluate(Side stm, int bucket) const;
 
+    inline bool isDirty() const noexcept { return accumulator_dirty; }
+
     // Defined in nnue.cpp to break a cycle.
     void refresh(const Board& board);
-    bool onMove(Move move, const Board& board); // Returns true if the move requires a full refresh
+    void onMove(Move move, const Board& board);
+    void update(Move move, const Board& board); // Applies the pending move's delta
+
+    // Apply any owed delta before the board mutates again
+    void flush(const Board& board) {
+        if (accumulator_dirty) {
+            update(pending_move, board);
+        }
+    }
 
     template <int N_ADD, int N_SUB>
     inline void apply(int16_t* acc, const int16_t* const* adds, const int16_t* const* subs) {

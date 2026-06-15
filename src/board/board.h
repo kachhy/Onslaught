@@ -71,7 +71,7 @@ public:
     uint64_t pawnHash() const { return pawn_hash; }
     Score getMaterialPST() const { return material_pst_score; }
     const EvalInfo& getEvalInfo() const { return eval_info; }
-    const Accumulator& getAccumulator() const { return accumulator; }
+    Accumulator& getAccumulator() const { return accumulator; }
     void refreshAccumulator() { accumulator.refresh(*this); }
 
     // Make and undo move
@@ -159,7 +159,7 @@ private:
     uint32_t move_number;
 
     // NNUE accumulator
-    Accumulator accumulator;
+    mutable Accumulator accumulator;
 };
 
 #endif // BOARD_H
