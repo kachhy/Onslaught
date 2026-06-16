@@ -223,6 +223,9 @@ void Board::clear() {
     castling_rights[E8] = 0xf ^ (BLACK_KS | BLACK_QS);
     castling_rights[H8] = 0xf ^ BLACK_KS;
     castling_rights[A8] = 0xf ^ BLACK_QS;
+
+    // Accumulator state
+    acc_ply = 0;
 }
 
 bool Board::loadFEN(const std::string& fen) {
@@ -337,7 +340,7 @@ bool Board::loadFEN(const std::string& fen) {
     setPhase();
     refreshMaterialPST();
     refreshZobrist();
-    accumulator.refresh(*this);
+    accumulator_stack[acc_ply].refresh(*this);
 
     return true;
 }
@@ -353,20 +356,30 @@ BitBoard Board::getDiscoveryAttacks(const Square sq, const Side side) const {
            (rooks & getPieceAttacks(static_cast<Piece>(ROOK), sq, occ[BOTH] & ~rook_attacks));
 }
 
-void Board::makeMove(Move move) {
-    accumulator.flush(*this); // Settle any existing accumulator invalidation as this will overwrite the move
+void Board::accumulatorPropagate() const { // Update the top accumulator by walking the lazy chain
+    int clean = acc_ply;
+    while (clean > 0 && accumulator_stack[clean].accumulator_dirty) {
+        clean--;
+    }
+    
+    for (int k = clean + 1; k <= acc_ply; k++) { // note: <= acc_ply (compute target too)
+        accumulator_stack[k].applyDelta(accumulator_stack[k - 1]);
+    }
+}
 
+void Board::makeMove(Move move) {
     Square from = From(move);
     Square to = To(move);
     Piece piece = MovePiece(move);
     Piece captured = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
 
+    acc_ply++;
+    accumulator_stack[acc_ply].record(move, stm, captured, static_cast<uint8_t>(getLSB(piece_bb[WHITE_KING])), static_cast<uint8_t>(getLSB(piece_bb[BLACK_KING])));
+
     history[history_ply++] = BoardHistory(
         castling, ep_square, fmr, captured, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash, material_pst_score,
-        eval_info, accumulator
+        eval_info
     );
-
-    accumulator.onMove(move, *this);
 
     fmr++;
 
@@ -531,6 +544,10 @@ void Board::makeMove(Move move) {
 
     setSpecials();
 
+    if (makeDefaultPiece(piece) == KING) {
+        accumulator_stack[acc_ply].refreshIfKingCrossed(*this, from, to);
+    }
+
     assert(piece_bb[WHITE_KING] != 0ULL);
     assert(piece_bb[BLACK_KING] != 0ULL);
 }
@@ -554,7 +571,7 @@ void Board::undoMove(Move move) {
     pawn_hash = hist_data.pawn_hash;
     material_pst_score = hist_data.material_pst_score;
     memcpy(&eval_info, &hist_data.eval_info, sizeof(EvalInfo));
-    memcpy(&accumulator, &hist_data.accumulator, sizeof(Accumulator));
+    acc_ply--;
 
     std::swap(stm, xstm);
     move_number -= (stm == BLACK);
@@ -642,12 +659,12 @@ void Board::undoMove(Move move) {
 }
 
 void Board::makeNullMove() {
-    // Settle any owed lazy delta before passing the position to the opponent.
-    accumulator.flush(*this);
+    acc_ply++;
+    accumulator_stack[acc_ply].record(NO_MOVE, stm, NO_PIECE, static_cast<uint8_t>(getLSB(piece_bb[WHITE_KING])), static_cast<uint8_t>(getLSB(piece_bb[BLACK_KING])));
 
     history[history_ply++] = BoardHistory(
         castling, ep_square, fmr, NO_PIECE, checkers, legal_mask, threatened_by[WHITE], threatened_by[BLACK], pinned, zobrist_hash, pawn_hash, material_pst_score,
-        eval_info, accumulator
+        eval_info
     );
     if (ep_square != NO_SQUARE) {
         zobrist_hash ^= ep_keys[ep_square];
@@ -673,7 +690,7 @@ void Board::undoNullMove() {
     pawn_hash = hist_data.pawn_hash;
     material_pst_score = hist_data.material_pst_score;
     memcpy(&eval_info, &hist_data.eval_info, sizeof(EvalInfo));
-    memcpy(&accumulator, &hist_data.accumulator, sizeof(Accumulator));
+    acc_ply--;
     std::swap(stm, xstm);
 }
 
