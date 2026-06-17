@@ -71,8 +71,9 @@ public:
     uint64_t pawnHash() const { return pawn_hash; }
     Score getMaterialPST() const { return material_pst_score; }
     const EvalInfo& getEvalInfo() const { return eval_info; }
-    const Accumulator& getAccumulator() const { return accumulator; }
-    void refreshAccumulator() { accumulator.refresh(*this); }
+    Accumulator& getAccumulator() const { return accumulator_stack[acc_ply]; }
+    void refreshAccumulator() { accumulator_stack[acc_ply].refresh(*this); }
+    void accumulatorPropagate() const;
 
     // Make and undo move
     void makeMove(Move move);
@@ -96,7 +97,6 @@ public:
         uint64_t pawn_hash;
         Score material_pst_score;
         EvalInfo eval_info;
-        Accumulator accumulator;
 
         BoardHistory() :
             castling(0), ep_square(NO_SQUARE), fmr(0), captured_piece(NO_PIECE), checkers(0), legal_mask(0), pinned(0), zobrist_hash(0), pawn_hash(0),
@@ -108,16 +108,16 @@ public:
 
         BoardHistory(
             CastlingRights castling, Square ep_square, uint8_t fmr, Piece captured_piece, BitBoard checkers, BitBoard legal_mask, BitBoard white_threats,
-            BitBoard black_threats, BitBoard pinned, uint64_t zobrist_hash, uint64_t pawn_hash, Score material_pst_score, const EvalInfo& eval_info,
-            const Accumulator& accumulator
+            BitBoard black_threats, BitBoard pinned, uint64_t zobrist_hash, uint64_t pawn_hash, Score material_pst_score, const EvalInfo& eval_info
         ) :
             castling(castling), ep_square(ep_square), fmr(fmr), captured_piece(captured_piece), checkers(checkers), legal_mask(legal_mask), pinned(pinned),
-            zobrist_hash(zobrist_hash), pawn_hash(pawn_hash), material_pst_score(material_pst_score), accumulator(accumulator) {
+            zobrist_hash(zobrist_hash), pawn_hash(pawn_hash), material_pst_score(material_pst_score) {
             threatened_by[WHITE] = white_threats;
             threatened_by[BLACK] = black_threats;
             memcpy(&this->eval_info, &eval_info, sizeof(EvalInfo));
         }
     };
+
     const BoardHistory* getBoardHistory() const { return history; }
 private:
 
@@ -159,7 +159,8 @@ private:
     uint32_t move_number;
 
     // NNUE accumulator
-    Accumulator accumulator;
+    mutable Accumulator accumulator_stack[MAX_PLY + MAX_GAME_MOVES + 1];
+    mutable int acc_ply = 0;
 };
 
 #endif // BOARD_H

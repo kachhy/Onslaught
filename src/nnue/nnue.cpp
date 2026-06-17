@@ -43,86 +43,17 @@ void Accumulator::refresh(const Board& board) {
             continue;
         }
 
-        add(makeDefaultPiece(pc), getPieceSide(pc), static_cast<Square>(sq));
+        add(*this, makeDefaultPiece(pc), getPieceSide(pc), static_cast<Square>(sq));
     }
+
+    accumulator_dirty = false;
 }
 
-bool Accumulator::onMove(Move move, const Board& board) {
-    const Piece moved_piece = MovePiece(move);
-    const DefaultPiece moved_dp = makeDefaultPiece(moved_piece);
-    const Side us = board.getSTM();
-    const Side them = static_cast<Side>(us ^ 1);
-    const Square from = From(move);
-    const Square to = To(move);
-
-    // Board not yet mutated here, so these are the pre-move king squares
-    king_sq[WHITE] = static_cast<uint8_t>(getLSB(board.getPieceBB(WHITE_KING)));
-    king_sq[BLACK] = static_cast<uint8_t>(getLSB(board.getPieceBB(BLACK_KING)));
-
-    if (moved_dp == KING) {
-        const bool cross = (kingBucket(from, us) != kingBucket(to, us)) || (kingNeedsMirror(from) != kingNeedsMirror(to));
-        if (cross) { // King changing bucket or mirror invalidates the whole perspective
-            return true;
-        }
-        
-        king_sq[us] = static_cast<uint8_t>(to); // same bucket + mirror
-    }
-
-    if (Castle(move)) {
-        Square rook_from = NO_SQUARE, rook_to = NO_SQUARE;
-        switch (to) {
-        case G1:
-            rook_from = H1;
-            rook_to = F1;
-            break;
-        case C1:
-            rook_from = A1;
-            rook_to = D1;
-            break;
-        case G8:
-            rook_from = H8;
-            rook_to = F8;
-            break;
-        case C8:
-            rook_from = A8;
-            rook_to = D8;
-            break;
-        default: return false;
-        }
-
-        addAddSubSub(KING, us, to, ROOK, us, rook_to, KING, us, from, ROOK, us, rook_from);
-        return false;
-    }
-
-    if (Prom(move)) {
-        sub(PAWN, us, from);
-        add(promPiece(move), us, to);
-        if (Capture(move)) {
-            sub(makeDefaultPiece(board.pieceAt(to)), them, to);
-        }
-
-        return false;
-    }
-
-    if (IsEP(move)) {
-        const Square cap_sq = static_cast<Square>(static_cast<int>(to) - (us == WHITE ? NORTH : SOUTH));
-        sub(PAWN, us, from);
-        add(PAWN, us, to);
-        sub(PAWN, them, cap_sq);
-        return false;
-    }
-
-    if (Capture(move)) {
-        addSubSub(moved_dp, us, from, makeDefaultPiece(board.pieceAt(to)), to);
-        return false;
-    }
-
-    addSub(moved_dp, us, from, to);
-    return false;
-}
-
-int evaluate(const Accumulator& accum, const Side stm, const int piece_count) {
-    return accum.evaluate(stm, outputBucket(piece_count)) * NNUE_WEIGHT_SCALAR / 100;
+int evaluate(const Board& board) {
+    board.accumulatorPropagate(); // Bring the top accumulator up to date along the lazy chain
+    Accumulator& accum = board.getAccumulator();
+    const uint8_t piece_count = bitCount(board.getOcc(BOTH));
+    return accum.evaluate(board.getSTM(), outputBucket(piece_count)) * NNUE_WEIGHT_SCALAR / 100;
 }
 
 namespace {
