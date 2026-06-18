@@ -323,7 +323,6 @@ int search(
     }
 
     bool in_check = board.inCheck();
-    int cplx = 1;
     if (in_check) {
         depth++; // check extension
     }
@@ -335,7 +334,6 @@ int search(
                 ss->static_eval = tt_entry.score;
             } else {
                 ss->static_eval = eval(board);
-                cplx = complexity(board);
 
                 if (tt_entry.bound == (tt_entry.score > ss->static_eval ? LOWERBOUND : UPPERBOUND)) {
                     ss->static_eval = tt_entry.score;
@@ -343,7 +341,6 @@ int search(
             }
         } else {
             ss->static_eval = eval(board);
-            cplx = complexity(board);
         }
     }
 
@@ -360,7 +357,7 @@ int search(
 
     // nmp
     BitBoard non_pawn_material = board.getOcc(board.getSTM()) & ~board.getPieceBB(makePiece(PAWN, board.getSTM())) & ~board.getPieceBB(makePiece(KING, board.getSTM()));
-    if (!is_pv && can_make_null_move && !in_check && depth >= NMP_DEPTH_CUTOFF && static_eval >= beta && non_pawn_material && (cplx == 1 || cplx < -484)) {
+    if (!is_pv && can_make_null_move && !in_check && depth >= NMP_DEPTH_CUTOFF && static_eval >= beta && non_pawn_material) {
         int nmp_reduction = 3 + depth / 6;
         ss->move = NO_MOVE;
         board.makeNullMove();
@@ -378,7 +375,7 @@ int search(
     }
 
     // razoring = save movegen cost on pruned nodes by checking if it can beat alpha with quiesce, otherwise fail low
-    if (!is_pv && !in_check && depth <= RAZORING_DEPTH_MAX && static_eval + RAZOR_MARGIN * depth < alpha && (cplx == -1 || cplx < -484)) {
+    if (!is_pv && !in_check && depth <= RAZORING_DEPTH_MAX && static_eval + RAZOR_MARGIN * depth < alpha) {
         int quiescent_score = quiesce(board, alpha - 1, alpha, ply + 1, 0);
         if (quiescent_score < alpha) {
             return quiescent_score;
@@ -568,8 +565,6 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
         }
     }
 
-    float static_complexity = complexityPercent(board);
-
     for (int depth = 1; depth <= max_depth; depth++) {
         if (!searching) {
             break;
@@ -578,7 +573,7 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
         tt.incAge();
 
         // aspiration window
-        int delta = ASPIRATION_MARGIN + static_complexity * ASPIRATION_COMPLEXITY_MARGIN;
+        int delta = ASPIRATION_MARGIN;
         int alpha;
         int beta;
         if (depth >= ASPIRATION_DEPTH_CUTOFF) {
