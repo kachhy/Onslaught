@@ -15,6 +15,8 @@ extern int16_t network_weights[INPUT_SIZE * NUM_KING_BUCKETS][HIDDEN_SIZE];
 extern int16_t network_biases[HIDDEN_SIZE];
 extern int16_t output_weights[NUM_OUTPUT_BUCKETS][2 * HIDDEN_SIZE];
 extern int16_t output_bias[NUM_OUTPUT_BUCKETS];
+extern int16_t complexity_weights[NUM_OUTPUT_BUCKETS][2 * HIDDEN_SIZE];
+extern int16_t complexity_bias[NUM_OUTPUT_BUCKETS];
 
 class alignas(64) Accumulator {
 private:
@@ -124,6 +126,8 @@ public:
     }
 
     int32_t evaluate(Side stm, int bucket) const;
+    int32_t complexity(Side stm, int bucket) const;
+    int64_t forward(Side stm, const int16_t* out_w) const;
 
     // Defined in nnue.cpp to break a cycle.
     void refresh(const Board& board);
@@ -218,10 +222,10 @@ public:
     const int16_t* values(Side persp) const { return accumulator[persp]; }
 };
 
-inline int32_t Accumulator::evaluate(Side stm, int bucket) const {
+// Squared-clipped-ReLU forward pass through one output head's weights
+inline int64_t Accumulator::forward(Side stm, const int16_t* out_w) const {
     const Side us = stm;
     const Side them = static_cast<Side>(stm ^ 1);
-    const int16_t* out_w = output_weights[bucket];
 
     vepi32 acc_us = vecZero32();
     vepi32 acc_them = vecZero32();
@@ -236,13 +240,21 @@ inline int32_t Accumulator::evaluate(Side stm, int bucket) const {
         acc_them = vecAdd32(acc_them, vecMAdd(vecMullo(ct, wt), ct));
     }
 
-    int64_t sum = static_cast<int64_t>(vecReduce(acc_us)) + vecReduce(acc_them);
+    return static_cast<int64_t>(vecReduce(acc_us)) + vecReduce(acc_them);
+}
 
+inline int32_t Accumulator::evaluate(Side stm, int bucket) const {
     // Quant pipeline:
     //   sum            scale = L0^2 * L1
     //   sum / L0       scale = L0   * L1  (matches output_bias)
     //   * EVAL_SCALE / (L0 * L1) -> centipawns
-    sum = sum / L0_SCALE + output_bias[bucket];
+    int64_t sum = forward(stm, output_weights[bucket]) / L0_SCALE + output_bias[bucket];
+    return static_cast<int32_t>(sum * EVAL_SCALE / MUL_SCALE);
+}
+
+inline int32_t Accumulator::complexity(Side stm, int bucket) const {
+    // Same quant pipeline as evaluate(), using the complexity head's weights/bias.
+    int64_t sum = forward(stm, complexity_weights[bucket]) / L0_SCALE + complexity_bias[bucket];
     return static_cast<int32_t>(sum * EVAL_SCALE / MUL_SCALE);
 }
 

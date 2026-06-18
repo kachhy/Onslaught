@@ -7,6 +7,7 @@
 
 constexpr uint8_t RFP_MARGIN = 84;
 constexpr uint8_t ASPIRATION_MARGIN = 20;
+constexpr uint8_t ASPIRATION_COMPLEXITY_MARGIN = 10;
 constexpr uint16_t FUTILITY_MARGIN = 90;
 constexpr uint16_t RAZOR_MARGIN = 492;
 constexpr float LMR_VALUE = 0.828061;
