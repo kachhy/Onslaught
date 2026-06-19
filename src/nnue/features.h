@@ -11,6 +11,7 @@ constexpr size_t NUM_KING_BUCKETS = 2;
 constexpr size_t NUM_OUTPUT_BUCKETS = 8;
 constexpr size_t INPUT_SIZE = 768;
 constexpr size_t HIDDEN_SIZE = 1024;
+constexpr size_t CPLX_L1 = 32;
 
 // King buckets (Bullet's ChessBucketsMirrored)
 constexpr uint8_t KING_BUCKETS[32] = {

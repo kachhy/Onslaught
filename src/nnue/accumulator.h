@@ -15,8 +15,10 @@ extern int16_t network_weights[INPUT_SIZE * NUM_KING_BUCKETS][HIDDEN_SIZE];
 extern int16_t network_biases[HIDDEN_SIZE];
 extern int16_t output_weights[NUM_OUTPUT_BUCKETS][2 * HIDDEN_SIZE];
 extern int16_t output_bias[NUM_OUTPUT_BUCKETS];
-extern int16_t complexity_weights[NUM_OUTPUT_BUCKETS][2 * HIDDEN_SIZE];
-extern int16_t complexity_bias[NUM_OUTPUT_BUCKETS];
+extern int16_t complexity_l2a_weights[CPLX_L1][2 * HIDDEN_SIZE];
+extern int16_t complexity_l2a_bias[CPLX_L1];
+extern int16_t complexity_l2b_weights[NUM_OUTPUT_BUCKETS][CPLX_L1];
+extern int16_t complexity_l2b_bias[NUM_OUTPUT_BUCKETS];
 
 class alignas(64) Accumulator {
 private:
@@ -253,9 +255,28 @@ inline int32_t Accumulator::evaluate(Side stm, int bucket) const {
 }
 
 inline int32_t Accumulator::complexity(Side stm, int bucket) const {
-    // Same quant pipeline as evaluate(), using the complexity head's weights/bias.
-    int64_t sum = forward(stm, complexity_weights[bucket]) / L0_SCALE + complexity_bias[bucket];
-    return static_cast<int32_t>(sum * EVAL_SCALE / MUL_SCALE);
+    int16_t l2a_hidden[CPLX_L1];
+
+    // Pass shared accumulators through the l2a layer using your SIMD forward function
+    for (size_t i = 0; i < CPLX_L1; ++i) {
+        int64_t sum = forward(stm, complexity_l2a_weights[i]) / L0_SCALE + complexity_l2a_bias[i];
+        l2a_hidden[i] = static_cast<int16_t>(sum / L1_SCALE); // Quantize down to i16 for the next layer's input activation (divide by QB)
+    }
+
+    // Compute the l2b output layer
+    int64_t final_sum = 0;
+    const int16_t* w_l2b = complexity_l2b_weights[bucket];
+
+    for (size_t i = 0; i < CPLX_L1; ++i) {
+        // Apply SCReLU to the intermediate layer activations
+        int32_t clipped = std::max<int32_t>(0, std::min<int32_t>(l2a_hidden[i], L0_SCALE));
+        int32_t activation = clipped * clipped;
+        final_sum += static_cast<int64_t>(activation) * w_l2b[i];
+    }
+
+    //  Apply the final quantization pipeline to convert to engine units
+    final_sum = final_sum / L0_SCALE + complexity_l2b_bias[bucket];
+    return static_cast<int32_t>(final_sum * EVAL_SCALE / MUL_SCALE);
 }
 
 #endif // ACCUMULATOR_H

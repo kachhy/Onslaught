@@ -6,7 +6,7 @@ INCBIN(NNUEWeights, EVALFILE);
 #else
 // No embedded network - falls back to file loading at runtime
 extern const unsigned char gNNUEWeightsData[] = {};
-extern const unsigned int  gNNUEWeightsSize   = 0;
+extern const unsigned int gNNUEWeightsSize = 0;
 #endif
 
 #include "nnue.h"
@@ -15,10 +15,10 @@ extern const unsigned int  gNNUEWeightsSize   = 0;
 #include "core/bitboard.h"
 #include "core/move.h"
 
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
-#include <cmath>
 #include <cstring>
 #include <fstream>
 #include <ios>
@@ -26,15 +26,17 @@ extern const unsigned int  gNNUEWeightsSize   = 0;
 // Global game board, declared in uci.cpp
 extern Board board;
 
-std::string nnue_path = "nn-6835710ad54ff7d7-v2cn.nnue"; // Default NNUE
+std::string nnue_path = "nn-1a355a4cb0791ada-v2cn.nnue"; // Default NNUE
 
 // Network storage
 alignas(64) int16_t network_weights[INPUT_SIZE * NUM_KING_BUCKETS][HIDDEN_SIZE] = {};
 int16_t network_biases[HIDDEN_SIZE] = {};
 alignas(64) int16_t output_weights[NUM_OUTPUT_BUCKETS][2 * HIDDEN_SIZE] = {};
 int16_t output_bias[NUM_OUTPUT_BUCKETS] = {};
-alignas(64) int16_t complexity_weights[NUM_OUTPUT_BUCKETS][2 * HIDDEN_SIZE] = {};
-int16_t complexity_bias[NUM_OUTPUT_BUCKETS] = {};
+alignas(64) int16_t complexity_l2a_weights[CPLX_L1][2 * HIDDEN_SIZE] = {};
+int16_t complexity_l2a_bias[CPLX_L1] = {};
+alignas(64) int16_t complexity_l2b_weights[NUM_OUTPUT_BUCKETS][CPLX_L1] = {};
+int16_t complexity_l2b_bias[NUM_OUTPUT_BUCKETS] = {};
 
 void Accumulator::refresh(const Board& board) {
     reset();
@@ -66,19 +68,25 @@ int complexity(const Board& board) {
     return (accum.complexity(board.getSTM(), outputBucket(piece_count)) * NNUE_WEIGHT_SCALAR / 100);
 }
 
-double complexityPercent(const Board& board) {
-    return 1.0 / (1.0 + std::exp(-static_cast<double>(complexity(board)) / EVAL_SCALE));
-}
+double complexityPercent(const Board& board) { return 1.0 / (1.0 + std::exp(-static_cast<double>(complexity(board)) / EVAL_SCALE)); }
 
 namespace {
+constexpr size_t CPLX_L1 = 32;
+
 constexpr size_t FT_WEIGHT_COUNT = INPUT_SIZE * HIDDEN_SIZE * NUM_KING_BUCKETS;
 constexpr size_t FT_BIAS_COUNT = HIDDEN_SIZE;
 constexpr size_t OUT_WEIGHT_COUNT = NUM_OUTPUT_BUCKETS * 2 * HIDDEN_SIZE;
 constexpr size_t OUT_BIAS_COUNT = NUM_OUTPUT_BUCKETS;
-constexpr size_t CPX_WEIGHT_COUNT = NUM_OUTPUT_BUCKETS * 2 * HIDDEN_SIZE;
-constexpr size_t CPX_BIAS_COUNT = NUM_OUTPUT_BUCKETS;
+
+// New 2-layer complexity architecture counts
+constexpr size_t CPX_L2A_WEIGHT_COUNT = CPLX_L1 * 2 * HIDDEN_SIZE;
+constexpr size_t CPX_L2A_BIAS_COUNT = CPLX_L1;
+constexpr size_t CPX_L2B_WEIGHT_COUNT = NUM_OUTPUT_BUCKETS * CPLX_L1;
+constexpr size_t CPX_L2B_BIAS_COUNT = NUM_OUTPUT_BUCKETS;
+
 constexpr size_t EXPECTED_BYTES =
-    (FT_WEIGHT_COUNT + FT_BIAS_COUNT + OUT_WEIGHT_COUNT + OUT_BIAS_COUNT + CPX_WEIGHT_COUNT + CPX_BIAS_COUNT) * sizeof(std::int16_t);
+    (FT_WEIGHT_COUNT + FT_BIAS_COUNT + OUT_WEIGHT_COUNT + OUT_BIAS_COUNT + CPX_L2A_WEIGHT_COUNT + CPX_L2A_BIAS_COUNT + CPX_L2B_WEIGHT_COUNT + CPX_L2B_BIAS_COUNT) *
+    sizeof(std::int16_t);
 
 // Bullet pads the dumped Parameters struct to a 64-byte boundary, so we accept either the exact count OR to the next 64 bytes
 constexpr size_t ALIGN_BYTES = 64;
@@ -95,8 +103,6 @@ bool loadNNUEFromMemory(const unsigned char* data, size_t size) {
         return false;
     }
     if (size != EXPECTED_BYTES && size != EXPECTED_BYTES_PADDED) {
-        std::fprintf(stderr, "loadNNUE: embedded size mismatch (%zu bytes, expected %zu or %zu padded)\n",
-                     size, EXPECTED_BYTES, EXPECTED_BYTES_PADDED);
         return false;
     }
 
@@ -109,9 +115,14 @@ bool loadNNUEFromMemory(const unsigned char* data, size_t size) {
     ptr += OUT_WEIGHT_COUNT * sizeof(int16_t);
     std::memcpy(output_bias, ptr, OUT_BIAS_COUNT * sizeof(int16_t));
     ptr += OUT_BIAS_COUNT * sizeof(int16_t);
-    std::memcpy(complexity_weights, ptr, CPX_WEIGHT_COUNT * sizeof(int16_t));
-    ptr += CPX_WEIGHT_COUNT * sizeof(int16_t);
-    std::memcpy(complexity_bias, ptr, CPX_BIAS_COUNT * sizeof(int16_t));
+    std::memcpy(complexity_l2a_weights, ptr, CPX_L2A_WEIGHT_COUNT * sizeof(int16_t));
+    ptr += CPX_L2A_WEIGHT_COUNT * sizeof(int16_t);
+    std::memcpy(complexity_l2a_bias, ptr, CPX_L2A_BIAS_COUNT * sizeof(int16_t));
+    ptr += CPX_L2A_BIAS_COUNT * sizeof(int16_t);
+    std::memcpy(complexity_l2b_weights, ptr, CPX_L2B_WEIGHT_COUNT * sizeof(int16_t));
+    ptr += CPX_L2B_WEIGHT_COUNT * sizeof(int16_t);
+    std::memcpy(complexity_l2b_bias, ptr, CPX_L2B_BIAS_COUNT * sizeof(int16_t));
+
     board.refreshAccumulator();
 
     return true;
@@ -157,10 +168,16 @@ bool loadNNUE(const std::filesystem::path& path) {
     if (!readExact(in, output_bias, OUT_BIAS_COUNT * sizeof(std::int16_t))) {
         return false;
     }
-    if (!readExact(in, complexity_weights, CPX_WEIGHT_COUNT * sizeof(std::int16_t))) {
+    if (!readExact(in, complexity_l2a_weights, CPX_L2A_WEIGHT_COUNT * sizeof(std::int16_t))) {
         return false;
     }
-    if (!readExact(in, complexity_bias, CPX_BIAS_COUNT * sizeof(std::int16_t))) {
+    if (!readExact(in, complexity_l2a_bias, CPX_L2A_BIAS_COUNT * sizeof(std::int16_t))) {
+        return false;
+    }
+    if (!readExact(in, complexity_l2b_weights, CPX_L2B_WEIGHT_COUNT * sizeof(std::int16_t))) {
+        return false;
+    }
+    if (!readExact(in, complexity_l2b_bias, CPX_L2B_BIAS_COUNT * sizeof(std::int16_t))) {
         return false;
     }
 
