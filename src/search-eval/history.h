@@ -14,6 +14,7 @@ struct SearchStack {
     int static_eval;
     Move killers[2];
     Move move; // For continuation history - the current move
+    Move excluded; // Singular-extension excluded move or NO_MOVE
 };
 
 void resetHistory();
