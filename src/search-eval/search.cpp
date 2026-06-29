@@ -314,7 +314,7 @@ int search(
     if (tt_hit) {
         tt_entry.score = scoreFromTT(tt_entry.score, ply);
 
-        if (!is_pv && ply > 0 && tt_entry.depth >= static_cast<size_t>(depth)) {
+        if (!is_pv && ply > 0 && ss->excluded == NO_MOVE && tt_entry.depth >= static_cast<size_t>(depth)) {
             if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) || (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
                 return tt_entry.score;
             }
@@ -422,6 +422,10 @@ int search(
         std::swap(scores[i], scores[best_move_index]);
 
         Move move = moves[i];
+        if (move == ss->excluded) {
+            continue;
+        }
+
         bool is_quiet_move = !Capture(move) && !Prom(move);
         bool gives_check = givesCheck(board, move);
         // futility pruning: if static_eval + margin <= alpha, prune quiet moves bc they are unlikely to improve position
@@ -443,21 +447,38 @@ int search(
             quiets_tried.emplace_back(move);
         }
 
+        // singular extensions: if the TT move is much better than all alternatives
+        // (a reduced search of the other moves fails low below a margin), extend it.
+        int extension = 0;
+        if (ply > 0 && ss->excluded == NO_MOVE && depth >= 8 && tt_hit && move == tt_entry.best_move && tt_entry.bound != UPPERBOUND &&
+            tt_entry.depth >= static_cast<size_t>(depth) - 3 && std::abs(tt_entry.score) < SCORE_MAX - MAX_GAME_MOVES) {
+            int s_beta = tt_entry.score - 2 * depth;
+            ss->excluded = move;
+            int s_score = search(board, (depth - 1) / 2, s_beta - 1, s_beta, hard_cap, max_nodes, start, ply, ss, can_make_null_move, pv_table, max_ply);
+            ss->excluded = NO_MOVE;
+
+            if (s_score < s_beta) {
+                extension = 1; // singular
+                if (!is_pv && s_score < s_beta - 20) {
+                    extension = 2; // Double extension
+                }
+            } else if (s_beta >= beta) { // Multi-cut pruning
+                return s_beta;
+            } else if (tt_entry.score >= beta) {
+                extension = -1; // negative extension
+            }
+        }
+
         ss->move = move;
         board.makeMove(move);
         tt.prefetch(board.hash());
 
-        // // mate extensions (replaced by check extension at top of search)
-        // int extension = 0;
-        // if (gives_check && depth <= 2) {
-        //     extension = 1;
-        // }
-
         int score;
+        int new_depth = depth - 1 + extension;
         bool do_full_search = false;
 
         if (moves_searched == 0) {
-            score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
+            score = -search(board, new_depth, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
         } else {
             // lmr
             if (moves_searched >= LMR_MOVES_CUTOFF && depth >= LMR_DEPTH_CUTOFF && !Capture(move) && !Prom(move) && !in_check) {
@@ -467,19 +488,21 @@ int search(
                 // history-based reduction: reduce good-history quiets less, bad-history more.
                 const int move_hist = getScoreHistory(board.getXSTM(), move) + getContHist(ss, board.getXSTM(), move);
                 lmr_reduction = std::max(0, std::min(lmr_reduction - move_hist / HIST_LMR_DIVISOR, depth - 2));
-                score = -search(board, depth - 1 - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
+                score = -search(board, new_depth - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
                 do_full_search = score > alpha;
             } else {
                 do_full_search = true;
             }
+
             // pvs at full depth
             if (do_full_search) {
-                score = -search(board, depth - 1, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
+                score = -search(board, new_depth, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
                 if (score > alpha && score < beta) {
-                    score = -search(board, depth - 1, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
+                    score = -search(board, new_depth, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
                 }
             }
         }
+
         board.undoMove(move);
         moves_searched++;
 
@@ -495,7 +518,10 @@ int search(
             }
         }
         if (score >= beta) {
-            tt.insert(board, best_move, scoreToTT(best_score, ply), LOWERBOUND, depth);
+            if (ss->excluded == NO_MOVE) {
+                tt.insert(board, best_move, scoreToTT(best_score, ply), LOWERBOUND, depth);
+            }
+
             if (!Capture(best_move) && !Prom(best_move)) {
                 if (best_move != ss->killers[0]) { // Update killer moves
                     ss->killers[1] = ss->killers[0];
@@ -507,12 +533,21 @@ int search(
                     updateContHistory(depth, board.getSTM(), best_move, ss, quiets_tried);
                 }
             }
+
             return best_score;
         }
     }
 
+    // If only the excluded move was available, fail low (move is singular)
+    if (ss->excluded != NO_MOVE && best_score == -SCORE_MAX) {
+        return alpha;
+    }
+
     TTBound bound = (best_score > original_alpha) ? EXACTBOUND : UPPERBOUND;
-    tt.insert(board, best_move, scoreToTT(best_score, ply), bound, depth);
+    if (ss->excluded == NO_MOVE) {
+        tt.insert(board, best_move, scoreToTT(best_score, ply), bound, depth);
+    }
+    
     return best_score;
 }
 
