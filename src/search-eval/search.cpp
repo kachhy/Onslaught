@@ -173,28 +173,36 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
     if (ply >= seldepth) {
         seldepth = ply;
     }
+
     nodes++;
+
     if (ply >= MAX_PLY) {
         return eval(board);
     }
+
     if (ply > 0 && isDraw(board, ply)) {
         return 0;
     }
+
     int static_eval;
     int best_value;
     MoveList moves;
+
     if (board.inCheck()) {
         best_value = -SCORE_MAX + std::min(ply, (int)MAX_PLY - 1);
         getLegalMoves(board, moves);
     } else {
         static_eval = eval(board);
         best_value = static_eval;
+
         if (best_value >= beta) {
             return best_value;
         }
+
         if (best_value > alpha) {
             alpha = best_value;
         }
+
         getNoisyMoves(board, moves);
     }
 
@@ -216,17 +224,25 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
                 best_move_index = j;
             }
         }
+
         moves.sort_item(best_move_index);
         std::swap(scores[i], scores[best_move_index]);
-
         Move noisy_move = moves[i];
-        // SEE
+
+        // Delta pruning
+        if (Capture(noisy_move) && !Prom(noisy_move) && best_value + DELTA_PRUNING_MARGIN + SEE_VALUES[makeDefaultPiece(board.pieceAt(To(noisy_move)))] < alpha) { // Borrowing SEE values since they're very similar to raw material values
+            continue;
+        }
+
+        // SEE pruning
         if (!board.inCheck() && !staticExchangeEval(board, noisy_move, 0)) {
             continue;
         }
+
         board.makeMove(noisy_move);
         int score = -quiesce(board, -beta, -alpha, ply + 1, qply + 1);
         board.undoMove(noisy_move);
+
         if (score >= beta) {
             return score;
         }
