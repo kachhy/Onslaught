@@ -65,8 +65,9 @@ To contribute code
 Running all of these SPRT tests takes a lot of compute. To contribute compute to our OpenBench instance, please refer to the [OpenBench wiki](https://github.com/AndyGrant/OpenBench/wiki). Ensure you have an account, use those credentials, and use [https://openbench.kaichung.dev](https://openbench.kaichung.dev) as the endpoint.
 
 ## 🙏 Acknowledgments
-
--   The [Chess Programming Wiki](https://www.chessprogramming.org) for being an invaluable resource for chess engine development.
--   [OpenBench](https://github.com/AndyGrant/OpenBench) is a great SPRT testing framework that we heavily rely on to test changes.
--   The [Bullet](github.com/jw1912/bullet) NNUE trainer for training our networks and being incredibly intuitive and easy to use.
--   [Incbin](https://github.com/graphitemaster/incbin) which we use to include our networks in our binaries.
+- [Chess Programming Wiki](https://www.chessprogramming.org) - an invaluable reference that guided much of our development.
+- [Ethereal](https://github.com/AndyGrant/Ethereal) - a great source of inspiration, both in strength and in code clarity.
+- [Bullet](https://github.com/jw1912/bullet) - the NNUE trainer we used to train our networks; intuitive and easy to work with.
+- [OpenBench](https://github.com/AndyGrant/OpenBench) - the SPRT testing framework we rely on for all our testing.
+- [Incbin](https://github.com/graphitemaster/incbin) - used to embed our networks directly into our binaries.
+- [CodeMonkeyKing's YouTube series](https://www.youtube.com/watch?v=QUNP-UjujBM&list=PLmN0neTso3Jxh8ZIylk74JpwfiWNI76Cs) - a great starting point for learning chess engine implementation.
