@@ -101,6 +101,7 @@ void printInfo(const Board& src, int depth, int seldepth, int score, const char*
     }
     std::cout << std::endl;
 }
+
 // SEE
 int staticExchangeEval(const Board& board, Move move, int threshold) {
     if (Castle(move) || IsEP(move) || Prom(move)) {
@@ -369,6 +370,50 @@ int search(
 
         if (score >= beta) {
             return score;
+        }
+    }
+
+    // Probcut
+    // TODO: needs tuning
+    int prob_beta = beta + PROB_BETA_OFFSET;
+    if (!is_pv && !in_check && depth >= 6 && (!tt_hit || tt_entry.score >= prob_beta || tt_entry.depth < depth - 3)) {
+        // Check noisy moves 
+        MoveList pc_moves;
+        getNoisyMoves(board, pc_moves);
+
+        std::array<int, MAX_MOVES> scores;
+        for (uint8_t i = 0; i < pc_moves.size(); i++) {
+            scores[i] = scoreMove(board, pc_moves[i], tt_hit ? tt_entry.best_move : NO_MOVE, ss);
+        }
+
+        for (uint8_t i = 0; i < pc_moves.size(); i++) {
+            // move ordering
+            uint8_t best_move_index = i;
+            for (uint8_t j = i + 1; j < pc_moves.size(); j++) {
+                if (scores[j] > scores[best_move_index]) {
+                    best_move_index = j;
+                }
+            }
+
+            pc_moves.sort_item(best_move_index);
+            std::swap(scores[i], scores[best_move_index]);
+
+            Move move = pc_moves[i];
+            board.makeMove(move);
+            tt.prefetch(board.hash());
+            ss->move = move;
+            
+            int score = -quiesce(board, -prob_beta, -prob_beta + 1, ply + 1, 0);
+            if (score >= prob_beta) {
+                score = -search(board, depth - 4, -prob_beta, -prob_beta + 1, hard_cap, max_nodes, start, ply + 1, ss, true, pv_table, max_ply);
+                board.undoMove(move);
+
+                if (score >= prob_beta) {
+                    return score;
+                }
+            } else {
+                board.undoMove(move);
+            }
         }
     }
 

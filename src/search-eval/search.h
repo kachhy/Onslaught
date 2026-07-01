@@ -24,6 +24,7 @@ constexpr uint8_t ASPIRATION_DEPTH_CUTOFF = 3;
 constexpr float ASPIRATION_SCALAR = 1.290771;
 constexpr int SEE_VALUES[6] = { 100, 300, 300, 500, 900, 20000 }; // PBNRQK
 constexpr int SEE_DEPTH_MAX = 8;
+constexpr int PROB_BETA_OFFSET = 180;
 
 extern thread_local uint64_t nodes;
 
