@@ -54,7 +54,7 @@ endif
 
 OBJ=$(patsubst src/%.cpp,$(OBJDIR)/%.o,$(SRC))
 DEPS=$(OBJ:.o=.d)
-EXE ?= $(OBJDIR)/Axiom
+EXE ?= $(OBJDIR)/Onslaught
 
 release: $(EXE)
 debug: $(EXE)

@@ -1,23 +1,23 @@
 <div align="center">
 <img src="./img/icon_tiny.png" height:auto;"/>
 
-[![GitHub stars](https://img.shields.io/github/stars/kachhy/Axiom?style=for-the-badge)](https://github.com/kachhy/Axiom/stargazers) [![GitHub forks](https://img.shields.io/github/forks/kachhy/Axiom?style=for-the-badge)](https://github.com/kachhy/Axiom/network) [![GitHub issues](https://img.shields.io/github/issues/kachhy/Axiom?style=for-the-badge)](https://github.com/kachhy/Axiom/issues)
+[![GitHub stars](https://img.shields.io/github/stars/kachhy/Onslaught?style=for-the-badge)](https://github.com/kachhy/Onslaught/stargazers) [![GitHub forks](https://img.shields.io/github/forks/kachhy/Onslaught?style=for-the-badge)](https://github.com/kachhy/Onslaught/network) [![GitHub issues](https://img.shields.io/github/issues/kachhy/Onslaught?style=for-the-badge)](https://github.com/kachhy/Onslaught/issues)
 
-[![GitHub license](https://img.shields.io/github/license/kachhy/Axiom?style=for-the-badge)](LICENSE)
+[![GitHub license](https://img.shields.io/github/license/kachhy/Onslaught?style=for-the-badge)](LICENSE)
 
-[![Top Language](https://img.shields.io/github/languages/top/kachhy/Axiom?style=for-the-badge&color=blue)](https://github.com/kachhy/Axiom)
+[![Top Language](https://img.shields.io/github/languages/top/kachhy/Onslaught?style=for-the-badge&color=blue)](https://github.com/kachhy/Onslaught)
 
-# Axiom
+# Onslaught
 **A UCI-compliant chess engine built in C++.**
 </div>
 
 ## 📖 Overview
 
-Axiom is a Universal Chess Interface (UCI) compliant chess engine developed in C++. Designed for performance, Axiom can be used with various UCI-compatible chess graphical user interfaces (GUIs) to play, analyze, and find optimal moves in standard chess positions.
+Onslaught is a Universal Chess Interface (UCI) compliant chess engine developed in C++. Designed for performance, Onslaught can be used with various UCI-compatible chess graphical user interfaces (GUIs) to play, analyze, and find optimal moves in standard chess positions.
 
 ## 🚀 Quick Start
 
-Follow these steps to build and run the Axiom chess engine.
+Follow these steps to build and run the Onslaught chess engine.
 
 ### Prerequisites
 
@@ -28,12 +28,12 @@ Follow these steps to build and run the Axiom chess engine.
 
 1.  **Clone the repository**
     ```bash
-    git clone https://github.com/kachhy/Axiom.git
-    cd Axiom
+    git clone https://github.com/kachhy/Onslaught.git
+    cd Onslaught
     ```
 
 2.  **Build the engine**
-    The `Makefile` will compile the source code and create the `axiom` executable.
+    The `Makefile` will compile the source code and create the `Onslaught` executable.
     ```bash
     make release
     ```
