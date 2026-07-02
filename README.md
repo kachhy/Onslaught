@@ -1,5 +1,5 @@
 <div align="center">
-<img src="./img/icon_tiny.png" height:auto;"/>
+<img src="./img/onslaught.png" height:auto;"/>
 
 [![GitHub stars](https://img.shields.io/github/stars/kachhy/Onslaught?style=for-the-badge)](https://github.com/kachhy/Onslaught/stargazers) [![GitHub forks](https://img.shields.io/github/forks/kachhy/Onslaught?style=for-the-badge)](https://github.com/kachhy/Onslaught/network) [![GitHub issues](https://img.shields.io/github/issues/kachhy/Onslaught?style=for-the-badge)](https://github.com/kachhy/Onslaught/issues)
 
