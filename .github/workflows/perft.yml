@@ -25,4 +25,4 @@ jobs:
     - name: Run Tests and Check Perft Assertions
       run: |
         cd build/perft
-        ./Axiom
+        ./Onslaught
