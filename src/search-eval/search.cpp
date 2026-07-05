@@ -244,29 +244,36 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
 
 static int scoreMove(Board& board, Move move, Move tt_move, SearchStack* ss) {
     if (move == tt_move) {
-        return 150000; // priority to existing best move
+        return 170000; // priority to existing best move
+    }
+
+    if ((Capture(move) || IsEP(move)) && staticExchangeEval(board, move, 0)) {
+        DefaultPiece attacker = makeDefaultPiece(MovePiece(move));
+        Piece victim_piece = IsEP(move) ? makePiece(PAWN, board.getXSTM()) : board.pieceAt(To(move));
+        DefaultPiece victim = makeDefaultPiece(victim_piece);
+        return 150000 + MVV_LVA[victim][attacker];
+    }
+
+    if (Prom(move)) {
+        return 140000;
+    }
+
+    if (move == ss->killers[0]) {
+        return 130000;
+    }
+
+    if (move == ss->killers[1]) {
+        return 120000;
     }
 
     if (Capture(move) || IsEP(move)) {
         DefaultPiece attacker = makeDefaultPiece(MovePiece(move));
         Piece victim_piece = IsEP(move) ? makePiece(PAWN, board.getXSTM()) : board.pieceAt(To(move));
         DefaultPiece victim = makeDefaultPiece(victim_piece);
-        return 130000 + MVV_LVA[victim][attacker];
-    }
-
-    if (Prom(move)) {
-        return 120000;
-    }
-
-    if (move == ss->killers[0]) {
-        return 110000;
-    }
-    if (move == ss->killers[1]) {
-        return 100000;
+        return 100000 + MVV_LVA[victim][attacker];
     }
 
     int history = getScoreHistory(board.getSTM(), move) + getContHist(ss, board.getSTM(), move);
-
     return history;
 }
 
