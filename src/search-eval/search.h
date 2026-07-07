@@ -27,6 +27,7 @@ constexpr int SEE_DEPTH_MAX = 8;
 constexpr int PROB_BETA_OFFSET = 180;
 
 extern thread_local uint64_t nodes;
+extern int multi_pv;
 
 struct GoParams;
 
