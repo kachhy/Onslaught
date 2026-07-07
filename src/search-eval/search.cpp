@@ -790,6 +790,10 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
 
         // Print this depth's PV slots ordered by score.
         if (!params.silent) {
+            auto stop = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+            int nps = duration.count() == 0 ? nodes : static_cast<int>((double)nodes / (duration.count() / 1000.0));
+
             std::vector<int> order(pv_count);
             for (int i = 0; i < pv_count; i++) {
                 order[i] = i;
@@ -798,7 +802,7 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
 
             for (int rank = 0; rank < pv_count; rank++) {
                 int pv_idx = order[rank];
-                printInfo(board, depth, seldepth, multipv_score[pv_idx], nullptr, nodes, nps_at_depth, &multipv_pv[pv_idx], rank + 1);
+                printInfo(board, depth, seldepth, multipv_score[pv_idx], nullptr, nodes, nps, &multipv_pv[pv_idx], rank + 1);
             }
         }
 
