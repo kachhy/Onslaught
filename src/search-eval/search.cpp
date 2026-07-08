@@ -181,13 +181,30 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
     if (ply >= seldepth) {
         seldepth = ply;
     }
+
     nodes++;
+
     if (ply >= MAX_PLY) {
         return eval(board);
     }
+
     if (ply > 0 && isDraw(board, ply)) {
         return 0;
     }
+
+    bool is_pv = beta - alpha != 1;
+
+    // TT Probe: find if this position has already been searched at a good depth and returns its score
+    Entry tt_entry;
+    bool tt_hit = tt.fetch(board, tt_entry);
+    if (tt_hit) {
+        tt_entry.score = scoreFromTT(tt_entry.score, ply);
+        if (!is_pv &&
+            (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) || (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha))) {
+            return tt_entry.score;
+        }
+    }
+
     int static_eval;
     int best_value;
     MoveList moves;
@@ -224,23 +241,28 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
                 best_move_index = j;
             }
         }
+
         moves.sort_item(best_move_index);
         std::swap(scores[i], scores[best_move_index]);
-
         Move noisy_move = moves[i];
+        
         // SEE
         if (!board.inCheck() && !staticExchangeEval(board, noisy_move, 0)) {
             continue;
         }
+
         board.makeMove(noisy_move);
         int score = -quiesce(board, -beta, -alpha, ply + 1, qply + 1);
         board.undoMove(noisy_move);
+
         if (score >= beta) {
             return score;
         }
+
         if (score > best_value) {
             best_value = score;
         }
+
         if (score > alpha) {
             alpha = score;
         }
@@ -328,7 +350,7 @@ int search(
     nodes++;
     bool is_pv = beta - alpha != 1;
 
-    // find if this position has already been searched at a good depth and returns its score
+    // TT Probe: find if this position has already been searched at a good depth and returns its score
     Entry tt_entry;
     bool tt_hit = tt.fetch(board, tt_entry);
     if (tt_hit) {
