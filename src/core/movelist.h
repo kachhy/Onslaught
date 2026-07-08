@@ -105,7 +105,8 @@ public:
 
     uint8_t size() const { return count; }
     bool empty() const { return !count; }
-    void sort_item(const uint8_t item);
+    inline void clear() { count = 0; sel_sort_index = 0; }
+    void sort_item(const uint8_t index);
     inline void emplace_back(const Move move) {
         list[count] = move;
         ++count;
@@ -124,6 +125,30 @@ public:
 private:
     Move list[MAX_MOVES]; // Pun intended
     uint8_t count, sel_sort_index;
+};
+
+class RootMoveList : public MoveList {
+private:
+    Move claimed_moves[MAX_MOVES];
+    uint8_t claimed_count = 0;
+public:
+    inline void claim(const Move move) {
+        claimed_moves[claimed_count++] = move;
+    }
+
+    inline bool is_claimed(const Move move) const {
+        for (uint8_t i = 0; i < claimed_count; i++) {
+            if (claimed_moves[i] == move) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Call once per depth, before searching for pv_idx 0.
+    inline void reset_claims() {
+        claimed_count = 0;
+    }
 };
 
 #endif // MOVELIST_H

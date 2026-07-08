@@ -10,14 +10,17 @@
 #include "movegen/movegen.h"
 #include "terms.h"
 #include "uci/uci.h"
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cmath>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 thread_local uint16_t seldepth;
 thread_local uint64_t nodes;
+int multi_pv = 1;
 
 struct PVLine {
     uint16_t cur_move;
@@ -52,7 +55,7 @@ int scoreFromTT(int score, int ply) {
     return score;
 }
 
-void printInfo(const Board& src, int depth, int seldepth, int score, const char* bound, long long nodes, int nps, PVLine* pv) {
+void printInfo(const Board& src, int depth, int seldepth, int score, const char* bound, long long nodes, int nps, PVLine* pv, int multipv = -1) {
     std::cout << "info depth " << depth << " seldepth " << seldepth;
     if (std::abs(score) < SCORE_MAX - MAX_GAME_MOVES) {
         std::cout << " score cp " << score;
@@ -62,7 +65,11 @@ void printInfo(const Board& src, int depth, int seldepth, int score, const char*
     if (bound) {
         std::cout << " " << bound;
     }
-    std::cout << " nodes " << nodes << " nps " << nps << " pv ";
+    std::cout << " nodes " << nodes << " nps " << nps;
+    if (multipv != -1) {
+        std::cout << " multipv " << multipv;
+    }
+    std::cout << " pv ";
     if (!bound) {
         for (uint16_t i = 0; i < pv[0].cur_move; i++) {
             std::cout << moveToStr(pv[0].moves[i]) << ' ';
@@ -277,13 +284,15 @@ static int scoreMove(Board& board, Move move, Move tt_move, SearchStack* ss) {
     return history;
 }
 
+template <NodeType Type>
 int search(
     Board& board, int depth, int alpha, int beta, size_t hard_cap, long long max_nodes, std::chrono::high_resolution_clock::time_point start, int ply, SearchStack* ss,
-    bool can_make_null_move, PVLine pv_table[], int max_ply
+    bool can_make_null_move, PVLine pv_table[], int max_ply, RootMoveList& rml
 ) {
     if (ply >= seldepth) {
         seldepth = ply;
     }
+
     if (ply >= MAX_PLY) {
         return eval(board);
     }
@@ -297,17 +306,20 @@ int search(
         }
     }
 
-    if (ply > 0 && isDraw(board, ply)) {
-        return 0;
+    if constexpr (Type != ROOT_NODE) {
+        if (isDraw(board, ply)) {
+            return 0;
+        }
     }
+
     // mdp
     alpha = std::max(alpha, -SCORE_MAX + ply);
     beta = std::min(beta, SCORE_MAX - ply - 1);
     if (alpha >= beta) {
         return alpha;
     }
-    // quiesce on depth <= 0
 
+    // quiesce on depth <= 0
     if (depth <= 0) {
         pv_table[ply].cur_move = 0;
         return quiesce(board, alpha, beta, ply + 1, 0);
@@ -322,9 +334,12 @@ int search(
     if (tt_hit) {
         tt_entry.score = scoreFromTT(tt_entry.score, ply);
 
-        if (!is_pv && ply > 0 && ss->excluded == NO_MOVE && tt_entry.depth >= static_cast<size_t>(depth)) {
-            if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) || (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
-                return tt_entry.score;
+        if constexpr (Type != ROOT_NODE) {
+            if (!is_pv && ss->excluded == NO_MOVE && tt_entry.depth >= static_cast<size_t>(depth)) {
+                if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) ||
+                    (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
+                    return tt_entry.score;
+                }
             }
         }
     }
@@ -355,80 +370,84 @@ int search(
     // imrpoving checks
     // bool improving = !in_check && ply >= 2 && static_eval > board.static_evals[ply - 2];
 
-    // rfp (prune worse positions harder with improving position)
-    // TODO Tune the rfp margin constant
-    if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * (depth /* - (improving && depth > 1)*/) >= beta) {
-        return static_eval;
-    }
-
-    // nmp
-    BitBoard non_pawn_material = board.getOcc(board.getSTM()) & ~board.getPieceBB(makePiece(PAWN, board.getSTM())) & ~board.getPieceBB(makePiece(KING, board.getSTM()));
-    if (!is_pv && can_make_null_move && !in_check && depth >= NMP_DEPTH_CUTOFF && static_eval >= beta && non_pawn_material) {
-        int nmp_reduction = 3 + depth / 6;
-        ss->move = NO_MOVE;
-        board.makeNullMove();
-        tt.prefetch(board.hash());
-        int score = -search(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ply + 1, ss + 1, false, pv_table, max_ply);
-        board.undoNullMove();
-
-        if (score >= SCORE_MAX - MAX_GAME_MOVES) { // Prevent including mate scores
-            score = beta;
+    if constexpr (Type != ROOT_NODE) {
+        // rfp (prune worse positions harder with improving position)
+        // TODO Tune the rfp margin constant
+        if (!is_pv && !in_check && depth <= 6 && static_eval - RFP_MARGIN * (depth /* - (improving && depth > 1)*/) >= beta) {
+            return static_eval;
         }
 
-        if (score >= beta) {
-            return score;
-        }
-    }
-
-    // Probcut
-    // TODO: needs tuning
-    int prob_beta = beta + PROB_BETA_OFFSET;
-    if (!is_pv && !in_check && depth >= 6 && (!tt_hit || tt_entry.score >= prob_beta || tt_entry.depth < depth - 3)) {
-        // Check noisy moves 
-        MoveList pc_moves;
-        getNoisyMoves(board, pc_moves);
-
-        std::array<int, MAX_MOVES> scores;
-        for (uint8_t i = 0; i < pc_moves.size(); i++) {
-            scores[i] = scoreMove(board, pc_moves[i], tt_hit ? tt_entry.best_move : NO_MOVE, ss);
-        }
-
-        for (uint8_t i = 0; i < pc_moves.size(); i++) {
-            // move ordering
-            uint8_t best_move_index = i;
-            for (uint8_t j = i + 1; j < pc_moves.size(); j++) {
-                if (scores[j] > scores[best_move_index]) {
-                    best_move_index = j;
-                }
-            }
-
-            pc_moves.sort_item(best_move_index);
-            std::swap(scores[i], scores[best_move_index]);
-
-            Move move = pc_moves[i];
-            board.makeMove(move);
+        // nmp
+        BitBoard non_pawn_material =
+            board.getOcc(board.getSTM()) & ~board.getPieceBB(makePiece(PAWN, board.getSTM())) & ~board.getPieceBB(makePiece(KING, board.getSTM()));
+        if (!is_pv && can_make_null_move && !in_check && depth >= NMP_DEPTH_CUTOFF && static_eval >= beta && non_pawn_material) {
+            int nmp_reduction = 3 + depth / 6;
+            ss->move = NO_MOVE;
+            board.makeNullMove();
             tt.prefetch(board.hash());
-            ss->move = move;
-            
-            int score = -quiesce(board, -prob_beta, -prob_beta + 1, ply + 1, 0);
-            if (score >= prob_beta) {
-                score = -search(board, depth - 4, -prob_beta, -prob_beta + 1, hard_cap, max_nodes, start, ply + 1, ss, true, pv_table, max_ply);
-                board.undoMove(move);
+            int score =
+                -search<NON_ROOT_NODE>(board, depth - 1 - nmp_reduction, -beta, -beta + 1, hard_cap, max_nodes, start, ply + 1, ss + 1, false, pv_table, max_ply, rml);
+            board.undoNullMove();
 
-                if (score >= prob_beta) {
-                    return score;
-                }
-            } else {
-                board.undoMove(move);
+            if (score >= SCORE_MAX - MAX_GAME_MOVES) { // Prevent including mate scores
+                score = beta;
+            }
+
+            if (score >= beta) {
+                return score;
             }
         }
-    }
 
-    // razoring = save movegen cost on pruned nodes by checking if it can beat alpha with quiesce, otherwise fail low
-    if (!is_pv && !in_check && depth <= RAZORING_DEPTH_MAX && static_eval + RAZOR_MARGIN * depth < alpha) {
-        int quiescent_score = quiesce(board, alpha - 1, alpha, ply + 1, 0);
-        if (quiescent_score < alpha) {
-            return quiescent_score;
+        // Probcut
+        // TODO: needs tuning
+        int prob_beta = beta + PROB_BETA_OFFSET;
+        if (!is_pv && !in_check && depth >= 6 && (!tt_hit || tt_entry.score >= prob_beta || tt_entry.depth < depth - 3)) {
+            // Check noisy moves
+            MoveList pc_moves;
+            getNoisyMoves(board, pc_moves);
+
+            std::array<int, MAX_MOVES> scores;
+            for (uint8_t i = 0; i < pc_moves.size(); i++) {
+                scores[i] = scoreMove(board, pc_moves[i], tt_hit ? tt_entry.best_move : NO_MOVE, ss);
+            }
+
+            for (uint8_t i = 0; i < pc_moves.size(); i++) {
+                // move ordering
+                uint8_t best_move_index = i;
+                for (uint8_t j = i + 1; j < pc_moves.size(); j++) {
+                    if (scores[j] > scores[best_move_index]) {
+                        best_move_index = j;
+                    }
+                }
+
+                pc_moves.sort_item(best_move_index);
+                std::swap(scores[i], scores[best_move_index]);
+
+                Move move = pc_moves[i];
+                board.makeMove(move);
+                tt.prefetch(board.hash());
+                ss->move = move;
+
+                int score = -quiesce(board, -prob_beta, -prob_beta + 1, ply + 1, 0);
+                if (score >= prob_beta) {
+                    score = -search<NON_ROOT_NODE>(board, depth - 4, -prob_beta, -prob_beta + 1, hard_cap, max_nodes, start, ply + 1, ss, true, pv_table, max_ply, rml);
+                    board.undoMove(move);
+
+                    if (score >= prob_beta) {
+                        return score;
+                    }
+                } else {
+                    board.undoMove(move);
+                }
+            }
+        }
+
+        // razoring = save movegen cost on pruned nodes by checking if it can beat alpha with quiesce, otherwise fail low
+        if (!is_pv && !in_check && depth <= RAZORING_DEPTH_MAX && static_eval + RAZOR_MARGIN * depth < alpha) {
+            int quiescent_score = quiesce(board, alpha - 1, alpha, ply + 1, 0);
+            if (quiescent_score < alpha) {
+                return quiescent_score;
+            }
         }
     }
 
@@ -437,8 +456,15 @@ int search(
         depth--;
     }
 
-    MoveList moves;
-    getLegalMoves(board, moves);
+    // Regenerate moves fresh every call to resolve tiebreaks by canonical move order
+    MoveList local_moves;
+    if constexpr (Type == ROOT_NODE) {
+        rml.clear();
+        getLegalMoves(board, rml);
+    } else {
+        getLegalMoves(board, local_moves);
+    }
+    MoveList& moves = (Type == ROOT_NODE) ? static_cast<MoveList&>(rml) : local_moves;
     if (moves.size() == 0) {
         pv_table[ply].cur_move = 0;
         return in_check ? -SCORE_MAX + ply : 0; // checkmate or stalemate
@@ -470,12 +496,20 @@ int search(
                 best_move_index = j;
             }
         }
+
         moves.sort_item(best_move_index);
         std::swap(scores[i], scores[best_move_index]);
 
         Move move = moves[i];
         if (move == ss->excluded) {
             continue;
+        }
+
+        // MultiPV: skip root moves already claimed by an earlier, better-scoring PV slot.
+        if constexpr (Type == ROOT_NODE) {
+            if (rml.is_claimed(move)) {
+                continue;
+            }
         }
 
         bool is_quiet_move = !Capture(move) && !Prom(move);
@@ -502,22 +536,25 @@ int search(
         // singular extensions: if the TT move is much better than all alternatives
         // (a reduced search of the other moves fails low below a margin), extend it.
         int extension = 0;
-        if (ply > 0 && ss->excluded == NO_MOVE && depth >= 8 && tt_hit && move == tt_entry.best_move && tt_entry.bound != UPPERBOUND &&
-            tt_entry.depth >= static_cast<size_t>(depth) - 3 && std::abs(tt_entry.score) < SCORE_MAX - MAX_GAME_MOVES) {
-            int s_beta = tt_entry.score - 2 * depth;
-            ss->excluded = move;
-            int s_score = search(board, (depth - 1) / 2, s_beta - 1, s_beta, hard_cap, max_nodes, start, ply, ss, can_make_null_move, pv_table, max_ply);
-            ss->excluded = NO_MOVE;
+        if constexpr (Type != ROOT_NODE) {
+            if (ss->excluded == NO_MOVE && depth >= 8 && tt_hit && move == tt_entry.best_move && tt_entry.bound != UPPERBOUND &&
+                tt_entry.depth >= static_cast<size_t>(depth) - 3 && std::abs(tt_entry.score) < SCORE_MAX - MAX_GAME_MOVES) {
+                int s_beta = tt_entry.score - 2 * depth;
+                ss->excluded = move;
+                int s_score =
+                    search<NON_ROOT_NODE>(board, (depth - 1) / 2, s_beta - 1, s_beta, hard_cap, max_nodes, start, ply, ss, can_make_null_move, pv_table, max_ply, rml);
+                ss->excluded = NO_MOVE;
 
-            if (s_score < s_beta) {
-                extension = 1; // singular
-                if (!is_pv && s_score < s_beta - 20) {
-                    extension = 2; // Double extension
+                if (s_score < s_beta) {
+                    extension = 1; // singular
+                    if (!is_pv && s_score < s_beta - 20) {
+                        extension = 2; // Double extension
+                    }
+                } else if (s_beta >= beta) { // Multi-cut pruning
+                    return s_beta;
+                } else if (tt_entry.score >= beta) {
+                    extension = -1; // negative extension
                 }
-            } else if (s_beta >= beta) { // Multi-cut pruning
-                return s_beta;
-            } else if (tt_entry.score >= beta) {
-                extension = -1; // negative extension
             }
         }
 
@@ -530,7 +567,7 @@ int search(
         bool do_full_search = false;
 
         if (moves_searched == 0) {
-            score = -search(board, new_depth, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
+            score = -search<NON_ROOT_NODE>(board, new_depth, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply, rml);
         } else {
             // lmr
             if (moves_searched >= LMR_MOVES_CUTOFF && depth >= LMR_DEPTH_CUTOFF && !Capture(move) && !Prom(move) && !in_check) {
@@ -540,7 +577,9 @@ int search(
                 // history-based reduction: reduce good-history quiets less, bad-history more.
                 const int move_hist = getScoreHistory(board.getXSTM(), move) + getContHist(ss, board.getXSTM(), move);
                 lmr_reduction = std::max(0, std::min(lmr_reduction - move_hist / HIST_LMR_DIVISOR, depth - 2));
-                score = -search(board, new_depth - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
+                score = -search<NON_ROOT_NODE>(
+                    board, new_depth - lmr_reduction, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply, rml
+                );
                 do_full_search = score > alpha;
             } else {
                 do_full_search = true;
@@ -548,9 +587,9 @@ int search(
 
             // pvs at full depth
             if (do_full_search) {
-                score = -search(board, new_depth, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
+                score = -search<NON_ROOT_NODE>(board, new_depth, -alpha - 1, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply, rml);
                 if (score > alpha && score < beta) {
-                    score = -search(board, new_depth, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply);
+                    score = -search<NON_ROOT_NODE>(board, new_depth, -beta, -alpha, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply, rml);
                 }
             }
         }
@@ -599,7 +638,7 @@ int search(
     if (ss->excluded == NO_MOVE) {
         tt.insert(board, best_move, scoreToTT(best_score, ply), bound, depth);
     }
-    
+
     return best_score;
 }
 
@@ -651,75 +690,122 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
         }
     }
 
+    // rml is (re)populated fresh inside root search on every call
+    RootMoveList rml;
+    MoveList legal_probe;
+    getLegalMoves(board, legal_probe);
+
+    // Number of PV lines to report this search (at most the max number of legal moves at root)
+    int pv_count = std::max(1, std::min(multi_pv, (int)legal_probe.size()));
+    std::vector<PVLine> multipv_pv(pv_count);
+    std::vector<int> multipv_score(pv_count, 0);
+    std::vector<Move> multipv_move(pv_count, NO_MOVE);
+
     for (int depth = 1; depth <= max_depth; depth++) {
         if (!searching) {
             break;
         }
+
         seldepth = 0;
         tt.incAge();
+        rml.reset_claims(); // fresh MultiPV ranking each depth
 
-        // aspiration window
-        int delta = ASPIRATION_MARGIN;
-        int alpha;
-        int beta;
-        if (depth >= ASPIRATION_DEPTH_CUTOFF) {
-            alpha = best_score - delta;
-            beta = best_score + delta;
-        } else {
-            alpha = -SCORE_MAX;
-            beta = SCORE_MAX;
-        }
+        bool aborted = false;
 
-        int iter_score = best_score;
+        for (int pv_idx = 0; pv_idx < pv_count; pv_idx++) {
+            // For aspiration, secondary PVs search at full window since we only track the top move's score.
+            int delta = ASPIRATION_MARGIN;
+            int alpha;
+            int beta;
 
-        while (true) {
-            // Clear PV table before each search
-            for (int i = 0; i <= MAX_PLY; i++) {
-                pv_table[i].cur_move = 0;
+            if (pv_idx == 0 && depth >= ASPIRATION_DEPTH_CUTOFF) {
+                alpha = best_score - delta;
+                beta = best_score + delta;
+            } else {
+                alpha = -SCORE_MAX;
+                beta = SCORE_MAX;
             }
 
-            iter_score = search(board, depth, alpha, beta, hard_cap, params.nodes, start, 0, sstack, true, pv_table, MAX_PLY);
-            if (!searching) {
+            int iter_score = (pv_idx == 0) ? best_score : 0;
+            while (true) {
+                // Clear PV table before each search
+                for (int i = 0; i <= MAX_PLY; i++) {
+                    pv_table[i].cur_move = 0;
+                }
+
+                iter_score = search<ROOT_NODE>(board, depth, alpha, beta, hard_cap, params.nodes, start, 0, sstack, true, pv_table, MAX_PLY, rml);
+                if (!searching) {
+                    aborted = true;
+                    break;
+                }
+
+                auto stop = std::chrono::high_resolution_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+                int nps = duration.count() == 0 ? nodes : static_cast<int>((double)nodes / (duration.count() / 1000.0));
+
+                if (iter_score <= alpha) {
+                    // fail low = true score is at most alpha (upper bound)
+                    if (!params.silent) {
+                        printInfo(board, depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table, pv_idx + 1);
+                    }
+                    alpha = std::max(-SCORE_MAX, iter_score - delta);
+                    delta *= (1 + ASPIRATION_SCALAR);
+                } else if (iter_score >= beta) {
+                    // fail high = true score is at least beta (lower bound)
+                    if (!params.silent) {
+                        printInfo(board, depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table, pv_idx + 1);
+                    }
+                    beta = std::min(SCORE_MAX, iter_score + delta);
+                    delta *= (1 + ASPIRATION_SCALAR);
+                } else {
+                    multipv_score[pv_idx] = iter_score;
+                    multipv_pv[pv_idx] = pv_table[0];
+                    multipv_move[pv_idx] = (pv_table[0].cur_move > 0) ? pv_table[0].moves[0] : NO_MOVE;
+                    if (multipv_move[pv_idx] == NO_MOVE) { // Fallback to TT for the move
+                        Entry tt_entry;
+                        if (tt.fetch(board, tt_entry) && tt_entry.best_move != NO_MOVE) {
+                            multipv_move[pv_idx] = tt_entry.best_move;
+                        }
+                    }
+
+                    // Claim this root move so later PV slots this depth skip over it.
+                    rml.claim(multipv_move[pv_idx]);
+
+                    if (pv_idx == 0) {
+                        best_score = iter_score;
+                        best_move = multipv_move[0];
+                    }
+                    break;
+                }
+            }
+
+            if (aborted) {
                 break;
             }
+        }
 
+        if (!searching) {
+            break;
+        }
+
+        // Print this depth's PV slots ordered by score.
+        if (!params.silent) {
             auto stop = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
             int nps = duration.count() == 0 ? nodes : static_cast<int>((double)nodes / (duration.count() / 1000.0));
 
-            if (iter_score <= alpha) {
-                // fail low = true score is at most alpha (upper bound)
-                if (!params.silent) {
-                    printInfo(board, depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table);
-                }
-                alpha = std::max(-SCORE_MAX, iter_score - delta);
-                delta *= (1 + ASPIRATION_SCALAR);
-            } else if (iter_score >= beta) {
-                // fail high = true score is at least beta (lower bound)
-                if (!params.silent) {
-                    printInfo(board, depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table);
-                }
-                beta = std::min(SCORE_MAX, iter_score + delta);
-                delta *= (1 + ASPIRATION_SCALAR);
-            } else {
-                best_score = iter_score;
-                if (!params.silent) {
-                    printInfo(board, depth, seldepth, best_score, nullptr, nodes, nps, pv_table);
-                }
-                if (pv_table[0].cur_move > 0) {
-                    best_move = pv_table[0].moves[0];
-                } else { // Fallback to TT for best move
-                    Entry tt_entry;
-                    if (tt.fetch(board, tt_entry) && tt_entry.best_move != NO_MOVE) {
-                        best_move = tt_entry.best_move;
-                    }
-                }
-                break;
+            std::vector<int> order(pv_count);
+            for (int i = 0; i < pv_count; i++) {
+                order[i] = i;
+            }
+            std::stable_sort(order.begin(), order.end(), [&](int a, int b) { return multipv_score[a] > multipv_score[b]; });
+
+            for (int rank = 0; rank < pv_count; rank++) {
+                int pv_idx = order[rank];
+                printInfo(board, depth, seldepth, multipv_score[pv_idx], nullptr, nodes, nps, &multipv_pv[pv_idx], rank + 1);
             }
         }
-        if (!searching) {
-            break;
-        }
+
         if (soft_cap != 0 && (size_t)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() >= soft_cap) {
             break;
         }

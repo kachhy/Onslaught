@@ -59,6 +59,11 @@ enum TTBound {
     UPPERBOUND
 };
 
+enum NodeType {
+    ROOT_NODE = 0,
+    NON_ROOT_NODE
+};
+
 extern const char* board_coords[];
 
 extern const int phase_weights[];
