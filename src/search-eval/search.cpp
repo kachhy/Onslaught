@@ -212,7 +212,19 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         best_value = -SCORE_MAX + std::min(ply, (int)MAX_PLY - 1);
         getLegalMoves(board, moves);
     } else {
-        static_eval = eval(board);
+        if (tt_hit) {
+            if (tt_entry.bound == EXACTBOUND) {
+                static_eval = tt_entry.score;
+            } else {
+                static_eval = eval(board);
+                if (tt_entry.bound == (tt_entry.score > static_eval ? LOWERBOUND : UPPERBOUND)) {
+                    static_eval = tt_entry.score;
+                }
+            }
+        } else {
+            static_eval = eval(board);
+        }
+
         best_value = static_eval;
         if (best_value >= beta) {
             return best_value;
