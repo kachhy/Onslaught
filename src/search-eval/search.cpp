@@ -8,6 +8,8 @@
 #include "history.h"
 #include "movegen/attacks.h"
 #include "movegen/movegen.h"
+#include "movepicker.h"
+#include "see.h"
 #include "terms.h"
 #include "uci/uci.h"
 #include <algorithm>
@@ -77,7 +79,7 @@ void printInfo(const Board& src, int depth, int seldepth, int score, const char*
     } else { // Reconstruct from TT
         auto bp = std::make_unique<Board>(src);
         Board& board = *bp;
-        for (int i = 0; i < MAX_PLY; i++) {
+        for (int i = 0; i < seldepth; i++) {
             Entry tt_entry;
             bool tt_hit = tt.fetch(board, tt_entry);
 
@@ -107,74 +109,6 @@ void printInfo(const Board& src, int depth, int seldepth, int score, const char*
         }
     }
     std::cout << std::endl;
-}
-
-// SEE
-int staticExchangeEval(const Board& board, Move move, int threshold) {
-    if (Castle(move) || IsEP(move) || Prom(move)) {
-        return 1;
-    }
-
-    Square from = From(move);
-    Square to = To(move);
-
-    int v = SEE_VALUES[makeDefaultPiece(board.pieceAt(to))] - threshold;
-    if (v < 0) {
-        return 0;
-    }
-
-    v = SEE_VALUES[makeDefaultPiece(MovePiece(move))] - v;
-    if (v <= 0) {
-        return 1;
-    }
-
-    int stm = board.getSTM();
-
-    BitBoard occ = board.getOcc(BOTH) ^ (BitBoard(1) << from) ^ (BitBoard(1) << to);
-    BitBoard attackers = getAttackers(board, to, occ);
-    BitBoard mine, lowest_attacker;
-
-    const BitBoard diag = board.getPieceBB(WHITE_BISHOP) | board.getPieceBB(BLACK_BISHOP) | board.getPieceBB(WHITE_QUEEN) | board.getPieceBB(BLACK_QUEEN);
-    const BitBoard straight = board.getPieceBB(WHITE_ROOK) | board.getPieceBB(BLACK_ROOK) | board.getPieceBB(WHITE_QUEEN) | board.getPieceBB(BLACK_QUEEN);
-
-    int result = 1;
-
-    while (true) {
-        stm ^= 1;
-        attackers &= occ;
-
-        if (!(mine = (attackers & board.getOcc(static_cast<Side>(stm))))) {
-            break;
-        }
-
-        result ^= 1;
-
-        int pt;
-        for (pt = PAWN; pt <= QUEEN; pt++) {
-            lowest_attacker = mine & board.getPieceBB(makePiece(static_cast<DefaultPiece>(pt), static_cast<Side>(stm)));
-            if (lowest_attacker) {
-                break;
-            }
-        }
-
-        if (pt > QUEEN) {
-            return (attackers & ~board.getOcc(static_cast<Side>(stm))) ? result ^ 1 : result;
-        }
-
-        if ((v = SEE_VALUES[pt] - v) < result) {
-            break;
-        }
-
-        occ ^= (lowest_attacker & -lowest_attacker);
-        if (pt == PAWN || pt == BISHOP || pt == QUEEN) {
-            attackers |= getBishopAttacks(to, occ) & diag;
-        }
-        if (pt == ROOK || pt == QUEEN) {
-            attackers |= getRookAttacks(to, occ) & straight;
-        }
-    }
-
-    return result;
 }
 
 int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
@@ -456,31 +390,13 @@ int search(
         depth--;
     }
 
-    // Regenerate moves fresh every call to resolve tiebreaks by canonical move order
-    MoveList local_moves;
-    if constexpr (Type == ROOT_NODE) {
-        rml.clear();
-        getLegalMoves(board, rml);
-    } else {
-        getLegalMoves(board, local_moves);
-    }
-    MoveList& moves = (Type == ROOT_NODE) ? static_cast<MoveList&>(rml) : local_moves;
-    if (moves.size() == 0) {
-        pv_table[ply].cur_move = 0;
-        return in_check ? -SCORE_MAX + ply : 0; // checkmate or stalemate
-    }
-
-    std::array<int, MAX_MOVES> scores;
-    for (uint8_t i = 0; i < moves.size(); i++) {
-        scores[i] = scoreMove(board, moves[i], tt_hit ? tt_entry.best_move : NO_MOVE, ss);
-    }
-
     int original_alpha = alpha;
     int best_score = -SCORE_MAX;
     Move best_move = NO_MOVE;
 
     // PVS
     int moves_searched = 0;
+    int legal_seen = 0; // total legal moves yielded by the picker, incl. excluded/claimed ones
 
     // history malus. apply penalties when all moves fail low
     MoveList quiets_tried;
@@ -488,19 +404,12 @@ int search(
     // futility pruning
     bool futility_pruning = !is_pv && !in_check && depth <= FP_DEPTH_MAX && static_eval + FUTILITY_MARGIN * depth <= alpha;
 
-    for (uint8_t i = 0; i < moves.size(); i++) {
-        // move ordering
-        uint8_t best_move_index = i;
-        for (uint8_t j = i + 1; j < moves.size(); j++) {
-            if (scores[j] > scores[best_move_index]) {
-                best_move_index = j;
-            }
-        }
+    MovePicker picker(board, REGULAR, tt_hit ? tt_entry.best_move : NO_MOVE, ss->killers[0], ss->killers[1], ss);
 
-        moves.sort_item(best_move_index);
-        std::swap(scores[i], scores[best_move_index]);
+    Move move;
+    while ((move = picker.nextMove()) != NO_MOVE) {
+        legal_seen++;
 
-        Move move = moves[i];
         if (move == ss->excluded) {
             continue;
         }
@@ -540,10 +449,17 @@ int search(
             if (ss->excluded == NO_MOVE && depth >= 8 && tt_hit && move == tt_entry.best_move && tt_entry.bound != UPPERBOUND &&
                 tt_entry.depth >= static_cast<size_t>(depth) - 3 && std::abs(tt_entry.score) < SCORE_MAX - MAX_GAME_MOVES) {
                 int s_beta = tt_entry.score - 2 * depth;
+
+                // The verification search below recurses at this same ply/pv_table, so it messes up the PV table
+                // We just restore it later.
+                PVLine saved_pv = pv_table[ply];
+
                 ss->excluded = move;
                 int s_score =
                     search<NON_ROOT_NODE>(board, (depth - 1) / 2, s_beta - 1, s_beta, hard_cap, max_nodes, start, ply, ss, can_make_null_move, pv_table, max_ply, rml);
                 ss->excluded = NO_MOVE;
+
+                pv_table[ply] = saved_pv;
 
                 if (s_score < s_beta) {
                     extension = 1; // singular
@@ -627,6 +543,11 @@ int search(
 
             return best_score;
         }
+    }
+
+    if (legal_seen == 0) {
+        pv_table[ply].cur_move = 0;
+        return in_check ? -SCORE_MAX + ply : 0; // checkmate or stalemate
     }
 
     // If only the excluded move was available, fail low (move is singular)
