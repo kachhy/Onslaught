@@ -158,7 +158,7 @@ int MovePicker::scoreQuietMove(Move move) {
 
 int MovePicker::scoreLoudMove(Move move) {
     // Good SEE capture
-    if (staticExchangeEval(board, move, 0)) {
+    if ((Capture(move) || IsEP(move)) && staticExchangeEval(board, move, 0)) {
         DefaultPiece attacker = makeDefaultPiece(MovePiece(move));
         Piece victim_piece = IsEP(move) ? makePiece(PAWN, board.getXSTM()) : board.pieceAt(To(move));
         DefaultPiece victim = makeDefaultPiece(victim_piece);
@@ -199,24 +199,29 @@ Move MovePicker::nextMove() {
         }
     case INIT_CAPTURES: stage = GOOD_CAPTURES; initCaptures();
     case GOOD_CAPTURES:
-        if (loud_moves_start < loud_moves.size()) {
+        while (loud_moves_start < loud_moves.size()) {
             int best_index = loud_moves_start;
-            int best_score = loud_scores[loud_moves_start];
 
             for (uint16_t j = loud_moves_start + 1; j < loud_moves.size(); j++) {
-                if (loud_scores[j] > best_score) {
+                if (loud_scores[j] > loud_scores[best_index]) {
                     best_index = j;
-                    best_score = loud_scores[j];
                 }
             }
 
-            if (best_score > 40000) { // Promotion or good SEE capture
-                Move best_move = loud_moves[best_index];
-                loud_moves.sort_item(best_index);
-                std::swap(loud_scores[loud_moves_start], loud_scores[best_index]);
-                loud_moves_start++;
-                return best_move;
+            if (loud_scores[best_index] < 40000) { // Only bad captures remain
+                break;
             }
+
+            Move best_move = loud_moves[best_index];
+            loud_moves.sort_item(best_index);
+            std::swap(loud_scores[loud_moves_start], loud_scores[best_index]);
+            loud_moves_start++;
+
+            if (best_move == tt_move) {
+                continue; // already yielded at the TT stage
+            }
+
+            return best_move;
         }
 
         if (type == QSEARCH) {
@@ -226,23 +231,21 @@ Move MovePicker::nextMove() {
         }
     case KILLER1:
         stage = KILLER2;
-        if (isLegal(ss->killers[0], board)) {
+        if (ss->killers[0] != tt_move && isLegal(ss->killers[0], board)) {
             return ss->killers[0];
         }
     case KILLER2:
         stage = BAD_CAPTURES;
-        if (isLegal(ss->killers[1], board)) {
+        if (ss->killers[1] != tt_move && isLegal(ss->killers[1], board)) {
             return ss->killers[1];
         }
     case BAD_CAPTURES:
-        if (loud_moves_start < loud_moves.size()) {
+        while (loud_moves_start < loud_moves.size()) {
             int best_index = loud_moves_start;
-            int best_score = loud_scores[loud_moves_start];
 
             for (uint16_t j = loud_moves_start + 1; j < loud_moves.size(); j++) {
-                if (loud_scores[j] > best_score) {
+                if (loud_scores[j] > loud_scores[best_index]) {
                     best_index = j;
-                    best_score = loud_scores[j];
                 }
             }
 
@@ -250,6 +253,11 @@ Move MovePicker::nextMove() {
             loud_moves.sort_item(best_index);
             std::swap(loud_scores[loud_moves_start], loud_scores[best_index]);
             loud_moves_start++;
+
+            if (best_move == tt_move) {
+                continue; // already yielded at the TT stage
+            }
+
             return best_move;
         }
 
@@ -260,14 +268,12 @@ Move MovePicker::nextMove() {
         }
     case INIT_QUIET: stage = QUIET_MOVES; initQuiets();
     case QUIET_MOVES:
-        if (quiet_moves_start < quiet_moves.size()) {
+        while (quiet_moves_start < quiet_moves.size()) {
             int best_index = quiet_moves_start;
-            int best_score = quiet_scores[quiet_moves_start];
 
             for (uint16_t j = quiet_moves_start + 1; j < quiet_moves.size(); j++) {
-                if (quiet_scores[j] > best_score) {
+                if (quiet_scores[j] > quiet_scores[best_index]) {
                     best_index = j;
-                    best_score = quiet_scores[j];
                 }
             }
 
@@ -275,6 +281,11 @@ Move MovePicker::nextMove() {
             quiet_moves.sort_item(best_index);
             std::swap(quiet_scores[quiet_moves_start], quiet_scores[best_index]);
             quiet_moves_start++;
+
+            if (best_move == tt_move || best_move == ss->killers[0] || best_move == ss->killers[1]) {
+                continue; // already yielded at the TT/killer stages
+            }
+
             return best_move;
         }
 
