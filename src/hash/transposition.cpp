@@ -14,18 +14,11 @@ static size_t computeCapacity(size_t megabytes) {
         entries = 1;
     }
 
-    // Round down to nearest power of 2 so we can mask the hash for indexing.
-    size_t pow2 = 1;
-    while ((pow2 << 1) <= entries) {
-        pow2 <<= 1;
-    }
-
-    return pow2;
+    return entries; // Note that lemire doesn't require power of 2 rounding.
 }
 
 TTable::TTable(size_t megabytes) : table_age(0), table_size(0) {
     table_capacity = computeCapacity(megabytes);
-    index_mask = table_capacity - 1;
     table.reset(new EntryTriple[table_capacity]()); // value-init -> zeroed
 }
 
@@ -37,33 +30,32 @@ void TTable::resize(size_t megabytes) {
     const size_t new_capacity = computeCapacity(megabytes);
     table.reset(new EntryTriple[new_capacity]());
     table_capacity = new_capacity;
-    index_mask = new_capacity - 1;
     table_size = 0;
     table_age = 0;
 }
 
-void TTable::insert(const Board& board, Move best_move, int score, uint8_t bound, uint8_t depth) {
-    const uint64_t hash = board.hash() & index_mask;
-    EntryTriple& bucket = table[hash];
+void TTable::insert(const Board& board, Move best_move, int16_t score, uint8_t bound, uint8_t depth) {
+    const uint16_t key = keyOf(board.hash());
+    EntryTriple& bucket = table[bucketIndex(board.hash())];
     if (bucket.count < 3) {
         for (uint8_t i = 0; i < bucket.count; i++) {
-            if (bucket.entries[i].hash == board.hash()) {
+            if (bucket.entries[i].hash == key) {
                 if (depth >= bucket.entries[i].depth || bound == EXACTBOUND) {
-                    bucket.entries[i] = { board.hash(), best_move, score, bound, depth, table_age };
+                    bucket.entries[i] = { key, best_move, score, bound, depth, table_age };
                 }
                 return;
             }
         }
 
-        bucket.entries[bucket.count] = { board.hash(), best_move, score, bound, depth, table_age };
+        bucket.entries[bucket.count] = { key, best_move, score, bound, depth, table_age };
         bucket.count++;
         table_size++;
         return;
     }
 
-    if (bucket.entries[0].hash == board.hash()) {
+    if (bucket.entries[0].hash == key) {
         if (depth >= bucket.entries[0].depth || bound == EXACTBOUND) {
-            bucket.entries[0] = { board.hash(), best_move, score, bound, depth, table_age };
+            bucket.entries[0] = { key, best_move, score, bound, depth, table_age };
         }
         return;
     }
@@ -71,9 +63,9 @@ void TTable::insert(const Board& board, Move best_move, int score, uint8_t bound
     uint8_t kickout_index = 0;
     int64_t best_kickout_score = bucket.entries[0].depth - (table_age - bucket.entries[0].last_seen);
     for (uint8_t i = 1; i < bucket.count; i++) {
-        if (bucket.entries[i].hash == board.hash()) {
+        if (bucket.entries[i].hash == key) {
             if (depth >= bucket.entries[i].depth || bound == EXACTBOUND) {
-                bucket.entries[i] = { board.hash(), best_move, score, bound, depth, table_age };
+                bucket.entries[i] = { key, best_move, score, bound, depth, table_age };
             }
             return;
         }
@@ -85,31 +77,28 @@ void TTable::insert(const Board& board, Move best_move, int score, uint8_t bound
         }
     }
 
-    bucket.entries[kickout_index] = { board.hash(), best_move, score, bound, depth, table_age };
+    bucket.entries[kickout_index] = { key, best_move, score, bound, depth, table_age };
 }
 
 bool TTable::fetch(const Board& board, Entry& entry) {
-    const uint64_t hash = board.hash() & index_mask;
-    EntryTriple& bucket = table[hash];
+    const uint16_t key = keyOf(board.hash());
+    EntryTriple& bucket = table[bucketIndex(board.hash())];
 
     if (!bucket.count) {
         return false;
     }
 
-    bool found = false;
     for (uint8_t i = 0; i < bucket.count; i++) {
-        if (bucket.entries[i].hash == board.hash()) {
-            std::swap(bucket.entries[0], bucket.entries[i]);
-            if (!found || bucket.entries[0].depth > entry.depth) {
-                entry = bucket.entries[0];
+        if (bucket.entries[i].hash == key) {
+            entry = bucket.entries[i];
+            if (bucket.entries[i].last_seen != table_age) {
+                bucket.entries[i].last_seen = table_age;
             }
-            bucket.entries[0].last_seen = table_age;
-            found = true;
-            break;
+            return true;
         }
     }
 
-    return found;
+    return false;
 }
 
 void TTable::clear() {
