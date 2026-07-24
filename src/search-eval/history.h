@@ -7,8 +7,8 @@
 
 constexpr int MAX_HISTORY = 8192;
 
-extern int score_history[2][64][64]; // [stm][from][to] (butterfly history)
-extern int cont_hist[2][6][64][6][64]; // [stm][prevPiece][prevTo][piece][to] (continuation history)
+extern thread_local int score_history[2][64][64]; // [stm][from][to] (butterfly history)
+extern thread_local int cont_hist[2][6][64][6][64]; // [stm][prevPiece][prevTo][piece][to] (continuation history)
 
 struct SearchStack {
     int static_eval;

@@ -3,6 +3,7 @@
 
 #include "board/board.h"
 #include "core/move.h"
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <functional>
@@ -60,6 +61,10 @@ struct GoParams {
     bool ponder = false;
     bool silent = false;
     std::vector<std::string> searchmoves;
+
+    // LazySMP parameters
+    int aspiration_jitter = 0;
+    int start_depth_offset = 0;
 };
 
 int uciStartup();
@@ -67,8 +72,8 @@ void uci();
 void checkStdin(std::chrono::high_resolution_clock::time_point start, long long max_nodes, long long current_nodes, size_t hard_cap);
 void setOption(std::string key, UCIOption value);
 
-extern thread_local bool searching;
 extern thread_local bool stdin_enabled;
+extern std::atomic<bool> searching;
 extern bool debug_mode;
 extern std::unordered_map<std::string, UCIOption> options_map;
 

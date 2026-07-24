@@ -1,8 +1,8 @@
 #include "history.h"
 #include <cstring>
 
-int score_history[2][64][64]; // [stm][from][to] (butterfly history)
-int cont_hist[2][6][64][6][64]; // [stm][prevPiece][prevTo][piece][to] (continuation history)
+thread_local int score_history[2][64][64]; // [stm][from][to] (butterfly history)
+thread_local int cont_hist[2][6][64][6][64]; // [stm][prevPiece][prevTo][piece][to] (continuation history)
 
 void resetHistory() {
     memset(score_history, 0, sizeof(score_history));

@@ -4,6 +4,7 @@
 #include "search-eval/eval.h"
 #include "search-eval/search.h"
 #include <sstream>
+#include <thread>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -13,9 +14,10 @@
 #endif
 
 Board board;
-thread_local bool searching = false;
 thread_local bool stdin_enabled = true;
+std::atomic<bool> searching = false;
 bool debug_mode = false;
+uint8_t num_threads = 1;
 std::unordered_map<std::string, UCIOption> options_map;
 
 void setOption(std::string key, UCIOption value) { options_map[key] = std::move(value); }
@@ -110,7 +112,7 @@ static inline void newGame(Board& board) {
 
 static inline void initOptions() {
     setOption("Hash", SpinOption{ 1, 16384, 256, [](int mb) { tt.resize(mb); } });
-    setOption("Threads", SpinOption{ 1, 1, 1, nullptr });
+    setOption("Threads", SpinOption{ 1, 255, 1, [](int threads) { num_threads = threads; } });
     setOption("MultiPV", SpinOption{ 1, 255, 1, [](int mpv) { multi_pv = mpv; } });
     setOption("NNUE", CheckOption{ true, [](bool val) { use_nnue = val; } });
     setOption("EvalFile", StringOption{ "nn-1697fd3fc841dc25-v2.nnue", [](std::string path) {
@@ -215,8 +217,32 @@ static inline void go(Board& board) {
     }
 
     searching = true;
+    tt.incAge();
+
     int best_score;
+    std::vector<std::thread> helpers;
+    std::vector<Board> helper_boards(num_threads - 1, board);  // copy ctor per helper
+    std::vector<int> dummy_scores(num_threads - 1);
+
+    for (uint8_t i = 0; i < num_threads - 1; i++) {
+        GoParams helper_params = params;
+        helper_params.silent = true;
+        helper_params.aspiration_jitter = i % 16;
+        helper_params.start_depth_offset = i % 8;
+
+        helpers.emplace_back([&, i, helper_params] {
+            stdin_enabled = false; // only the main thread may touch std::cin
+            search(helper_boards[i], 256, dummy_scores[i], helper_params);
+        });
+    }
+
     Move best_move = search(board, (params.infinite || params.depth == -1) ? 256 : params.depth, best_score, params);
+    
+    searching = false;
+    for (auto& t : helpers) {
+        t.join();
+    }
+
     std::cout << "bestmove " << moveToStr(best_move) << std::endl;
 }
 

@@ -622,20 +622,19 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
     std::vector<int> multipv_score(pv_count, 0);
     std::vector<Move> multipv_move(pv_count, NO_MOVE);
 
-    for (int depth = 1; depth <= max_depth; depth++) {
+    for (int depth = 1 + params.start_depth_offset; depth <= max_depth; depth++) {
         if (!searching) {
             break;
         }
 
         seldepth = 0;
-        tt.incAge();
         rml.reset_claims(); // fresh MultiPV ranking each depth
 
         bool aborted = false;
 
         for (int pv_idx = 0; pv_idx < pv_count; pv_idx++) {
             // For aspiration, secondary PVs search at full window since we only track the top move's score.
-            int delta = ASPIRATION_MARGIN;
+            int delta = ASPIRATION_MARGIN - params.aspiration_jitter;
             int alpha;
             int beta;
 

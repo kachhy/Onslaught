@@ -36,48 +36,54 @@ void TTable::resize(size_t megabytes) {
 
 void TTable::insert(const Board& board, Move best_move, int16_t score, uint8_t bound, uint8_t depth) {
     const uint16_t key = keyOf(board.hash());
+    const uint16_t move16 = packMove(best_move);
+    const uint8_t piece_type = (best_move == NO_MOVE) ? 0 : static_cast<uint8_t>(makeDefaultPiece(MovePiece(best_move)));
+    const uint8_t bound_age = packBoundAge(bound, table_age, piece_type);
+    const uint16_t stored_key = encodeKey(key, move16, score, depth, bound_age);
     EntryTriple& bucket = table[bucketIndex(board.hash())];
-    if (bucket.count < 3) {
+
+    if (bucket.count < EntryTriple::CAPACITY) {
         for (uint8_t i = 0; i < bucket.count; i++) {
-            if (bucket.entries[i].hash == key) {
+            if (decodeKey(bucket.entries[i]) == key) {
                 if (depth >= bucket.entries[i].depth || bound == EXACTBOUND) {
-                    bucket.entries[i] = { key, best_move, score, bound, depth, table_age };
+                    bucket.entries[i] = { stored_key, move16, score, depth, bound_age };
                 }
                 return;
             }
         }
 
-        bucket.entries[bucket.count] = { key, best_move, score, bound, depth, table_age };
+        bucket.entries[bucket.count] = { stored_key, move16, score, depth, bound_age };
         bucket.count++;
         table_size++;
         return;
     }
 
-    if (bucket.entries[0].hash == key) {
+    if (decodeKey(bucket.entries[0]) == key) {
         if (depth >= bucket.entries[0].depth || bound == EXACTBOUND) {
-            bucket.entries[0] = { key, best_move, score, bound, depth, table_age };
+            bucket.entries[0] = { stored_key, move16, score, depth, bound_age };
         }
         return;
     }
 
     uint8_t kickout_index = 0;
-    int64_t best_kickout_score = bucket.entries[0].depth - (table_age - bucket.entries[0].last_seen);
+    int64_t best_kickout_score = static_cast<int64_t>(bucket.entries[0].depth) - ((table_age - ageOf(bucket.entries[0].bound_age)) & TT_AGE_MASK);
     for (uint8_t i = 1; i < bucket.count; i++) {
-        if (bucket.entries[i].hash == key) {
+        if (decodeKey(bucket.entries[i]) == key) {
             if (depth >= bucket.entries[i].depth || bound == EXACTBOUND) {
-                bucket.entries[i] = { key, best_move, score, bound, depth, table_age };
+                bucket.entries[i] = { stored_key, move16, score, depth, bound_age };
             }
+
             return;
         }
 
-        const int64_t this_kickout_score = bucket.entries[i].depth - (table_age - bucket.entries[i].last_seen);
+        const int64_t this_kickout_score = static_cast<int64_t>(bucket.entries[i].depth) - ((table_age - ageOf(bucket.entries[i].bound_age)) & TT_AGE_MASK);
         if (this_kickout_score < best_kickout_score) {
             kickout_index = i;
             best_kickout_score = this_kickout_score;
         }
     }
 
-    bucket.entries[kickout_index] = { key, best_move, score, bound, depth, table_age };
+    bucket.entries[kickout_index] = { stored_key, move16, score, depth, bound_age };
 }
 
 bool TTable::fetch(const Board& board, Entry& entry) {
@@ -89,11 +95,19 @@ bool TTable::fetch(const Board& board, Entry& entry) {
     }
 
     for (uint8_t i = 0; i < bucket.count; i++) {
-        if (bucket.entries[i].hash == key) {
-            entry = bucket.entries[i];
-            if (bucket.entries[i].last_seen != table_age) {
-                bucket.entries[i].last_seen = table_age;
+        PackedEntry& packed = bucket.entries[i];
+        if (decodeKey(packed) == key) {
+            entry.best_move = unpackMove(packed.move16, pieceOf(packed.bound_age), board.getSTM());
+            entry.score = packed.score;
+            entry.depth = packed.depth;
+            entry.bound = boundOf(packed.bound_age);
+
+            if (ageOf(packed.bound_age) != table_age) {
+                const uint8_t bound_age = packBoundAge(entry.bound, table_age, pieceOf(packed.bound_age));
+                packed.key = encodeKey(key, packed.move16, packed.score, packed.depth, bound_age);
+                packed.bound_age = bound_age;
             }
+
             return true;
         }
     }
