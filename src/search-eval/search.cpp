@@ -575,14 +575,6 @@ int search(
                 lmr_reduction -= move_hist / HIST_LMR_DIVISOR;
                 lmr_reduction = std::max(0, lmr_reduction);
 
-                if (tt_hit && (Capture(tt_entry.best_move) || Prom(tt_entry.best_move))) {
-                    lmr_reduction += LMR_TT_CAPTURE;
-                }
-
-                if (improving) {
-                    lmr_reduction -= LMR_IMPROVING;
-                }
-
                 if (cutnode) {
                     lmr_reduction += LMR_CUTNODE;
                 }
