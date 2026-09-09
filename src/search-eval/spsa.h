@@ -6,8 +6,8 @@
     INT (RFP_MARGIN,                84,    20,   200,    8)                    \
     INT (FUTILITY_MARGIN,           90,    20,   250,   11)                    \
     INT (RAZOR_MARGIN,             492,   150,   900,   37)                    \
-    INT (PROB_BETA_OFFSET,         180,    50,   400,   17)                    \
-    INT (ASPIRATION_MARGIN,         20,     5,    60,    3)                    \
+    INT (PROB_BETA_OFFSET,         184,    50,   400,   17)                    \
+    INT (ASPIRATION_MARGIN,         15,     5,    60,    3)                    \
     INT (HIST_LMR_DIVISOR,        8192,  2048, 16384,  700)                    \
     INT (LMR_CUTNODE,                2,     0,     4,    1)                    \
     /* Depth cutoffs */                                                        \
@@ -29,7 +29,7 @@
     INT (NMP_DEPTH_DIVISOR,          6,     2,    12,    1)                    \
     /* ProbCut */                                                              \
     INT (PROBCUT_DEPTH_MIN,          6,     3,    12,    1)                    \
-    INT (PROBCUT_TT_DEPTH_MARGIN,    3,     1,     6,    1)                    \
+    INT (PROBCUT_TT_DEPTH_MARGIN,    4,     1,     6,    1)                    \
     INT (PROBCUT_REDUCTION,          4,     2,     8,    1)                    \
     /* LMR reduction adjustments, in plies */                                  \
     INT (LMR_DEPTH_CAP,              2,     1,     5,    1)                    \
@@ -40,7 +40,7 @@
        original six-decimal constants exactly */                               \
     REAL(LMR_VALUE,             828061,  200000, 1600000,  70000, 1000000.0)   \
     REAL(LMR_SCALAR,           2172229, 1000000, 4000000, 150000, 1000000.0)   \
-    REAL(ASPIRATION_SCALAR,    1290771,  500000, 3000000, 125000, 1000000.0)
+    REAL(ASPIRATION_SCALAR,    1214100,  500000, 3000000, 125000, 1000000.0)
 
 #ifdef SPSA_TUNE
 
