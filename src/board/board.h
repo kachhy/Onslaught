@@ -1,6 +1,7 @@
 #ifndef BOARD_H
 #define BOARD_H
 
+#include "binpack/viriformat.h"
 #include "core/bitboard.h"
 #include "core/move.h"
 #include "nnue/accumulator.h"
@@ -70,6 +71,8 @@ public:
     Accumulator& getAccumulator() const { return accumulator_stack[acc_ply]; }
     void refreshAccumulator() { accumulator_stack[acc_ply].refresh(*this); }
     void accumulatorPropagate() const;
+
+    viriformat::PackedBoard toPackedBoard(int score, uint8_t result = 0) const;
 
     // Syzygy functions
     uint64_t probeWDL();

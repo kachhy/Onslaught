@@ -1,4 +1,5 @@
 #include "datagen.h"
+#include "binpack/viriformat.h"
 #include "board/board.h"
 #include "board/rules.h"
 #include "hash/transposition.h"
@@ -30,8 +31,10 @@ const static std::string NNUE_PATH("");
 constexpr static int16_t DG_DEPTH = 128;
 constexpr static int32_t DG_NODES = 4000;
 constexpr static int16_t DG_RANDOM_MOVES = 8;
-constexpr static size_t DG_POSITION_GOAL = 6000000;
-constexpr static int DG_THREADS = 24;
+constexpr static size_t DG_POSITION_GOAL = 1000000000;
+constexpr static int DG_THREADS = 1;
+
+constexpr static bool USE_BINPACK = true;
 
 // Filtering thresholds
 constexpr static int DG_SCORE_FILTER = 1500;  // skip recording when |score| >= this
@@ -61,6 +64,41 @@ static bool isQuiet(const Board& board, Move best_move) {
 
 static bool isMateScore(int score) { return std::abs(score) >= SCORE_MAX - MAX_GAME_MOVES; }
 
+static viriformat::Move toViriMove(Move move) {
+    const uint8_t from = static_cast<uint8_t>(From(move));
+    uint8_t to = static_cast<uint8_t>(To(move));
+
+    MoveType type = MoveType::NORMAL;
+    DefaultPiece promo = PAWN; // unused unless type == PROMOTION
+
+    if (Prom(move)) {
+        // viriformat's promo field is 2 bits: KNIGHT=0, BISHOP=1, ROOK=2, QUEEN=3.
+        promo = static_cast<DefaultPiece>(promPiece(move) - 1);
+        type = MoveType::PROMOTION;
+    } else if (IsEP(move)) {
+        type = MoveType::EN_PASSANT;
+    } else if (Castle(move)) {
+        // Viriformat encodes castling Chess960-style: "to" is the rook's origin square
+        switch (to) {
+            case G1: to = H1; break;
+            case C1: to = A1; break;
+            case G8: to = H8; break;
+            case C8: to = A8; break;
+            default: break;
+        }
+        type = MoveType::CASTLING;
+    }
+
+    // viriformat expects standard LERF numbering (A1=0..H8=63)
+    const uint8_t lerf_from = from ^ 56;
+    const uint8_t lerf_to = to ^ 56;
+
+    if (type == MoveType::PROMOTION) {
+        return viriformat::Move(lerf_from, lerf_to, promo);
+    }
+    return viriformat::Move(lerf_from, lerf_to, type);
+}
+
 struct FENScore {
     std::string fen;
     int score;
@@ -69,8 +107,8 @@ struct FENScore {
 };
 
 static void datagenWorker(int thread_id) {
-    const std::string filename = "data_" + std::to_string(thread_id) + ".txt";
-    std::ofstream out(filename);
+    const std::string filename = "data_" + std::to_string(thread_id) + (USE_BINPACK ? ".binpack" : ".txt");
+    std::ofstream out(filename, std::ios::binary);
     if (!out) {
         std::cerr << "datagen[" << thread_id << "]: failed to open " << filename << std::endl;
         return;
@@ -87,6 +125,7 @@ static void datagenWorker(int thread_id) {
 
     std::vector<FENScore> fen_scores;
     fen_scores.reserve(512);
+    std::vector<std::pair<viriformat::Move, int16_t>> viri_moves;
 
     while (positions_generated < DG_POSITION_GOAL) {
         Board board;
@@ -107,8 +146,12 @@ static void datagenWorker(int thread_id) {
 
         if (!valid_opening) {
             fen_scores.clear();
+            viri_moves.clear();
             continue;
         }
+
+        viriformat::PackedBoard packed_board = {};
+        bool set_board = false;
 
         // Adjudication counters
         int win_streak_white = 0;
@@ -147,7 +190,14 @@ static void datagenWorker(int thread_id) {
             }
 
             const bool mate = isMateScore(score);
+            
+            // Viriformat's Score is white-relative, not side-to-move relative.
             const int white_score = board.getSTM() == WHITE ? score : -score;
+
+            if (!set_board) {
+                packed_board = board.toPackedBoard(white_score);
+                set_board = true;
+            }
 
             // WDL filter: opening already lopsided -> discard game
             if (first_scored) {
@@ -208,19 +258,50 @@ static void datagenWorker(int thread_id) {
             if (!mate && std::abs(score) < DG_SCORE_FILTER && isQuiet(board, best_move)) {
                 fen_scores.emplace_back(board.toFEN(), white_score);
             }
+            viri_moves.emplace_back(toViriMove(best_move), static_cast<int16_t>(white_score));
             board.makeMove(best_move);
             game_ply++;
         }
 
         if (discard_game) {
             fen_scores.clear();
+            viri_moves.clear();
             continue;
         }
 
-        for (const FENScore& fs : fen_scores) {
-            out << fs.fen << " | " << fs.score << " | " << result << "\n";
+        // Write Viriformat
+        if constexpr (USE_BINPACK) {
+            if (result == "0.0") {
+                packed_board.result = 0;
+            } else if (result == "0.5") {
+                packed_board.result = 1;
+            } else {
+                packed_board.result = 2;
+            }
+            
+            // Write packedboard
+            out << packed_board;
+            // Write moves
+            for (const std::pair<viriformat::Move, int16_t>& move_pair : viri_moves) {
+                const uint16_t raw_move = move_pair.first.raw();
+                out.write(reinterpret_cast<const char*>(&raw_move), sizeof(raw_move));
+                out.write(reinterpret_cast<const char*>(&move_pair.second), sizeof(move_pair.second));
+            }
+            // Terminator: all-zero move+score record marks end of this game's move list
+            {
+                constexpr uint16_t terminator_move = 0;
+                constexpr int16_t terminator_score = 0;
+                out.write(reinterpret_cast<const char*>(&terminator_move), sizeof(terminator_move));
+                out.write(reinterpret_cast<const char*>(&terminator_score), sizeof(terminator_score));
+            }
+            out.flush();
+        } else {
+            // Write raw
+            for (const FENScore& fs : fen_scores) {
+                out << fs.fen << " | " << fs.score << " | " << result << "\n";
+            }
+            out.flush();
         }
-        out.flush();
 
         const size_t new_total = positions_generated.fetch_add(fen_scores.size()) + fen_scores.size();
 
@@ -251,6 +332,7 @@ static void datagenWorker(int thread_id) {
         }
 
         fen_scores.clear();
+        viri_moves.clear();
     }
 }
 

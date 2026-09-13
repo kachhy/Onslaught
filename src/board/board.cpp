@@ -369,6 +369,54 @@ void Board::accumulatorPropagate() const { // Update the top accumulator by walk
 
 static inline BitBoard mirrorRanks(BitBoard bb) { return __builtin_bswap64(bb); }
 
+viriformat::PackedBoard Board::toPackedBoard(int score, uint8_t result) const {
+    viriformat::PackedBoard pb = {};
+    const BitBoard lerf_occ = mirrorRanks(occ[BOTH]); // Viriformat expects LERF
+    pb.occ_bb = lerf_occ;
+
+    uint8_t i = 0;
+    BitBoard temp_occ = lerf_occ;
+
+    while (temp_occ) {
+        const uint8_t lerf_sq = popLSB(temp_occ);
+        const uint8_t sq = lerf_sq ^ 56; // back to our internal Square indexing
+        const Piece p = pieceAt(sq);
+
+        uint8_t type = makeDefaultPiece(p) & 0x7;
+        // Viriformat marks castling-eligible rooks with type code 6, rather than 3
+        if (type == ROOK) {
+            if ((sq == A1 && (castling & WHITE_QS)) || (sq == H1 && (castling & WHITE_KS)) || (sq == A8 && (castling & BLACK_QS)) ||
+                (sq == H8 && (castling & BLACK_KS))) {
+                type = 6;
+            }
+        }
+
+        uint8_t piece = type;
+        if (p > WHITE_KING) {
+            piece |= 0x8;
+        }
+
+        if (i & 1) {
+            pb.pieces[i / 2] |= piece << 4;
+        } else {
+            pb.pieces[i / 2] = piece;
+        }
+
+        i++;
+    }
+
+    pb.stm_ep_sq = ep_square == NO_SQUARE ? 64 : static_cast<uint8_t>(ep_square ^ 56);
+    pb.stm_ep_sq |= (stm == BLACK) ? 0x80 : 0x00;
+
+    pb.halfmove = fmr;
+    pb.fullmove = move_number;
+
+    pb.score = score;
+    pb.result = result;
+
+    return pb;
+}
+
 uint64_t Board::probeWDL() {
     return tb_probe_wdl(
         mirrorRanks(occ[WHITE]), mirrorRanks(occ[BLACK]), mirrorRanks(piece_bb[WHITE_KING] | piece_bb[BLACK_KING]),
@@ -380,13 +428,12 @@ uint64_t Board::probeWDL() {
 
 bool Board::probeDTZ(TbRootMoves& results, bool has_repeated) { // Meant to be used at the root node only
     return tb_probe_root_dtz(
-        mirrorRanks(occ[WHITE]), mirrorRanks(occ[BLACK]), mirrorRanks(piece_bb[WHITE_KING] | piece_bb[BLACK_KING]),
-        mirrorRanks(piece_bb[WHITE_QUEEN] | piece_bb[BLACK_QUEEN]), mirrorRanks(piece_bb[WHITE_ROOK] | piece_bb[BLACK_ROOK]),
-        mirrorRanks(piece_bb[WHITE_BISHOP] | piece_bb[BLACK_BISHOP]), mirrorRanks(piece_bb[WHITE_KNIGHT] | piece_bb[BLACK_KNIGHT]),
-        mirrorRanks(piece_bb[WHITE_PAWN] | piece_bb[BLACK_PAWN]),
-        fmr, ep_square == NO_SQUARE ? 0 : (ep_square ^ 56),
-        stm == WHITE ? PYRRHIC_WHITE : PYRRHIC_BLACK, has_repeated, &results
-    ) != 0;
+               mirrorRanks(occ[WHITE]), mirrorRanks(occ[BLACK]), mirrorRanks(piece_bb[WHITE_KING] | piece_bb[BLACK_KING]),
+               mirrorRanks(piece_bb[WHITE_QUEEN] | piece_bb[BLACK_QUEEN]), mirrorRanks(piece_bb[WHITE_ROOK] | piece_bb[BLACK_ROOK]),
+               mirrorRanks(piece_bb[WHITE_BISHOP] | piece_bb[BLACK_BISHOP]), mirrorRanks(piece_bb[WHITE_KNIGHT] | piece_bb[BLACK_KNIGHT]),
+               mirrorRanks(piece_bb[WHITE_PAWN] | piece_bb[BLACK_PAWN]), fmr, ep_square == NO_SQUARE ? 0 : (ep_square ^ 56), stm == WHITE ? PYRRHIC_WHITE : PYRRHIC_BLACK,
+               has_repeated, &results
+           ) != 0;
 }
 
 void Board::makeMove(Move move) {
@@ -811,7 +858,7 @@ void Board::setThreatened() {
             Square cur_square = static_cast<Square>(popLSB(cur_piece_bb));
             threatened_by[WHITE] |= getPieceAttacks(static_cast<Piece>(white_index), cur_square, occ[BOTH]);
         }
-        
+
         cur_piece_bb = piece_bb[black_index];
         while (cur_piece_bb) {
             Square cur_square = static_cast<Square>(popLSB(cur_piece_bb));
