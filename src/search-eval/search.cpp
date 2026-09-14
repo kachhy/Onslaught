@@ -133,19 +133,34 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
 
     nodes++;
 
+    const bool in_check = board.inCheck();
+
+    if (ply > 0 && isDraw(board, ply)) {
+        if (in_check && board.getFMR() >= 100) { // Checkmate overrides the fifty-move rule
+            MoveList evasions;
+            getLegalMoves(board, evasions);
+
+            if (evasions.size() == 0) {
+                return -SCORE_MAX + std::min(ply, (int)MAX_PLY - 1);
+            }
+        }
+
+        return 0; // Draw
+    }
+
     if (ply >= MAX_PLY) {
         return eval(board);
     }
 
-    if (ply > 0 && isDraw(board, ply)) {
-        return 0;
+    if (in_check && qply >= 2) {
+        return eval(board);
     }
 
-    int static_eval;
+    int static_eval; // TODO: add some SCORE_NONE to prevent fragile usage
     int best_value;
     MoveList moves;
 
-    if (board.inCheck()) {
+    if (in_check) {
         best_value = -SCORE_MAX + std::min(ply, (int)MAX_PLY - 1);
         getLegalMoves(board, moves);
     } else {
@@ -184,7 +199,7 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         Move noisy_move = moves[i];
 
         // SEE
-        if (!board.inCheck() && !staticExchangeEval(board, noisy_move, 0)) {
+        if (!in_check && !staticExchangeEval(board, noisy_move, 0)) {
             continue;
         }
 
