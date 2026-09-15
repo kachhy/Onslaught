@@ -33,18 +33,64 @@ int16_t network_biases[HIDDEN_SIZE] = {};
 alignas(64) int16_t output_weights[NUM_OUTPUT_BUCKETS][2 * HIDDEN_SIZE] = {};
 int16_t output_bias[NUM_OUTPUT_BUCKETS] = {};
 
-void Accumulator::refresh(const Board& board) {
-    reset();
-    king_sq[WHITE] = static_cast<uint8_t>(getLSB(board.getPieceBB(WHITE_KING)));
-    king_sq[BLACK] = static_cast<uint8_t>(getLSB(board.getPieceBB(BLACK_KING)));
-    for (uint8_t sq = 0; sq < 64; sq++) {
-        const Piece pc = board.pieceAt(sq);
-        if (pc == NO_PIECE) {
-            continue;
+// Finny tables
+std::array<std::array<AccumulatorCacheEntry, 2>, 64> accumulator_cache;
+
+template <Side Persp>
+void Accumulator::refreshPerspective(const Board& board) {
+    AccumulatorCacheEntry& entry = accumulator_cache[king_sq[Persp]][Persp];
+
+    if (entry.initialized) { // Use the accumulator cache
+        // Seed from the cached baseline, then apply a symmetric difference
+        loadPerspective(Persp, entry.accumulator);
+        for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
+            const Piece piece = static_cast<Piece>(pc);
+            const BitBoard cache_bb = entry.piece_bb[pc];
+            const BitBoard board_bb = board.getPieceBB(piece);
+
+            BitBoard removed = cache_bb & ~board_bb;
+            while (removed) {
+                subPerspective<Persp>(makeDefaultPiece(piece), getPieceSide(piece), static_cast<Square>(popLSB(removed)));
+            }
+
+            BitBoard added = board_bb & ~cache_bb;
+            while (added) {
+                addPerspective<Persp>(makeDefaultPiece(piece), getPieceSide(piece), static_cast<Square>(popLSB(added)));
+            }
+        }
+    } else {
+        for (size_t i = 0; i < HIDDEN_SIZE; i++) {
+            accumulator[Persp][i] = network_biases[i];
         }
 
-        add(*this, makeDefaultPiece(pc), getPieceSide(pc), static_cast<Square>(sq));
+        for (uint8_t sq = 0; sq < 64; sq++) {
+            const Piece pc = board.pieceAt(sq);
+            if (pc == NO_PIECE) {
+                continue;
+            }
+
+            addPerspective<Persp>(makeDefaultPiece(pc), getPieceSide(pc), static_cast<Square>(sq));
+        }
     }
+
+    storePerspective(Persp, entry.accumulator);
+    for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
+        entry.piece_bb[pc] = board.getPieceBB(static_cast<Piece>(pc));
+    }
+
+    entry.initialized = true;
+}
+
+// Force template specialization
+template void Accumulator::refreshPerspective<WHITE>(const Board& board);
+template void Accumulator::refreshPerspective<BLACK>(const Board& board);
+
+void Accumulator::refresh(const Board& board) {
+    king_sq[WHITE] = static_cast<uint8_t>(getLSB(board.getPieceBB(WHITE_KING)));
+    king_sq[BLACK] = static_cast<uint8_t>(getLSB(board.getPieceBB(BLACK_KING)));
+
+    refreshPerspective<WHITE>(board);
+    refreshPerspective<BLACK>(board);
 
     accumulator_dirty = false;
 }
@@ -135,6 +181,12 @@ bool loadNNUE(const std::filesystem::path& path) {
     }
     if (!readExact(in, output_bias, OUT_BIAS_COUNT * sizeof(std::int16_t))) {
         return false;
+    }
+
+    // Invalidate accumulator cache
+    for (uint8_t i = 0; i < 64; i++) {
+        accumulator_cache[i][0].initialized = false;
+        accumulator_cache[i][1].initialized = false;
     }
 
     board.refreshAccumulator();

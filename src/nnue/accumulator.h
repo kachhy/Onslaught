@@ -5,6 +5,7 @@
 #include "core/move.h"
 #include "features.h"
 #include "simd.h"
+#include <array>
 #include <cstdint>
 #include <cstring>
 
@@ -25,8 +26,6 @@ public:
     Move move; // Move whose delta is owed when accumulator_dirty
     Side stm;
     Piece captured;
-
-    Accumulator() = default;
 
     void record(Move m, Side s, Piece cap, uint8_t wk, uint8_t bk) {
         move = m; stm = s; captured = cap;
@@ -163,6 +162,38 @@ public:
         apply<0, 1>(accumulator[BLACK], src.accumulator[BLACK], nullptr, bs);
     }
 
+    // Single-perspective add/sub (cache only touches one perspective)
+    template <Side persp>
+    void addPerspective(DefaultPiece piece, Side color, Square sq) {
+        const int idx = featureIndex<persp>(piece, color, sq, king_sq[persp]);
+        const int16_t* w = network_weights[idx];
+        for (size_t i = 0; i < HIDDEN_SIZE; i += VEC_I16) {
+            vecStore(accumulator[persp] + i, vecAdd(vecLoad(accumulator[persp] + i), vecLoad(w + i)));
+        }
+    }
+
+    template <Side persp>
+    void subPerspective(DefaultPiece piece, Side color, Square sq) {
+        const int idx = featureIndex<persp>(piece, color, sq, king_sq[persp]);
+        const int16_t* w = network_weights[idx];
+        for (size_t i = 0; i < HIDDEN_SIZE; i += VEC_I16) {
+            vecStore(accumulator[persp] + i, vecSub(vecLoad(accumulator[persp] + i), vecLoad(w + i)));
+        }
+    }
+
+    // Accumulator cache entries store only a single perspective to save space
+    void loadPerspective(Side persp, const int16_t* src) {
+        memcpy(accumulator[persp], src, sizeof(accumulator[persp]));
+    }
+
+    void storePerspective(Side persp, int16_t* dst) const {
+        memcpy(dst, accumulator[persp], sizeof(accumulator[persp]));
+    }
+
+    // Defined in nnue.cpp to break a cycle (needs Board).
+    template <Side persp>
+    void refreshPerspective(const Board& board);
+
     // Quiet move.
     void addSub(const Accumulator& src, DefaultPiece piece, Side color, Square from_sq, Square to_sq) {
         const int wf = featureIndex<WHITE>(piece, color, from_sq, king_sq[WHITE]);
@@ -245,5 +276,13 @@ inline int32_t Accumulator::evaluate(Side stm, int bucket) const {
     sum = sum / L0_SCALE + output_bias[bucket];
     return static_cast<int32_t>(sum * EVAL_SCALE / MUL_SCALE);
 }
+
+struct AccumulatorCacheEntry {
+    alignas(64) int16_t accumulator[HIDDEN_SIZE];
+    BitBoard piece_bb[12];
+    bool initialized = false;
+};
+
+extern std::array<std::array<AccumulatorCacheEntry, 2>, 64> accumulator_cache;
 
 #endif // ACCUMULATOR_H
