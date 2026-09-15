@@ -6,43 +6,59 @@
 #include "search-eval/terms.h"
 #include <cmath>
 #include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
+// Ordered mapping: offset prefix, evaluation value, Trace member. Array lengths
+// come from the evaluation values. Each score stores an adjacent MG/EG pair.
+// Keep PST separate because black squares share mirrored white parameters.
+#define TUNING_TERMS(SCALAR, ARRAY) \
+    ARRAY(MATERIAL, material_values, material) \
+    SCALAR(TEMPO, TEMPO, tempo) \
+    ARRAY(MOBILITY, MOBILITY, mobility) \
+    SCALAR(PAWN_PHALANX, PAWN_PHALANX, pawn_phalanx) \
+    SCALAR(DOUBLED_PAWNS, DOUBLED_PAWNS, doubled_pawns) \
+    SCALAR(BACKWARDS_PAWN, BACKWARDS_PAWN, backwards_pawn) \
+    SCALAR(ISOLATED_PAWN, ISOLATED_PAWN, isolated_pawn) \
+    ARRAY(PAWN_PROTECTION, PAWN_PROTECTION, pawn_protection) \
+    ARRAY(PASSED_PAWNS, PASSED_PAWNS, passed_pawns) \
+    SCALAR(KNIGHT_OUTPOST, KNIGHT_OUTPOST, knight_outpost) \
+    SCALAR(KNIGHT_BEHIND_PAWN, KNIGHT_BEHIND_PAWN, knight_behind_pawn) \
+    ARRAY(KNIGHT_PAWN_ADJ, KNIGHT_PAWN_ADJ, knight_pawn_adj) \
+    SCALAR(BISHOP_PAIR, BISHOP_PAIR, bishop_pair) \
+    SCALAR(BISHOP_CTRL_PENALTY, BISHOP_CONTROL_PENALTY, bishop_control_penalty) \
+    SCALAR(BAD_BISHOP, BAD_BISHOP, bad_bishop) \
+    SCALAR(BISHOP_BLOCKING_PAWN, BISHOP_BLOCKING_PAWN, bishop_blocking_pawn) \
+    SCALAR(BISHOP_BEHIND_PAWN, BISHOP_BEHIND_PAWN, bishop_behind_pawn) \
+    SCALAR(ROOK_SEVENTH, ROOK_ON_SEVENTH_RANK, rook_on_seventh_rank) \
+    SCALAR(ROOK_OPEN_FILE, ROOK_ON_OPEN_FILE, rook_on_open_file) \
+    SCALAR(ROOK_SEMI_OPEN_FILE, ROOK_ON_SEMI_OPEN_FILE, rook_on_semi_open_file) \
+    ARRAY(ROOK_PAWN_ADJ, ROOK_PAWN_ADJ, rook_pawn_adj) \
+    SCALAR(QUEEN_REL_PIN, QUEEN_REL_PIN, queen_rel_pin) \
+    SCALAR(NO_OPPONENT_QUEENS, NO_OPPONENT_QUEENS, no_opponent_queens) \
+    SCALAR(KING_OPEN_FILE, KING_ON_OPEN_FILE, king_on_open_file) \
+    SCALAR(KING_SEMI_OPEN_FILE, KING_ON_SEMI_OPEN_FILE, king_on_semi_open_file) \
+    ARRAY(PAWN_SHIELD, PAWN_SHIELD, pawn_shield) \
+    ARRAY(PAWN_STORM, PAWN_STORM, pawn_storm) \
+    ARRAY(KING_ZONE_ATTACK, KING_ZONE_ATTACK, king_zone_attack) \
+    ARRAY(KING_CASTLED, KING_CASTLED, king_castled) \
+    SCALAR(KING_LOST_CASTLE, KING_LOST_ONE_CASTLING_RIGHT, king_lost_one_castling_right) \
+    SCALAR(KING_UNCASTLED, KING_UNCASTLED_RIGHTS_REMAIN, king_uncastled_rights_remain) \
+    ARRAY(SAFE_CHECK, SAFE_CHECK, safe_check)
 
-constexpr uint16_t MATERIAL_OFFSET = 0;
-constexpr uint16_t TEMPO_OFFSET = MATERIAL_OFFSET + 12;
-constexpr uint16_t MOBILITY_OFFSET = TEMPO_OFFSET + 2;
-constexpr uint16_t PAWN_PHALANX_OFFSET = MOBILITY_OFFSET + 10;
-constexpr uint16_t DOUBLED_PAWNS_OFFSET = PAWN_PHALANX_OFFSET + 2;
-constexpr uint16_t BACKWARDS_PAWN_OFFSET = DOUBLED_PAWNS_OFFSET + 2;
-constexpr uint16_t ISOLATED_PAWN_OFFSET = BACKWARDS_PAWN_OFFSET + 2;
-constexpr uint16_t PAWN_PROTECTION_OFFSET = ISOLATED_PAWN_OFFSET + 2;
-constexpr uint16_t PASSED_PAWNS_OFFSET = PAWN_PROTECTION_OFFSET + 12;
-constexpr uint16_t KNIGHT_OUTPOST_OFFSET = PASSED_PAWNS_OFFSET + 16;
-constexpr uint16_t KNIGHT_BEHIND_PAWN_OFFSET = KNIGHT_OUTPOST_OFFSET + 2;
-constexpr uint16_t KNIGHT_PAWN_ADJ_OFFSET = KNIGHT_BEHIND_PAWN_OFFSET + 2;
-constexpr uint16_t BISHOP_PAIR_OFFSET = KNIGHT_PAWN_ADJ_OFFSET + 18;
-constexpr uint16_t BISHOP_CTRL_PENALTY_OFFSET = BISHOP_PAIR_OFFSET + 2;
-constexpr uint16_t BAD_BISHOP_OFFSET = BISHOP_CTRL_PENALTY_OFFSET + 2;
-constexpr uint16_t BISHOP_BLOCKING_PAWN_OFFSET = BAD_BISHOP_OFFSET + 2;
-constexpr uint16_t BISHOP_BEHIND_PAWN_OFFSET = BISHOP_BLOCKING_PAWN_OFFSET + 2;
-constexpr uint16_t ROOK_SEVENTH_OFFSET = BISHOP_BEHIND_PAWN_OFFSET + 2;
-constexpr uint16_t ROOK_OPEN_FILE_OFFSET = ROOK_SEVENTH_OFFSET + 2;
-constexpr uint16_t ROOK_SEMI_OPEN_FILE_OFFSET = ROOK_OPEN_FILE_OFFSET + 2;
-constexpr uint16_t ROOK_PAWN_ADJ_OFFSET = ROOK_SEMI_OPEN_FILE_OFFSET + 2;
-constexpr uint16_t QUEEN_REL_PIN_OFFSET = ROOK_PAWN_ADJ_OFFSET + 18;
-constexpr uint16_t NO_OPPONENT_QUEENS_OFFSET = QUEEN_REL_PIN_OFFSET + 2;
-constexpr uint16_t KING_OPEN_FILE_OFFSET = NO_OPPONENT_QUEENS_OFFSET + 2;
-constexpr uint16_t KING_SEMI_OPEN_FILE_OFFSET = KING_OPEN_FILE_OFFSET + 2;
-constexpr uint16_t PAWN_SHIELD_OFFSET = KING_SEMI_OPEN_FILE_OFFSET + 2;
-constexpr uint16_t PAWN_STORM_OFFSET = PAWN_SHIELD_OFFSET + 8;
-constexpr uint16_t KING_ZONE_ATTACK_OFFSET = PAWN_STORM_OFFSET + 6;
-constexpr uint16_t KING_CASTLED_OFFSET = KING_ZONE_ATTACK_OFFSET + 8;
-constexpr uint16_t KING_LOST_CASTLE_OFFSET = KING_CASTLED_OFFSET + 4;
-constexpr uint16_t KING_UNCASTLED_OFFSET = KING_LOST_CASTLE_OFFSET + 2;
-constexpr uint16_t SAFE_CHECK_OFFSET = KING_UNCASTLED_OFFSET + 2;
-constexpr uint16_t PST_OFFSET = SAFE_CHECK_OFFSET + 10;
+// The next enumerator starts immediately after the preceding MG/EG block.
+enum TuningOffset : uint16_t {
+#define TUNING_SCALAR_OFFSET(name, term, member) \
+    name##_OFFSET, name##_LAST = name##_OFFSET + 1,
+#define TUNING_ARRAY_OFFSET(name, term, member) \
+    name##_OFFSET, name##_LAST = name##_OFFSET + 2 * std::size(term) - 1,
+    TUNING_TERMS(TUNING_SCALAR_OFFSET, TUNING_ARRAY_OFFSET)
+#undef TUNING_SCALAR_OFFSET
+#undef TUNING_ARRAY_OFFSET
+    PST_OFFSET,
+    TUNING_PARAM_COUNT = PST_OFFSET + 6 * 64 * 2
+};
 
 // Minibatching parameters
 constexpr static uint16_t BATCH_SIZE = 16384;
