@@ -156,7 +156,8 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         return eval(board);
     }
 
-    int static_eval; // TODO: add some SCORE_NONE to prevent fragile usage
+    constexpr int SCORE_NONE = SCORE_MAX + 1;
+    int static_eval = SCORE_NONE; // TODO: add some SCORE_NONE to prevent fragile usage
     int best_value;
     MoveList moves;
 
@@ -197,6 +198,26 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         moves.sort_item(best_move_index);
         std::swap(scores[i], scores[best_move_index]);
         Move noisy_move = moves[i];
+
+        // Delta Pruning
+        if (static_eval != SCORE_NONE) {
+            if (static_eval >= beta) {
+                return static_eval; 
+            }
+
+            int BIG_DELTA = SEE_VALUES[4];
+            if(Prom(noisy_move)) { 
+                BIG_DELTA =  SEE_VALUES[4] + 900;
+            }
+
+            if ( static_eval < alpha - BIG_DELTA ) {
+                return alpha;
+            }
+
+            if( alpha < static_eval ) {
+                alpha = static_eval;
+            }
+        }
 
         // SEE
         if (!in_check && !staticExchangeEval(board, noisy_move, 0)) {
