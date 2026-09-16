@@ -199,16 +199,23 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         std::swap(scores[i], scores[best_move_index]);
         Move noisy_move = moves[i];
 
-        // Delta Pruning
-        if (static_eval != SCORE_NONE) {
-            int big_delta = SEE_VALUES[4];
-            if (Prom(noisy_move)) {
-                big_delta += 900;
-            }
+        // Getting the piece that gets captured
+        int captured_value = 6; //default for non-captures, which will never trigger delta pruning
+        if(Capture(noisy_move)){
+            Piece captured_piece = IsEP(noisy_move)
+                ? makePiece(PAWN, board.getXSTM())
+                : board.pieceAt(To(noisy_move));
+            DefaultPiece captured_type = makeDefaultPiece(captured_piece);
+            captured_value = SEE_VALUES[captured_type];
+        }
 
-            if (static_eval + big_delta < alpha) {
-                continue;
-            }
+        // Delta Pruning
+        if(!in_check
+            && Capture(noisy_move)
+            && static_eval != SCORE_NONE
+            && static_eval + 400 + captured_value < alpha
+            && !Prom(noisy_move)) {
+            continue;
         }
 
         // SEE
