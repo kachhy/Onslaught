@@ -202,21 +202,13 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
 
         // Delta Pruning
         if (static_eval != SCORE_NONE) {
-            if (static_eval >= beta) {
-                return static_eval; 
+            int big_delta = SEE_VALUES[4];
+            if (Prom(noisy_move)) {
+                big_delta += 900;
             }
 
-            int BIG_DELTA = SEE_VALUES[4];
-            if(Prom(noisy_move)) { 
-                BIG_DELTA =  SEE_VALUES[4] + 900;
-            }
-
-            if ( static_eval < alpha - BIG_DELTA ) {
-                return alpha;
-            }
-
-            if( alpha < static_eval ) {
-                alpha = static_eval;
+            if (static_eval + big_delta < alpha) {
+                continue;
             }
         }
 
