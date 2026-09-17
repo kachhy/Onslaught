@@ -113,6 +113,18 @@ constexpr size_t EXPECTED_BYTES = (FT_WEIGHT_COUNT + FT_BIAS_COUNT + OUT_WEIGHT_
 constexpr size_t ALIGN_BYTES = 64;
 constexpr size_t EXPECTED_BYTES_PADDED = (EXPECTED_BYTES + ALIGN_BYTES - 1) / ALIGN_BYTES * ALIGN_BYTES;
 
+// Board construction can cache accumulators before the network is loaded
+// So both construction and loading a new network requires invalidating the accumulator cache
+void refreshAfterNetworkLoad() {
+    for (auto& square : accumulator_cache) {
+        for (auto& entry : square) {
+            entry.initialized = false;
+        }
+    }
+    
+    board.refreshAccumulator();
+}
+
 bool readExact(std::ifstream& in, void* dst, std::size_t bytes) {
     in.read(reinterpret_cast<char*>(dst), static_cast<std::streamsize>(bytes));
     return in.gcount() == static_cast<std::streamsize>(bytes);
@@ -137,7 +149,7 @@ bool loadNNUEFromMemory(const unsigned char* data, size_t size) {
     std::memcpy(output_weights, ptr, OUT_WEIGHT_COUNT * sizeof(int16_t));
     ptr += OUT_WEIGHT_COUNT * sizeof(int16_t);
     std::memcpy(output_bias, ptr, OUT_BIAS_COUNT * sizeof(int16_t));
-    board.refreshAccumulator();
+    refreshAfterNetworkLoad();
     
     return true;
 }
@@ -183,12 +195,6 @@ bool loadNNUE(const std::filesystem::path& path) {
         return false;
     }
 
-    // Invalidate accumulator cache
-    for (uint8_t i = 0; i < 64; i++) {
-        accumulator_cache[i][0].initialized = false;
-        accumulator_cache[i][1].initialized = false;
-    }
-
-    board.refreshAccumulator();
+    refreshAfterNetworkLoad();
     return true;
 }
