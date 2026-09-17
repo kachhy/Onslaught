@@ -75,26 +75,6 @@ tune: $(EXE)
 spsa: $(EXE)
 perft: $(EXE)
 
-test-nnue-cache: $(OBJDIR)/nnue-cache-test
-	@$<
-
-bench-diagnostics: $(OBJDIR)/bench-diagnostics
-	@$<
-
-$(OBJDIR)/bench-diagnostics: $(filter-out $(OBJDIR)/main.o,$(OBJ)) $(C_OBJ) $(OBJDIR)/tests/bench_diagnostics.o
-	@$(CXX) $(LDFLAGS) $^ -o $@
-
-$(OBJDIR)/tests/bench_diagnostics.o: tests/bench_diagnostics.cpp
-	@mkdir -p $(dir $@)
-	@$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(OBJDIR)/nnue-cache-test: $(filter-out $(OBJDIR)/main.o,$(OBJ)) $(C_OBJ) $(OBJDIR)/tests/nnue_cache.o
-	@$(CXX) $(LDFLAGS) $^ -o $@
-
-$(OBJDIR)/tests/nnue_cache.o: tests/nnue_cache.cpp
-	@mkdir -p $(dir $@)
-	@$(CXX) $(CXXFLAGS) -c $< -o $@
-
 $(EXE): $(OBJ) $(C_OBJ)
 	@echo "  LINK $@"
 	@mkdir -p $(dir $@)
@@ -118,5 +98,5 @@ $(OBJDIR)/%.o: src/%.c
 clean:
 	rm -rf $(OBJDIR)
 
-.PHONY: all clean debug release test-nnue-cache bench-diagnostics
--include $(DEPS) $(OBJDIR)/tests/nnue_cache.d $(OBJDIR)/tests/bench_diagnostics.d
+.PHONY: all clean debug release
+-include $(DEPS)
