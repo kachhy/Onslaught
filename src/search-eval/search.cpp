@@ -31,6 +31,7 @@ bool syz_fmr = true;
 bool syz_dtz = true;
 
 int LMR_TABLE[LMR_TABLE_SIZE][LMR_TABLE_SIZE];
+constexpr int CAPTURE_VALUES[6] = { 300, 900, 800, 2000, 2400, 20000 }; // PBNRQK
 
 void initLMR() {
     for (int depth = 1; depth < LMR_TABLE_SIZE; depth++) {
@@ -207,15 +208,16 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
                 ? makePiece(PAWN, board.getXSTM())
                 : board.pieceAt(To(noisy_move));
             DefaultPiece captured_type = makeDefaultPiece(captured_piece);
-            captured_value = SEE_VALUES[captured_type];
+            captured_value = CAPTURE_VALUES[captured_type];
         }
 
         // Delta Pruning
         if(!in_check
             && Capture(noisy_move)
             && static_eval != SCORE_NONE
-            && static_eval + 400 + captured_value < alpha
-            && !Prom(noisy_move)) {
+            && static_eval + 600 + captured_value < alpha
+            && !Prom(noisy_move)
+            && !givesCheck(board, noisy_move)) {
             continue;
         }
 
