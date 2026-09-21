@@ -33,7 +33,10 @@
     INT (PROBCUT_REDUCTION,          4,     2,     8,    1)                    \
     /* LMR reduction adjustments, in plies */                                  \
     INT (LMR_DEPTH_CAP,              1,     1,     5,    1)                    \
+    INT (LMR_CHECK_REDUCTION,        1,     0,     3,    1)                    \
     INT (LMR_NO_TT_PV,               1,     0,     3,    1)                    \
+    INT (LMR_LMR_TT_CAPTURE,         1,     0,     3,    1)                    \
+    INT (LMR_KILLER_REDUCTION,       1,     0,     3,    1)                    \
     /* Floating point terms, stored scaled by 1e6. The scale has to hold the   \
        original six-decimal constants exactly */                               \
     REAL(LMR_VALUE,             890079,  200000, 1600000,  70000, 1000000.0)   \
