@@ -602,7 +602,7 @@ int search(
                     lmr_reduction += LMR_NO_TT_PV;
                 }
 
-                if (Capture(tt_entry.best_move)) {
+                if (tt_hit && tt_entry.best_move != NO_MOVE && Capture(tt_entry.best_move)) {
                     lmr_reduction += LMR_LMR_TT_CAPTURE;
                 }
 
