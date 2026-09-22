@@ -50,7 +50,7 @@ Follow these steps to build and run the Onslaught chess engine.
 
 | Version | Rating (CCRL 40/15) | Rating (Estimated)* | Rating (HCE Estimated)* |
 | :--- | :---: | :---: | :---: |
-| 2.0 |  --  | 3450 |  --  |
+| 2.0 |  3472  | 3450 |  --  |
 | 1.0 | 3006 | 3119 | 2854 |
 
 \* - *estimated using a 2+1 blitz format round robin, using engines anchored on the CCRL 2+1 blitz scale* 
