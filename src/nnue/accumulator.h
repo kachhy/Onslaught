@@ -17,6 +17,10 @@ extern int16_t network_biases[HIDDEN_SIZE];
 extern int16_t output_weights[NUM_OUTPUT_BUCKETS][2 * HIDDEN_SIZE];
 extern int16_t output_bias[NUM_OUTPUT_BUCKETS];
 
+inline bool kingMoveStaysInBucket(Side moving_side, Square from, Square to) {
+    return kingBucket(from, moving_side) == kingBucket(to, moving_side) && kingNeedsMirror(from) == kingNeedsMirror(to);
+}
+
 class alignas(64) Accumulator {
 private:
     int16_t accumulator[2][HIDDEN_SIZE]; // [perspective]
@@ -39,7 +43,7 @@ public:
     }
 
     void refreshIfKingCrossed(const Board& board, Square from, Square to) {
-        if (kingBucket(from, stm) != kingBucket(to, stm) || kingNeedsMirror(from) != kingNeedsMirror(to)) {
+        if (!kingMoveStaysInBucket(stm, from, to)) {
             refresh(board);
         }
     }

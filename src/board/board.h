@@ -72,6 +72,19 @@ public:
     void refreshAccumulator() { accumulator_stack[acc_ply].refresh(*this); }
     void accumulatorPropagate() const;
 
+    // True if the pending (dirty) accumulator chain above the last clean entry can be lazily updated only
+    bool canEvaluateLazily() const {
+        for (int i = acc_ply; i > 0 && accumulator_stack[i].accumulator_dirty; i--) {
+            const Accumulator& entry = accumulator_stack[i];
+            if (entry.move != NO_MOVE && makeDefaultPiece(MovePiece(entry.move)) == KING &&
+                !kingMoveStaysInBucket(entry.stm, From(entry.move), To(entry.move))) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
     viriformat::PackedBoard toPackedBoard(int score, uint8_t result = 0) const;
 
     // Syzygy functions

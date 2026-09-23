@@ -746,6 +746,21 @@ int eval(const Board& board) {
         return 0;
     }
 
+#ifdef TUNING
+    Score score = applyMaterial(pc);
+    score += applyAllPST(board);
+#else
+    Score score = board.getMaterialPST();
+#endif
+
+    int r_score = T(score, board.phase());
+    r_score = r_score * fmr_scale[board.getFMR()] / 200;
+
+    if (std::abs(r_score) > 10
+        && (!use_nnue || !board.canEvaluateLazily())) {
+        return board.getSTM() == WHITE ? r_score : -r_score;
+    }
+
     if (use_nnue) {
         int nnue_score = evaluate(board);
         nnue_score = nnue_score * fmr_scale[board.getFMR()] / 200;
@@ -754,12 +769,6 @@ int eval(const Board& board) {
 
     const EvalInfo info = computeEvalInfo(board);
     PieceCounts pc = getPieceCounts(board);
-#ifdef TUNING
-    Score score = applyMaterial(pc);
-    score += applyAllPST(board);
-#else
-    Score score = board.getMaterialPST();
-#endif
     score += evaluateKnights(board, info);
     score += evaluateBishops(pc, board, info); // - 0.26 MNPS
     score += evaluateRooks(board, info);       // - .198 MNPS
@@ -773,7 +782,7 @@ int eval(const Board& board) {
     score += (board.getSTM() == WHITE) ? TEMPO : -TEMPO;
     TRACE_INC(tempo, board.getSTM());
 
-    int r_score = T(score, board.phase());
+    r_score = T(score, board.phase());
     r_score = r_score * fmr_scale[board.getFMR()] / 200;
 
     return board.getSTM() == WHITE ? r_score : -r_score;
