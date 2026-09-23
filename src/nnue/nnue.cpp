@@ -6,7 +6,7 @@ INCBIN(NNUEWeights, EVALFILE);
 #else
 // No embedded network - falls back to file loading at runtime
 extern const unsigned char gNNUEWeightsData[] = {};
-extern const unsigned int  gNNUEWeightsSize   = 0;
+extern const unsigned int gNNUEWeightsSize = 0;
 #endif
 
 #include "nnue.h"
@@ -29,9 +29,9 @@ std::string nnue_path = "nn-0d2fd98ff872a9a1-v2.nnue"; // Default NNUE
 
 // Network storage
 alignas(64) int16_t network_weights[INPUT_SIZE * NUM_KING_BUCKETS][HIDDEN_SIZE] = {};
-int16_t network_biases[HIDDEN_SIZE] = {};
+alignas(64) int16_t network_biases[HIDDEN_SIZE] = {};
 alignas(64) int16_t output_weights[NUM_OUTPUT_BUCKETS][2 * HIDDEN_SIZE] = {};
-int16_t output_bias[NUM_OUTPUT_BUCKETS] = {};
+alignas(64) int16_t output_bias[NUM_OUTPUT_BUCKETS] = {};
 
 // Finny tables
 std::array<std::array<AccumulatorCacheEntry, 2>, 64> accumulator_cache;
@@ -40,45 +40,46 @@ template <Side Persp>
 void Accumulator::refreshPerspective(const Board& board) {
     AccumulatorCacheEntry& entry = accumulator_cache[king_sq[Persp]][Persp];
 
-    if (entry.initialized) { // Use the accumulator cache
-        // Seed from the cached baseline, then apply a symmetric difference
-        loadPerspective(Persp, entry.accumulator);
+    // An empty entry = biases with no pieces
+    // Adds the diff (full update)
+    if (!entry.initialized) {
+        std::memcpy(entry.accumulator, network_biases, sizeof(entry.accumulator));
         for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
-            const Piece piece = static_cast<Piece>(pc);
-            const BitBoard cache_bb = entry.piece_bb[pc];
-            const BitBoard board_bb = board.getPieceBB(piece);
-
-            BitBoard removed = cache_bb & ~board_bb;
-            while (removed) {
-                subPerspective<Persp>(makeDefaultPiece(piece), getPieceSide(piece), static_cast<Square>(popLSB(removed)));
-            }
-
-            BitBoard added = board_bb & ~cache_bb;
-            while (added) {
-                addPerspective<Persp>(makeDefaultPiece(piece), getPieceSide(piece), static_cast<Square>(popLSB(added)));
-            }
-        }
-    } else {
-        for (size_t i = 0; i < HIDDEN_SIZE; i++) {
-            accumulator[Persp][i] = network_biases[i];
+            entry.piece_bb[pc] = 0;
         }
 
-        for (uint8_t sq = 0; sq < 64; sq++) {
-            const Piece pc = board.pieceAt(sq);
-            if (pc == NO_PIECE) {
-                continue;
-            }
-
-            addPerspective<Persp>(makeDefaultPiece(pc), getPieceSide(pc), static_cast<Square>(sq));
-        }
+        entry.initialized = true;
     }
 
-    storePerspective(Persp, entry.accumulator);
+    // A legal position has at most 32 changes
+    const int16_t* adds[32];
+    const int16_t* subs[32];
+    uint8_t nAdd = 0, nSub = 0;
+
     for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
-        entry.piece_bb[pc] = board.getPieceBB(static_cast<Piece>(pc));
+        const Piece piece = static_cast<Piece>(pc);
+        const DefaultPiece dp = makeDefaultPiece(piece);
+        const Side side = getPieceSide(piece);
+        const BitBoard cache_bb = entry.piece_bb[pc];
+        const BitBoard board_bb = board.getPieceBB(piece);
+
+        BitBoard removed = cache_bb & ~board_bb;
+        while (removed) {
+            const Square sq = static_cast<Square>(popLSB(removed));
+            subs[nSub++] = network_weights[featureIndex<Persp>(dp, side, sq, king_sq[Persp])];
+        }
+
+        BitBoard added = board_bb & ~cache_bb;
+        while (added) {
+            const Square sq = static_cast<Square>(popLSB(added));
+            adds[nAdd++] = network_weights[featureIndex<Persp>(dp, side, sq, king_sq[Persp])];
+        }
+
+        entry.piece_bb[pc] = board_bb;
     }
 
-    entry.initialized = true;
+    // entry + diffs, written to both the entry and accumulator[Persp] in one pass
+    refreshFromEntry<Persp>(entry.accumulator, adds, nAdd, subs, nSub);
 }
 
 // Force template specialization
@@ -121,7 +122,7 @@ void refreshAfterNetworkLoad() {
             entry.initialized = false;
         }
     }
-    
+
     board.refreshAccumulator();
 }
 
@@ -136,8 +137,7 @@ bool loadNNUEFromMemory(const unsigned char* data, size_t size) {
         return false;
     }
     if (size != EXPECTED_BYTES && size != EXPECTED_BYTES_PADDED) {
-        std::fprintf(stderr, "loadNNUE: embedded size mismatch (%zu bytes, expected %zu or %zu padded)\n",
-                     size, EXPECTED_BYTES, EXPECTED_BYTES_PADDED);
+        std::fprintf(stderr, "loadNNUE: embedded size mismatch (%zu bytes, expected %zu or %zu padded)\n", size, EXPECTED_BYTES, EXPECTED_BYTES_PADDED);
         return false;
     }
 
@@ -150,7 +150,7 @@ bool loadNNUEFromMemory(const unsigned char* data, size_t size) {
     ptr += OUT_WEIGHT_COUNT * sizeof(int16_t);
     std::memcpy(output_bias, ptr, OUT_BIAS_COUNT * sizeof(int16_t));
     refreshAfterNetworkLoad();
-    
+
     return true;
 }
 

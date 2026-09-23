@@ -19,7 +19,8 @@ extern int16_t output_bias[NUM_OUTPUT_BUCKETS];
 
 class alignas(64) Accumulator {
 private:
-    int16_t accumulator[2][HIDDEN_SIZE]; // [perspective]
+    static_assert((HIDDEN_SIZE * sizeof(int16_t)) % 64 == 0, "HIDDEN_SIZE must be a multiple of 32 so each perspective row is 64-byte aligned");
+    alignas(64) int16_t accumulator[2][HIDDEN_SIZE]; // [perspective]
 public:
     uint8_t king_sq[2]; // [side]
     bool accumulator_dirty = false;
@@ -28,15 +29,15 @@ public:
     Piece captured;
 
     void record(Move m, Side s, Piece cap, uint8_t wk, uint8_t bk) {
-        move = m; stm = s; captured = cap;
+        move = m;
+        stm = s;
+        captured = cap;
         king_sq[WHITE] = wk;
         king_sq[BLACK] = bk;
         accumulator_dirty = true;
     }
 
-    void seedFrom(const Accumulator& prev) {
-        memcpy(accumulator, prev.accumulator, sizeof(accumulator));
-    }
+    void seedFrom(const Accumulator& prev) { memcpy(accumulator, prev.accumulator, sizeof(accumulator)); }
 
     void refreshIfKingCrossed(const Board& board, Square from, Square to) {
         if (kingBucket(from, stm) != kingBucket(to, stm) || kingNeedsMirror(from) != kingNeedsMirror(to)) {
@@ -127,6 +128,41 @@ public:
     // Defined in nnue.cpp to break a cycle.
     void refresh(const Board& board);
 
+    // Apply a runtime number of feature changes to a cache entry in one pass
+    // Writes to both entry and this accumulator
+    template <Side persp>
+    void refreshFromEntry(int16_t* entry, const int16_t* const* adds, int nAdd, const int16_t* const* subs, int nSub) {
+        constexpr uint8_t TILE = 8; // vectors kept in registers per tile
+        static_assert(HIDDEN_SIZE % (TILE * VEC_I16) == 0);
+        int16_t* out = accumulator[persp];
+
+        for (size_t base = 0; base < HIDDEN_SIZE; base += TILE * VEC_I16) {
+            vepi16 regs[TILE];
+            for (int r = 0; r < TILE; ++r) {
+                regs[r] = vecLoad(entry + base + r * VEC_I16);
+            }
+
+            for (int a = 0; a < nAdd; ++a) {
+                const int16_t* w = adds[a] + base;
+                for (int r = 0; r < TILE; ++r) {
+                    regs[r] = vecAdd(regs[r], vecLoad(w + r * VEC_I16));
+                }
+            }
+
+            for (int s = 0; s < nSub; ++s) {
+                const int16_t* w = subs[s] + base;
+                for (int r = 0; r < TILE; ++r) {
+                    regs[r] = vecSub(regs[r], vecLoad(w + r * VEC_I16));
+                }
+            }
+
+            for (int r = 0; r < TILE; ++r) {
+                vecStore(entry + base + r * VEC_I16, regs[r]);
+                vecStore(out + base + r * VEC_I16, regs[r]);
+            }
+        }
+    }
+
     template <int N_ADD, int N_SUB>
     inline void apply(int16_t* dst, const int16_t* src, const int16_t* const* adds, const int16_t* const* subs) {
         for (size_t i = 0; i < HIDDEN_SIZE; i += VEC_I16) {
@@ -182,13 +218,9 @@ public:
     }
 
     // Accumulator cache entries store only a single perspective to save space
-    void loadPerspective(Side persp, const int16_t* src) {
-        memcpy(accumulator[persp], src, sizeof(accumulator[persp]));
-    }
+    void loadPerspective(Side persp, const int16_t* src) { memcpy(accumulator[persp], src, sizeof(accumulator[persp])); }
 
-    void storePerspective(Side persp, int16_t* dst) const {
-        memcpy(dst, accumulator[persp], sizeof(accumulator[persp]));
-    }
+    void storePerspective(Side persp, int16_t* dst) const { memcpy(dst, accumulator[persp], sizeof(accumulator[persp])); }
 
     // Defined in nnue.cpp to break a cycle (needs Board).
     template <Side persp>
@@ -227,8 +259,8 @@ public:
 
     // Castling
     void addAddSubSub(
-        const Accumulator& src, DefaultPiece add1_piece, Side add1_color, Square add1_sq, DefaultPiece add2_piece, Side add2_color, Square add2_sq, DefaultPiece sub1_piece,
-        Side sub1_color, Square sub1_sq, DefaultPiece sub2_piece, Side sub2_color, Square sub2_sq
+        const Accumulator& src, DefaultPiece add1_piece, Side add1_color, Square add1_sq, DefaultPiece add2_piece, Side add2_color, Square add2_sq,
+        DefaultPiece sub1_piece, Side sub1_color, Square sub1_sq, DefaultPiece sub2_piece, Side sub2_color, Square sub2_sq
     ) {
         const int wa1 = featureIndex<WHITE>(add1_piece, add1_color, add1_sq, king_sq[WHITE]);
         const int ba1 = featureIndex<BLACK>(add1_piece, add1_color, add1_sq, king_sq[BLACK]);
