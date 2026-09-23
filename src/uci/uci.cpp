@@ -117,6 +117,7 @@ static inline void initOptions() {
     setOption("Hash", SpinOption{ 1, 16384, 256, [](int mb) { tt.resize(mb); } });
     setOption("Threads", SpinOption{ 1, 1, 1, nullptr });
     setOption("MultiPV", SpinOption{ 1, 255, 1, [](int mpv) { multi_pv = mpv; } });
+    setOption("MoveOverhead", SpinOption{ 0, 5000, 20, [](int mo) { move_overhead = mo; } });
     setOption("NNUE", CheckOption{ true, [](bool val) { use_nnue = val; } });
     setOption("SyzygyPath", StringOption{ "", [](std::string path) {
         tb_free();
@@ -196,11 +197,12 @@ static inline void go(Board& board) {
         arg = buffer.substr(0, buffer.find(" "));
         buffer = buffer.substr(buffer.find(" ") + 1);
 
+        // Clocks can arrive negative (e.g. a GUI with a time margin), and -1 means "no clock", so clamp to 0
         if (arg == "wtime") {
-            params.wtime = std::stoi(buffer.substr(0, buffer.find(" ")));
+            params.wtime = std::max(0, std::stoi(buffer.substr(0, buffer.find(" "))));
             buffer = buffer.substr(buffer.find(" ") + 1);
         } else if (arg == "btime") {
-            params.btime = std::stoi(buffer.substr(0, buffer.find(" ")));
+            params.btime = std::max(0, std::stoi(buffer.substr(0, buffer.find(" "))));
             buffer = buffer.substr(buffer.find(" ") + 1);
         } else if (arg == "winc") { // time added after each move for white
             params.winc = std::stoi(buffer.substr(0, buffer.find(" ")));

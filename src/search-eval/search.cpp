@@ -24,6 +24,7 @@ thread_local uint16_t seldepth;
 thread_local uint64_t nodes;
 thread_local uint64_t tb_hits;
 int multi_pv = 1;
+int move_overhead = 20;
 short syz_probe_depth = 1;
 short syz_probe_limit = 7;
 bool syz_fmr = true;
@@ -695,37 +696,28 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
     resetHistory();
 
     auto start = std::chrono::high_resolution_clock::now();
-    size_t hard_cap, soft_cap;
+    size_t hard_cap = 0, soft_cap = 0; // 0 means no limit
+
+    const int clock = board.getSTM() == WHITE ? params.wtime : params.btime;
+    const int inc = board.getSTM() == WHITE ? params.winc : params.binc;
 
     if (params.movetime != -1) {
         hard_cap = std::max(params.movetime, 1);
         soft_cap = params.movetime;
-    } else if (board.getSTM() == WHITE) {
-        if (params.wtime == -1) {
-            hard_cap = 0;
-            soft_cap = 0;
+    } else if (clock != -1) {
+        const int64_t left = std::max(clock - move_overhead, 1);
+        int64_t soft, hard;
+
+        if (params.movestogo > 0) {
+            soft = hard = left / params.movestogo + inc;
         } else {
-            if (params.movestogo > 0) {
-                hard_cap = std::max(params.wtime / params.movestogo + params.winc, 1);
-                soft_cap = params.wtime / params.movestogo + params.winc;
-            } else {
-                hard_cap = std::max(params.wtime / 20 + params.winc / 2, 1);
-                soft_cap = params.wtime / 30 + params.winc / 3;
-            }
+            soft = left / 30 + inc / 3;
+            hard = left / 20 + inc / 2;
         }
-    } else {
-        if (params.btime == -1) {
-            hard_cap = 0;
-            soft_cap = 0;
-        } else {
-            if (params.movestogo > 0) {
-                hard_cap = std::max(params.btime / params.movestogo + params.binc, 1);
-                soft_cap = params.btime / params.movestogo + params.binc;
-            } else {
-                hard_cap = std::max(params.btime / 20 + params.binc / 2, 1);
-                soft_cap = params.btime / 30 + params.binc / 3;
-            }
-        }
+
+        hard = std::max<int64_t>(1, std::min(hard, left * 4 / 5));
+        hard_cap = hard;
+        soft_cap = std::clamp<int64_t>(soft, 1, hard);
     }
 
     // rml is (re)populated fresh inside root search on every call
@@ -893,6 +885,16 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
 
         if (soft_cap != 0 && (size_t)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() >= soft_cap) {
             break;
+        }
+    }
+
+    // If the first iteration was aborted there is no best move yet, and any legal move beats forfeiting with 0000
+    if (best_move == NO_MOVE) {
+        for (Move m : legal_probe) {
+            if (rml.is_allowed(m)) {
+                best_move = m;
+                break;
+            }
         }
     }
 
