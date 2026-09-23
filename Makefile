@@ -1,7 +1,7 @@
 CXX ?= g++
 CXXFLAGS=-Wall -MMD -MP -Wno-switch -Isrc -std=c++17
 LDFLAGS=
-EVALFILE=nn-0d2fd98ff872a9a1-v2.nnue
+EVALFILE=nn-9b777ae43f378e7d-v2.1.nnue
 
 CXXFLAGS += -DEVALFILE='"$(EVALFILE)"'
 
