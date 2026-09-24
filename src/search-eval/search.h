@@ -8,6 +8,7 @@
 
 // Search terms live in spsa.h
 constexpr int LMR_TABLE_SIZE = 64;
+constexpr int LMR_GRAIN = 1024; // LMR reductions and their adjustments are in 1/LMR_GRAIN ply
 extern int LMR_TABLE[LMR_TABLE_SIZE][LMR_TABLE_SIZE];
 void initLMR();
 

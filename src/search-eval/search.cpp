@@ -34,7 +34,7 @@ int LMR_TABLE[LMR_TABLE_SIZE][LMR_TABLE_SIZE];
 void initLMR() {
     for (int depth = 1; depth < LMR_TABLE_SIZE; depth++) {
         for (int played = 1; played < LMR_TABLE_SIZE; played++) {
-            LMR_TABLE[depth][played] = static_cast<int>(LMR_VALUE + log(depth) * log(played) / LMR_SCALAR);
+            LMR_TABLE[depth][played] = static_cast<int>(LMR_GRAIN * (LMR_VALUE + log(depth) * log(played) / LMR_SCALAR));
         }
     }
 }
@@ -580,45 +580,38 @@ int search(
         } else {
             // lmr
             if (moves_searched >= LMR_MOVES_CUTOFF && depth >= LMR_DEPTH_CUTOFF && !Capture(move) && !Prom(move) && !in_check) {
-                // improving flag = search more carefully when good position is improving (less reduction)
-                int lmr_reduction = std::max(
-                    0, std::min(LMR_TABLE[std::min(depth, LMR_TABLE_SIZE - 1)][std::min(moves_searched, LMR_TABLE_SIZE - 1)], depth - LMR_DEPTH_CAP)
-                );
-                
-                // history-based reduction: reduce good-history quiets less, bad-history more.
-                const int move_hist = getScoreHistory(board.getXSTM(), move) + getContHist(ss, board.getXSTM(), move);
-                lmr_reduction -= move_hist / HIST_LMR_DIVISOR;
-                lmr_reduction = std::max(0, lmr_reduction);
+                // Everything is summed in 1/LMR_GRAIN ply so terms can be fractional, then floored and clamped once
+                int reduction = LMR_TABLE[std::min(depth, LMR_TABLE_SIZE - 1)][std::min(moves_searched, LMR_TABLE_SIZE - 1)];
 
-                if (!improving) {
-                    lmr_reduction += LMR_NON_IMPROVING;
-                }
+                // history-based reduction: reduce good-history quiets less, bad-history more
+                const int move_hist = getScoreHistory(board.getXSTM(), move) + getContHist(ss, board.getXSTM(), move);
+                reduction -= move_hist * LMR_GRAIN / HIST_LMR_DIVISOR;
 
                 if (cutnode) {
-                    lmr_reduction += LMR_CUTNODE;
+                    reduction += LMR_CUTNODE;
                 }
 
-                if (!is_pv) {
-                    lmr_reduction += LMR_NON_PV;
-                }
-                
                 if (!tt_hit && !is_pv) {
-                    lmr_reduction += LMR_NO_TT_PV;
-                }
-
-                if (move == ss->killers[0] || move == ss->killers[1]) {
-                    lmr_reduction -= LMR_KILLER_REDUCTION;
-                }
-
-                if (gives_check) {
-                    lmr_reduction -= LMR_GIVES_CHECK_REDUCTION;
+                    reduction += LMR_NO_TT_PV;
                 }
 
                 if (is_pv) {
-                    lmr_reduction -= LMR_PV_NODE;
+                    reduction -= LMR_PV_NODE;
                 }
 
-                lmr_reduction = std::max(0, std::min(lmr_reduction, new_depth - 1));
+                if (improving) {
+                    reduction -= LMR_IMPROVING;
+                }
+
+                if (move == ss->killers[0] || move == ss->killers[1]) {
+                    reduction -= LMR_KILLER_REDUCTION;
+                }
+
+                if (gives_check) {
+                    reduction -= LMR_GIVES_CHECK_REDUCTION;
+                }
+
+                int lmr_reduction = std::max(0, std::min(reduction / LMR_GRAIN, new_depth - 1));
 
                 if (lmr_reduction > 0) {
                     score = -search<NON_ROOT_NODE>(

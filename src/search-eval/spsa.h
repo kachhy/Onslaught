@@ -8,8 +8,7 @@
     INT (RAZOR_MARGIN,             492,   150,   900,   37)                    \
     INT (PROB_BETA_OFFSET,         184,    50,   400,   17)                    \
     INT (ASPIRATION_MARGIN,         15,     5,    60,    3)                    \
-    INT (HIST_LMR_DIVISOR,        8192,  2048, 16384,  700)                    \
-    INT (LMR_CUTNODE,                2,     0,     4,    1)                    \
+    INT (HIST_LMR_DIVISOR,        1024,   256,  8192,  100)                    \
     /* Depth cutoffs */                                                        \
     INT (NMP_DEPTH_CUTOFF,           3,     1,     8,    1)                    \
     INT (RAZORING_DEPTH_MAX,         2,     1,     6,    1)                    \
@@ -17,7 +16,7 @@
     INT (FP_DEPTH_MAX,               4,     1,    10,    1)                    \
     INT (LMP_DEPTH_MAX,              8,     2,    16,    1)                    \
     INT (LMP_BASE,                   3,     1,     8,    1)                    \
-    INT (LMR_MOVES_CUTOFF,           2,     2,    5,    1)                    \
+    INT (LMR_MOVES_CUTOFF,           2,     1,     8,    1)                    \
     INT (LMR_DEPTH_CUTOFF,           1,     1,     6,    1)                    \
     INT (ASPIRATION_DEPTH_CUTOFF,    3,     1,     8,    1)                    \
     INT (SEE_DEPTH_MAX,              8,     3,    15,    1)                    \
@@ -31,14 +30,13 @@
     INT (PROBCUT_DEPTH_MIN,          6,     3,    12,    1)                    \
     INT (PROBCUT_TT_DEPTH_MARGIN,    4,     1,     6,    1)                    \
     INT (PROBCUT_REDUCTION,          4,     2,     8,    1)                    \
-    /* LMR reduction adjustments, in plies */                                  \
-    INT (LMR_DEPTH_CAP,              1,     1,     5,    1)                    \
-    INT (LMR_NON_IMPROVING,          1,     0,     3,    1)                    \
-    INT (LMR_NON_PV,                 1,     0,     3,    1)                    \
-    INT (LMR_GIVES_CHECK_REDUCTION,  1,     0,     3,    1)                    \
-    INT (LMR_PV_NODE,                1,     0,     3,    1)                    \
-    INT (LMR_NO_TT_PV,               1,     0,     3,    1)                    \
-    INT (LMR_KILLER_REDUCTION,       1,     0,     3,    1)                    \
+    /* LMR reduction adjustments, in 1/LMR_GRAIN (1024) ply */                 \
+    INT (LMR_CUTNODE,             2048,     0,  4096,  128)                    \
+    INT (LMR_NO_TT_PV,            1024,     0,  3072,  128)                    \
+    INT (LMR_PV_NODE,             2048,     0,  4096,  128)                    \
+    INT (LMR_IMPROVING,           1024,     0,  3072,  128)                    \
+    INT (LMR_KILLER_REDUCTION,    1024,     0,  3072,  128)                    \
+    INT (LMR_GIVES_CHECK_REDUCTION, 1024,   0,  3072,  128)                    \
     /* Floating point terms, stored scaled by 1e6. The scale has to hold the   \
        original six-decimal constants exactly */                               \
     REAL(LMR_VALUE,             890079,  200000, 1600000,  70000, 1000000.0)   \
