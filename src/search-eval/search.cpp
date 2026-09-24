@@ -590,24 +590,32 @@ int search(
                 lmr_reduction -= move_hist / HIST_LMR_DIVISOR;
                 lmr_reduction = std::max(0, lmr_reduction);
 
-                if (in_check) {
-                    lmr_reduction -= LMR_CHECK_REDUCTION;
+                if (!improving) {
+                    lmr_reduction += LMR_NON_IMPROVING;
                 }
 
                 if (cutnode) {
                     lmr_reduction += LMR_CUTNODE;
                 }
 
+                if (!is_pv) {
+                    lmr_reduction += LMR_NON_PV;
+                }
+                
                 if (!tt_hit && !is_pv) {
                     lmr_reduction += LMR_NO_TT_PV;
                 }
 
-                if (tt_hit && tt_entry.best_move != NO_MOVE && Capture(tt_entry.best_move)) {
-                    lmr_reduction += LMR_LMR_TT_CAPTURE;
-                }
-
                 if (move == ss->killers[0] || move == ss->killers[1]) {
                     lmr_reduction -= LMR_KILLER_REDUCTION;
+                }
+
+                if (gives_check) {
+                    lmr_reduction -= LMR_GIVES_CHECK_REDUCTION;
+                }
+
+                if (is_pv) {
+                    lmr_reduction -= LMR_PV_NODE;
                 }
 
                 lmr_reduction = std::max(0, std::min(lmr_reduction, new_depth - 1));
