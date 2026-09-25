@@ -8,7 +8,7 @@
     INT (RAZOR_MARGIN,             492,   150,   900,   37)                    \
     INT (PROB_BETA_OFFSET,         184,    50,   400,   17)                    \
     INT (ASPIRATION_MARGIN,         15,     5,    60,    3)                    \
-    INT (HIST_LMR_DIVISOR,        1024,   256,  8192,  100)                    \
+    INT (HIST_LMR_DIVISOR,        905,   256,  8192,  100)                    \
     /* Depth cutoffs */                                                        \
     INT (NMP_DEPTH_CUTOFF,           3,     1,     8,    1)                    \
     INT (RAZORING_DEPTH_MAX,         2,     1,     6,    1)                    \
@@ -31,16 +31,16 @@
     INT (PROBCUT_TT_DEPTH_MARGIN,    4,     1,     6,    1)                    \
     INT (PROBCUT_REDUCTION,          4,     2,     8,    1)                    \
     /* LMR reduction adjustments, in 1/LMR_GRAIN (1024) ply */                 \
-    INT (LMR_CUTNODE,             2048,     0,  4096,  128)                    \
-    INT (LMR_NO_TT_PV,            1024,     0,  3072,  128)                    \
-    INT (LMR_PV_NODE,             2048,     0,  4096,  128)                    \
-    INT (LMR_IMPROVING,           1024,     0,  3072,  128)                    \
-    INT (LMR_KILLER_REDUCTION,    1024,     0,  3072,  128)                    \
-    INT (LMR_GIVES_CHECK_REDUCTION, 1024,   0,  3072,  128)                    \
+    INT (LMR_CUTNODE,             1972,     0,  4096,  128)                    \
+    INT (LMR_NO_TT_PV,            855,     0,  3072,  128)                    \
+    INT (LMR_PV_NODE,             2023,     0,  4096,  128)                    \
+    INT (LMR_IMPROVING,           1013,     0,  3072,  128)                    \
+    INT (LMR_KILLER_REDUCTION,    1011,     0,  3072,  128)                    \
+    INT (LMR_GIVES_CHECK_REDUCTION, 803,   0,  3072,  128)                    \
     /* Floating point terms, stored scaled by 1e6. The scale has to hold the   \
        original six-decimal constants exactly */                               \
-    REAL(LMR_VALUE,             890079,  200000, 1600000,  70000, 1000000.0)   \
-    REAL(LMR_SCALAR,           2071703, 1000000, 4000000, 150000, 1000000.0)   \
+    REAL(LMR_VALUE,             987609,  200000, 1600000,  70000, 1000000.0)   \
+    REAL(LMR_SCALAR,           1519640, 1000000, 4000000, 150000, 1000000.0)   \
     REAL(ASPIRATION_SCALAR,    1214100,  500000, 3000000, 125000, 1000000.0)
 
 #ifdef SPSA_TUNE
