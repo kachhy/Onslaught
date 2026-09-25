@@ -825,6 +825,8 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
                     if (!params.silent) {
                         printInfo(board, depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table, pv_idx + 1);
                     }
+
+                    beta = alpha;
                     alpha = std::max(-SCORE_MAX, iter_score - delta);
                     delta *= (1 + ASPIRATION_SCALAR);
                 } else if (iter_score >= beta) {
@@ -832,6 +834,8 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
                     if (!params.silent) {
                         printInfo(board, depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table, pv_idx + 1);
                     }
+                    
+                    alpha = std::max(beta - delta, alpha);
                     beta = std::min(SCORE_MAX, iter_score + delta);
                     delta *= (1 + ASPIRATION_SCALAR);
                 } else {
