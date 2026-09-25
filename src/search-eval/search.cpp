@@ -217,7 +217,7 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
             && !Prom(noisy_move)
             && static_eval != SCORE_NONE
             && alpha > -SCORE_MAX + MAX_PLY
-            && static_eval + 600 + captured_value < alpha
+            && static_eval + 1200 + captured_value < alpha
             && !givesCheck(board, noisy_move)) {
             continue;
         }
