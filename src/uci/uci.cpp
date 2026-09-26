@@ -177,6 +177,36 @@ static inline void position(Board& board) {
         }
 
         board.loadFEN(fen);
+
+        // Register starting files for chess 960
+        if (c960) {
+
+            // Find king
+            char file = 'a';
+            while (file != 'i') {
+                if (board.pieceAt(/* a0, b0, etc */) == WHITE_KING) {
+                    c960_info.files[0] = /* a, b, etc */;
+                    break;
+                } else file++;
+            }
+
+            // Find rooks
+            file = 'a';
+            while (file != 'i') {
+                if (board.pieceAt(/* a0, b0, etc */) == WHITE_ROOK) {
+                    c960_info.files[1] = /* a, b, etc */;
+                    file++;
+                    break;
+                }
+                file++;
+            }
+            while (file != 'i') {
+                if (board.pieceAt(/* a0, b0, etc */) == WHITE_ROOK) {
+                    c960_info.files[2] = /* a, b, etc */;
+                    break;
+                }
+            }
+        }
     }
 
     if (token == "moves") {
