@@ -3,6 +3,7 @@
 #include "core/bitboard.h"
 #include "core/types.h"
 #include "movegen/attacks.h"
+#include "uci/uci.h"
 #include <cmath>
 
 std::string moveToStr(Move move) {
@@ -78,7 +79,13 @@ Move strToMove(const std::string& str, const Board& board) {
             }
         }
     } else if (dp == KING) {
-        if (std::abs(from_file - to_file) == 2) {
+        if (c960) { // in chess960 king capture own rook indicates castle
+            const Side side = getPieceSide(piece);
+            const Piece same_side_rook = side == WHITE ? WHITE_ROOK : BLACK_ROOK;
+            if (target == same_side_rook) {
+                flags = CASTLE_FLAG;
+            }
+        } else if (std::abs(from_file - to_file) == 2) {
             flags = CASTLE_FLAG;
         }
     }
