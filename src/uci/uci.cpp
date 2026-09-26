@@ -13,6 +13,9 @@
 #include <unistd.h>
 #endif
 
+bool c960 = false;
+c960info c960_info;
+
 Board board;
 thread_local bool searching = false;
 thread_local bool stdin_enabled = true;
@@ -109,6 +112,8 @@ static inline void newGame(Board& board) {
     // reset the board to the starting position
     board.clear();
     board.loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
+    c960_info.reset();
 }
 
 static inline void initOptions() {
@@ -144,6 +149,8 @@ static inline void initOptions() {
             };
         }
     } });
+
+    setOption("UCI_Chess960", CheckOption{ false, [&c960](bool b) { c960 = b; } });
 }
 
 static inline void position(Board& board) {

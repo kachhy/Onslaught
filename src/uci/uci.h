@@ -72,4 +72,12 @@ extern thread_local bool stdin_enabled;
 extern bool debug_mode;
 extern std::unordered_map<std::string, UCIOption> options_map;
 
+struct c960info {
+    char files[3] = { '0', '0', '0' }; // [0] king, [1] queenside rook, [2] kingside rook
+    void reset() { files = { '0', '0', '0' }; }
+};
+
+extern bool c960;
+extern c960info c960_info;
+
 #endif // UCI_H
