@@ -1,5 +1,5 @@
 CXX ?= g++
-CXXFLAGS=-Wall -MMD -MP -Wno-switch -Isrc -std=c++17
+CXXFLAGS=-Wall -MMD -MP -Wno-switch -Isrc -std=c++17 -DSPSA_TUNE
 LDFLAGS=
 EVALFILE=nn-0d2fd98ff872a9a1-v2.nnue
 
