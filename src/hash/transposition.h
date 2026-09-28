@@ -18,7 +18,6 @@ struct alignas(64) EntryTriple {
 
 constexpr size_t ENTRY_TRIPLE_SIZE = sizeof(EntryTriple);
 constexpr size_t DEFAULT_TABLE_MB = 256;
-constexpr int TT_EXACT_REPLACE_MARGIN = 4; // max depth gap an EXACT entry may overwrite
 
 class TTable {
 private:

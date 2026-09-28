@@ -171,7 +171,6 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
     int static_eval; // TODO: add some SCORE_NONE to prevent fragile usage
     int best_value;
     MoveList moves;
-    int alpha_orig = alpha;
 
     if (in_check) {
         best_value = -SCORE_MAX + std::min(ply, (int)MAX_PLY - 1);
@@ -184,7 +183,6 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
 
         best_value = static_eval;
         if (best_value >= beta) {
-            tt.insert(board, NO_MOVE, scoreToTT(best_value, ply), LOWERBOUND, 0);
             return best_value;
         }
 
@@ -208,8 +206,6 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         }
     }
 
-    Move best_move = NO_MOVE;
-
     for (uint8_t i = 0; i < moves.size(); i++) {
         uint8_t best_move_index = i;
         for (uint8_t j = i + 1; j < moves.size(); j++) {
@@ -232,22 +228,17 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         board.undoMove(noisy_move);
 
         if (score >= beta) {
-            tt.insert(board, noisy_move, scoreToTT(score, ply), LOWERBOUND, 0);
             return score;
         }
 
         if (score > best_value) {
             best_value = score;
-            best_move = noisy_move;
         }
 
         if (score > alpha) {
             alpha = score;
         }
     }
-
-    TTBound bound = best_value > alpha_orig ? EXACTBOUND : UPPERBOUND;
-    tt.insert(board, best_move, scoreToTT(best_value, ply), bound, 0);
 
     return best_value;
 }
