@@ -17,14 +17,6 @@ static size_t computeCapacity(size_t megabytes) {
     return entries; // Note that lemire doesn't require power of 2 rounding.
 }
 
-static inline Move keepMove(const Entry& old, Move best_move) {
-    return best_move == NO_MOVE ? old.best_move : best_move;
-}
-
-static inline bool shouldReplace(const Entry& old, uint8_t bound, uint8_t depth) {
-    return depth >= old.depth || (bound == EXACTBOUND && depth + TT_EXACT_REPLACE_MARGIN >= old.depth);
-}
-
 TTable::TTable(size_t megabytes) : table_age(0), table_size(0) {
     table_capacity = computeCapacity(megabytes);
     table.reset(new EntryTriple[table_capacity]()); // value-init -> zeroed
@@ -48,8 +40,8 @@ void TTable::insert(const Board& board, Move best_move, int16_t score, uint8_t b
     if (bucket.count < 3) {
         for (uint8_t i = 0; i < bucket.count; i++) {
             if (bucket.entries[i].hash == key) {
-                if (shouldReplace(bucket.entries[i], bound, depth)) {
-                    bucket.entries[i] = { key, keepMove(bucket.entries[i], best_move), score, bound, depth, table_age };
+                if (depth >= bucket.entries[i].depth || bound == EXACTBOUND) {
+                    bucket.entries[i] = { key, best_move, score, bound, depth, table_age };
                 }
                 return;
             }
@@ -62,8 +54,8 @@ void TTable::insert(const Board& board, Move best_move, int16_t score, uint8_t b
     }
 
     if (bucket.entries[0].hash == key) {
-        if (shouldReplace(bucket.entries[0], bound, depth)) {
-            bucket.entries[0] = { key, keepMove(bucket.entries[0], best_move), score, bound, depth, table_age };
+        if (depth >= bucket.entries[0].depth || bound == EXACTBOUND) {
+            bucket.entries[0] = { key, best_move, score, bound, depth, table_age };
         }
         return;
     }
@@ -72,8 +64,8 @@ void TTable::insert(const Board& board, Move best_move, int16_t score, uint8_t b
     int64_t best_kickout_score = bucket.entries[0].depth - (table_age - bucket.entries[0].last_seen);
     for (uint8_t i = 1; i < bucket.count; i++) {
         if (bucket.entries[i].hash == key) {
-            if (shouldReplace(bucket.entries[i], bound, depth)) {
-                bucket.entries[i] = { key, keepMove(bucket.entries[i], best_move), score, bound, depth, table_age };
+            if (depth >= bucket.entries[i].depth || bound == EXACTBOUND) {
+                bucket.entries[i] = { key, best_move, score, bound, depth, table_age };
             }
             return;
         }
