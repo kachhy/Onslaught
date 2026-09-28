@@ -178,20 +178,13 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         getLegalMoves(board, moves);
     } else {
         static_eval = eval(board);
-        if (tt_hit && tt_entry.bound == (tt_entry.score > static_eval ? LOWERBOUND : UPPERBOUND)) {
-            static_eval = tt_entry.score;
-        }
-
         best_value = static_eval;
         if (best_value >= beta) {
-            tt.insert(board, NO_MOVE, scoreToTT(best_value, ply), LOWERBOUND, 0);
             return best_value;
         }
-
         if (best_value > alpha) {
             alpha = best_value;
         }
-
         getNoisyMoves(board, moves);
     }
 
