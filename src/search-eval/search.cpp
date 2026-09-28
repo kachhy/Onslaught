@@ -157,28 +157,49 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         return eval(board);
     }
 
+    Entry tt_entry;
+    bool tt_hit = tt.fetch(board, tt_entry);
+    if (tt_hit) {
+        tt_entry.score = scoreFromTT(tt_entry.score, ply);
+
+        if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) ||
+            (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
+            return tt_entry.score;
+        }
+    }
+
     int static_eval; // TODO: add some SCORE_NONE to prevent fragile usage
     int best_value;
     MoveList moves;
+    int alpha_orig = alpha;
 
     if (in_check) {
         best_value = -SCORE_MAX + std::min(ply, (int)MAX_PLY - 1);
         getLegalMoves(board, moves);
     } else {
         static_eval = eval(board);
+        if (tt_hit && tt_entry.bound == (tt_entry.score > static_eval ? LOWERBOUND : UPPERBOUND)) {
+            static_eval = tt_entry.score;
+        }
+
         best_value = static_eval;
         if (best_value >= beta) {
+            tt.insert(board, NO_MOVE, scoreToTT(best_value, ply), LOWERBOUND, 0);
             return best_value;
         }
+
         if (best_value > alpha) {
             alpha = best_value;
         }
+
         getNoisyMoves(board, moves);
     }
 
     std::array<int, MAX_MOVES> scores;
     for (uint8_t i = 0; i < moves.size(); i++) {
-        if (Capture(moves[i]) || IsEP(moves[i])) {
+        if (tt_hit && moves[i] == tt_entry.best_move) {
+            scores[i] = 170000;
+        } else if (Capture(moves[i]) || IsEP(moves[i])) {
             DefaultPiece attacker = makeDefaultPiece(MovePiece(moves[i]));
             Piece victim_piece = IsEP(moves[i]) ? makePiece(PAWN, board.getXSTM()) : board.pieceAt(To(moves[i]));
             scores[i] = MVV_LVA[makeDefaultPiece(victim_piece)][attacker];
@@ -186,6 +207,8 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
             scores[i] = 0; // only here if in check
         }
     }
+
+    Move best_move = NO_MOVE;
 
     for (uint8_t i = 0; i < moves.size(); i++) {
         uint8_t best_move_index = i;
@@ -209,17 +232,22 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         board.undoMove(noisy_move);
 
         if (score >= beta) {
+            tt.insert(board, noisy_move, scoreToTT(score, ply), LOWERBOUND, 0);
             return score;
         }
 
         if (score > best_value) {
             best_value = score;
+            best_move = noisy_move;
         }
 
         if (score > alpha) {
             alpha = score;
         }
     }
+
+    TTBound bound = best_value > alpha_orig ? EXACTBOUND : UPPERBOUND;
+    tt.insert(board, best_move, scoreToTT(best_value, ply), bound, 0);
 
     return best_value;
 }
