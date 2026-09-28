@@ -57,5 +57,7 @@ void updateContHistory(int depth, Side stm, Move move, SearchStack* ss, const Mo
 int getContHist(SearchStack* ss, Side stm, Move move) {
     const DefaultPiece pc = makeDefaultPiece(MovePiece(move));
     const Square to = To(move);
-    return cont_hist[stm][makeDefaultPiece(MovePiece((ss - 1)->move))][To((ss - 1)->move)][pc][to];
+    return cont_hist[stm][makeDefaultPiece(MovePiece((ss - 1)->move))][To((ss - 1)->move)][pc][to]
+            + cont_hist[stm][makeDefaultPiece(MovePiece((ss - 2)->move))][To((ss - 2)->move)][pc][to]
+            + cont_hist[stm][makeDefaultPiece(MovePiece((ss - 4)->move))][To((ss - 4)->move)][pc][to];
 }
