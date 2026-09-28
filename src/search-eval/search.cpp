@@ -334,6 +334,8 @@ int search(
     // find if this position has already been searched at a good depth and returns its score
     Entry tt_entry;
     bool tt_hit = tt.fetch(board, tt_entry);
+    // Entry from a real search, not qsearch (depth 0); only these should drive search heuristics
+    const bool tt_searched = tt_hit && tt_entry.depth > 0;
     if (tt_hit) {
         tt_entry.score = scoreFromTT(tt_entry.score, ply);
 
@@ -401,7 +403,7 @@ int search(
     if (in_check) { // important; this prevents the improving flag from being false after check sequence finsishes
         ss->static_eval = (ply >= 2 ? (ss - 2)->static_eval : 0);
     } else {
-        if (tt_hit && tt_entry.depth > 0) { // qsearch (depth 0) scores would skew pruning margins
+        if (tt_searched) {
             if (tt_entry.bound == EXACTBOUND) {
                 ss->static_eval = tt_entry.score;
             } else {
@@ -504,7 +506,7 @@ int search(
     }
 
     // iir (no tt move)
-    if (depth >= IIR_DEPTH_CUTOFF && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
+    if (depth >= IIR_DEPTH_CUTOFF && (!tt_searched || tt_entry.best_move == NO_MOVE)) {
         depth--;
     }
 
@@ -620,7 +622,7 @@ int search(
                     reduction += LMR_CUTNODE;
                 }
 
-                if (!tt_hit && !is_pv) {
+                if (!tt_searched && !is_pv) {
                     reduction += LMR_NO_TT_PV;
                 }
 
