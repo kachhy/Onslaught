@@ -401,7 +401,7 @@ int search(
     if (in_check) { // important; this prevents the improving flag from being false after check sequence finsishes
         ss->static_eval = (ply >= 2 ? (ss - 2)->static_eval : 0);
     } else {
-        if (tt_hit) {
+        if (tt_hit && tt_entry.depth > 0) { // qsearch (depth 0) scores would skew pruning margins
             if (tt_entry.bound == EXACTBOUND) {
                 ss->static_eval = tt_entry.score;
             } else {
