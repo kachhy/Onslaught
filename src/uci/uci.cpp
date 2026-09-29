@@ -150,7 +150,7 @@ static inline void initOptions() {
         }
     } });
 
-    setOption("UCI_Chess960", CheckOption{ false, [c = &c960](bool b) { *c = b; } });
+    setOption("UCI_Chess960", CheckOption{ false, [](bool b) { c960 = b; } });
 }
 
 static inline void position(Board& board) {
@@ -187,8 +187,6 @@ static inline void position(Board& board) {
             bb = board.getPieceBB(Piece::BLACK_ROOK);
             c960_info.bkr = (Square)popLSB(bb);
             c960_info.bqr = (Square)popLSB(bb);
-
-            std::cout << c960_info.wkr << " " << c960_info.wqr << " " << c960_info.bkr << " " << c960_info.bqr << "\n";
         }
     }
 
