@@ -636,6 +636,12 @@ int search(
         }
 
         board.undoMove(move);
+
+        // Search was stopped
+        if (!searching) {
+            return 0;
+        }
+
         moves_searched++;
 
         if (score > best_score) {
