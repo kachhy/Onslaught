@@ -150,7 +150,7 @@ static inline void initOptions() {
         }
     } });
 
-    setOption("UCI_Chess960", CheckOption{ false, [&c960](bool b) { c960 = b; } });
+    setOption("UCI_Chess960", CheckOption{ false, [c = &c960](bool b) { *c = b; } });
 }
 
 static inline void position(Board& board) {
@@ -178,34 +178,17 @@ static inline void position(Board& board) {
 
         board.loadFEN(fen);
 
-        // Register starting files for chess 960
+        // Find rook starting squares for chess 960
         if (c960) {
+            BitBoard bb = board.getPieceBB(Piece::WHITE_ROOK);
+            c960_info.wkr = (Square)popLSB(bb);
+            c960_info.wqr = (Square)popLSB(bb);
 
-            // Find king
-            char file = 'a';
-            while (file != 'i') {
-                if (board.pieceAt(/* a0, b0, etc */) == WHITE_KING) {
-                    c960_info.files[0] = /* a, b, etc */;
-                    break;
-                } else file++;
-            }
+            bb = board.getPieceBB(Piece::BLACK_ROOK);
+            c960_info.bkr = (Square)popLSB(bb);
+            c960_info.bqr = (Square)popLSB(bb);
 
-            // Find rooks
-            file = 'a';
-            while (file != 'i') {
-                if (board.pieceAt(/* a0, b0, etc */) == WHITE_ROOK) {
-                    c960_info.files[1] = /* a, b, etc */;
-                    file++;
-                    break;
-                }
-                file++;
-            }
-            while (file != 'i') {
-                if (board.pieceAt(/* a0, b0, etc */) == WHITE_ROOK) {
-                    c960_info.files[2] = /* a, b, etc */;
-                    break;
-                }
-            }
+            std::cout << c960_info.wkr << " " << c960_info.wqr << " " << c960_info.bkr << " " << c960_info.bqr << "\n";
         }
     }
 

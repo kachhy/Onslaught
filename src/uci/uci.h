@@ -73,8 +73,12 @@ extern bool debug_mode;
 extern std::unordered_map<std::string, UCIOption> options_map;
 
 struct c960info {
-    char files[3] = { '0', '0', '0' }; // [0] king, [1] queenside rook, [2] kingside rook
-    void reset() { files = { '0', '0', '0' }; }
+    Square wkr = NO_SQUARE; // white kingside rook
+    Square wqr = NO_SQUARE; // white queenside rook
+    Square bkr = NO_SQUARE; // black kingside rook
+    Square bqr = NO_SQUARE; // black queenside rook
+
+    void reset() { wkr = wqr = bkr = bqr = NO_SQUARE; }
 };
 
 extern bool c960;
