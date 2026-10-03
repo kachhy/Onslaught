@@ -6,6 +6,8 @@
 #include <iostream>
 #include <sstream>
 
+castling_masks castle_masks;
+
 Board::Board() { loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); }
 
 Board::Board(const std::string& fen) { loadFEN(fen); }
@@ -865,4 +867,8 @@ void Board::setThreatened() {
             threatened_by[BLACK] |= getPieceAttacks(static_cast<Piece>(black_index), cur_square, occ[BOTH]);
         }
     }
+}
+
+void castling_masks::set(const std::vector<Square>& kside, const std::vector<Square>& qside) {
+    // TODO!
 }

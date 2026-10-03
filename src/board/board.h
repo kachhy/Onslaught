@@ -19,12 +19,23 @@ constexpr uint8_t WHITE_QS = 0x4;
 constexpr uint8_t BLACK_KS = 0x2;
 constexpr uint8_t BLACK_QS = 0x1;
 
-constexpr BitBoard WHITE_KINGSIDE_CASTLE_MASK = 0x6000000000000000;
-constexpr BitBoard WHITE_QUEENSIDE_CASTLE_OCC_MASK = 0x0E00000000000000;
-constexpr BitBoard WHITE_QUEENSIDE_CASTLE_THREAT_MASK = 0x0C00000000000000;
-constexpr BitBoard BLACK_KINGSIDE_CASTLE_MASK = 0x0000000000000060;
-constexpr BitBoard BLACK_QUEENSIDE_CASTLE_OCC_MASK = 0x000000000000000E;
-constexpr BitBoard BLACK_QUEENSIDE_CASTLE_THREAT_MASK = 0x000000000000000C;
+struct castling_masks {
+    // BitBoard WHITE_KINGSIDE_CASTLE_MASK = 0x6000000000000000;
+    BitBoard white_kingside_occ = 0x6000000000000000;
+    BitBoard white_kingside_threat = 0x6000000000000000;
+    BitBoard white_queenside_occ = 0x0E00000000000000;
+    BitBoard white_queenside_threat = 0x0C00000000000000;
+
+    // BitBoard BLACK_KINGSIDE_CASTLE_MASK = 0x0000000000000060;
+    BitBoard black_kingside_occ = 0x0000000000000060;
+    BitBoard black_kingside_threat = 0x0000000000000060;
+    BitBoard black_queenside_occ = 0x000000000000000E;
+    BitBoard black_queenside_threat = 0x000000000000000C;
+
+    void reset() { *this = castling_masks(); };
+    void set(const std::vector<Square>& kside, const std::vector<Square>& qside);
+};
+extern castling_masks castle_masks;
 
 // Engine constants
 constexpr uint16_t MAX_PLY = 256;

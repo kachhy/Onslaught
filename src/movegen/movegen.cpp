@@ -323,23 +323,23 @@ void addLegalKingMoves(MoveList& moves, const Board& board, MoveFlag move_flag) 
     BitBoard xstm_threats = board.getThreatenedByXSTM();
 
     if (stm == WHITE) {
-        if (castling_rights & WHITE_KS && !((xstm_threats | occ) & WHITE_KINGSIDE_CASTLE_MASK)) {
+        if (castling_rights & WHITE_KS && !((xstm_threats & castle_masks.white_kingside_threat | (occ & castle_masks.white_kingside_occ))) {
             if (c960) {
                 moves.emplace_back(GenerateMove(board.getKingSquare(), c960_info.wkr, WHITE_KING, CASTLE_FLAG));
             } else moves.emplace_back(GenerateMove(E1, G1, WHITE_KING, CASTLE_FLAG));
         }
-        if (castling_rights & WHITE_QS && !((xstm_threats & WHITE_QUEENSIDE_CASTLE_THREAT_MASK) | (occ & WHITE_QUEENSIDE_CASTLE_OCC_MASK))) {
+        if (castling_rights & WHITE_QS && !((xstm_threats & castle_masks.white_queenside_threat) | (occ & castle_masks.white_queenside_occ))) {
             if (c960) {
                 moves.emplace_back(GenerateMove(board.getKingSquare(), c960_info.wqr, WHITE_KING, CASTLE_FLAG));
             } else moves.emplace_back(GenerateMove(E1, C1, WHITE_KING, CASTLE_FLAG));
         }
     } else {
-        if (castling_rights & BLACK_KS && !((xstm_threats | occ) & BLACK_KINGSIDE_CASTLE_MASK)) {
+        if (castling_rights & BLACK_KS && !((xstm_threats & castle_masks.black_kingside_threat | (occ & castle_masks.black_kingside_occ))) {
             if (c960) {
                 moves.emplace_back(GenerateMove(board.getKingSquare(), c960_info.bkr, BLACK_KING, CASTLE_FLAG));
             } else moves.emplace_back(GenerateMove(E8, G8, BLACK_KING, CASTLE_FLAG));
         }
-        if (castling_rights & BLACK_QS && !((xstm_threats & BLACK_QUEENSIDE_CASTLE_THREAT_MASK) | (occ & BLACK_QUEENSIDE_CASTLE_OCC_MASK))) {
+        if (castling_rights & BLACK_QS && !((xstm_threats & castle_masks.black_queenside_threat | (occ & castle_masks.black_queenside_occ))) {
             if (c960) {
                 moves.emplace_back(GenerateMove(board.getKingSquare(), c960_info.bqr, BLACK_KING, CASTLE_FLAG));
             } else moves.emplace_back(GenerateMove(E8, C8, BLACK_KING, CASTLE_FLAG));

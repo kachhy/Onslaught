@@ -114,6 +114,7 @@ static inline void newGame(Board& board) {
     board.loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
     c960_info.reset();
+    castle_masks.reset();
 }
 
 static inline void initOptions() {
@@ -187,6 +188,9 @@ static inline void position(Board& board) {
             bb = board.getPieceBB(Piece::BLACK_ROOK);
             c960_info.bkr = (Square)popLSB(bb);
             c960_info.bqr = (Square)popLSB(bb);
+
+            // TODO: set castling masks
+            
         }
     }
 
