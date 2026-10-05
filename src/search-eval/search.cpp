@@ -158,6 +158,17 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         return eval(board);
     }
 
+    Entry tt_entry;
+    bool tt_hit = tt.fetch(board, tt_entry);
+    if (tt_hit) {
+        tt_entry.score = scoreFromTT(tt_entry.score, ply);
+
+        if (tt_entry.bound == EXACTBOUND || (tt_entry.bound == LOWERBOUND && tt_entry.score >= beta) ||
+            (tt_entry.bound == UPPERBOUND && tt_entry.score <= alpha)) {
+            return tt_entry.score;
+        }
+    }
+
     constexpr int SCORE_NONE = SCORE_MAX + 1;
     int static_eval = SCORE_NONE; // TODO: add some SCORE_NONE to prevent fragile usage
     int best_value;
@@ -168,19 +179,27 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         getLegalMoves(board, moves);
     } else {
         static_eval = eval(board);
+        if (tt_hit && tt_entry.bound == (tt_entry.score > static_eval ? LOWERBOUND : UPPERBOUND)) {
+            static_eval = tt_entry.score;
+        }
+
         best_value = static_eval;
         if (best_value >= beta) {
             return best_value;
         }
+
         if (best_value > alpha) {
             alpha = best_value;
         }
+
         getNoisyMoves(board, moves);
     }
 
     std::array<int, MAX_MOVES> scores;
     for (uint8_t i = 0; i < moves.size(); i++) {
-        if (Capture(moves[i]) || IsEP(moves[i])) {
+        if (tt_hit && moves[i] == tt_entry.best_move) {
+            scores[i] = 170000;
+        } else if (Capture(moves[i]) || IsEP(moves[i])) {
             DefaultPiece attacker = makeDefaultPiece(MovePiece(moves[i]));
             Piece victim_piece = IsEP(moves[i]) ? makePiece(PAWN, board.getXSTM()) : board.pieceAt(To(moves[i]));
             scores[i] = MVV_LVA[makeDefaultPiece(victim_piece)][attacker];
@@ -329,6 +348,8 @@ int search(
     // find if this position has already been searched at a good depth and returns its score
     Entry tt_entry;
     bool tt_hit = tt.fetch(board, tt_entry);
+    // Entry from a real search, not qsearch (depth 0); only these should drive search heuristics
+    const bool tt_searched = tt_hit && tt_entry.depth > 0;
     if (tt_hit) {
         tt_entry.score = scoreFromTT(tt_entry.score, ply);
 
@@ -396,7 +417,7 @@ int search(
     if (in_check) { // important; this prevents the improving flag from being false after check sequence finsishes
         ss->static_eval = (ply >= 2 ? (ss - 2)->static_eval : 0);
     } else {
-        if (tt_hit) {
+        if (tt_searched) {
             if (tt_entry.bound == EXACTBOUND) {
                 ss->static_eval = tt_entry.score;
             } else {
@@ -499,7 +520,7 @@ int search(
     }
 
     // iir (no tt move)
-    if (depth >= IIR_DEPTH_CUTOFF && (!tt_hit || tt_entry.best_move == NO_MOVE)) {
+    if (depth >= IIR_DEPTH_CUTOFF && (!tt_searched || tt_entry.best_move == NO_MOVE)) {
         depth--;
     }
 
@@ -615,7 +636,7 @@ int search(
                     reduction += LMR_CUTNODE;
                 }
 
-                if (!tt_hit && !is_pv) {
+                if (!tt_searched && !is_pv) {
                     reduction += LMR_NO_TT_PV;
                 }
 
