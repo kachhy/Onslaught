@@ -31,6 +31,7 @@ bool syz_fmr = true;
 bool syz_dtz = true;
 
 int LMR_TABLE[LMR_TABLE_SIZE][LMR_TABLE_SIZE];
+constexpr int CAPTURE_VALUES[6] = { 300, 900, 800, 2000, 2400, 20000 }; // PBNRQK
 
 void initLMR() {
     for (int depth = 1; depth < LMR_TABLE_SIZE; depth++) {
@@ -168,7 +169,8 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         }
     }
 
-    int static_eval; // TODO: add some SCORE_NONE to prevent fragile usage
+    constexpr int SCORE_NONE = SCORE_MAX + 1;
+    int static_eval = SCORE_NONE; // TODO: add some SCORE_NONE to prevent fragile usage
     int best_value;
     MoveList moves;
 
@@ -217,6 +219,27 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         moves.sort_item(best_move_index);
         std::swap(scores[i], scores[best_move_index]);
         Move noisy_move = moves[i];
+
+        // Getting the piece that gets captured
+        int captured_value = 6; //default for non-captures, which will never trigger delta pruning
+        if(Capture(noisy_move)){
+            Piece captured_piece = IsEP(noisy_move)
+                ? makePiece(PAWN, board.getXSTM())
+                : board.pieceAt(To(noisy_move));
+            DefaultPiece captured_type = makeDefaultPiece(captured_piece);
+            captured_value = CAPTURE_VALUES[captured_type];
+        }
+
+        // Delta Pruning
+        if(!in_check
+            && Capture(noisy_move)
+            && !Prom(noisy_move)
+            && static_eval != SCORE_NONE
+            && alpha > -SCORE_MAX + MAX_PLY
+            && static_eval + 1200 + captured_value < alpha
+            && !givesCheck(board, noisy_move)) {
+            continue;
+        }
 
         // SEE
         if (!in_check && !staticExchangeEval(board, noisy_move, 0)) {
