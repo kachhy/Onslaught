@@ -600,6 +600,9 @@ int search(
                     extension = 1; // singular
                     if (!is_pv && s_score < s_beta - 20) {
                         extension = 2; // Double extension
+                        if(s_score < s_beta - 40) {
+                            extension = 3; // Triple extension
+                        }
                     }
                 } else if (s_beta >= beta) { // Multi-cut pruning
                     return s_beta;
