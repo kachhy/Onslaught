@@ -33,7 +33,6 @@ struct castling_masks {
     BitBoard black_queenside_threat = 0x000000000000000C;
 
     void reset() { *this = castling_masks(); };
-    void set(const std::vector<Square>& kside, const std::vector<Square>& qside);
 };
 extern castling_masks castle_masks;
 

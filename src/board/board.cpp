@@ -868,7 +868,3 @@ void Board::setThreatened() {
         }
     }
 }
-
-void castling_masks::set(const std::vector<Square>& kside, const std::vector<Square>& qside) {
-    // TODO!
-}
