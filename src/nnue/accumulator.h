@@ -283,6 +283,6 @@ struct AccumulatorCacheEntry {
     bool initialized = false;
 };
 
-extern std::array<std::array<AccumulatorCacheEntry, 2>, 64> accumulator_cache;
+extern thread_local std::array<std::array<AccumulatorCacheEntry, 2>, 64> accumulator_cache;
 
 #endif // ACCUMULATOR_H

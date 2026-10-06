@@ -34,7 +34,7 @@ alignas(64) int16_t output_weights[NUM_OUTPUT_BUCKETS][2 * HIDDEN_SIZE] = {};
 int16_t output_bias[NUM_OUTPUT_BUCKETS] = {};
 
 // Finny tables
-std::array<std::array<AccumulatorCacheEntry, 2>, 64> accumulator_cache;
+thread_local std::array<std::array<AccumulatorCacheEntry, 2>, 64> accumulator_cache;
 
 template <Side Persp>
 void Accumulator::refreshPerspective(const Board& board) {
