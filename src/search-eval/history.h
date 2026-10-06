@@ -15,6 +15,7 @@ struct SearchStack {
     Move killers[2];
     Move move; // For continuation history - the current move
     Move excluded; // Singular-extension excluded move or NO_MOVE
+    int double_ext_count; // Number of double extensions applied in this search
 };
 
 void resetHistory();
