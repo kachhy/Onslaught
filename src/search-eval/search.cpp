@@ -601,6 +601,9 @@ int search(
                     if (!is_pv && s_score < s_beta - DOUBLE_EXTENSION_BETA && ss->double_ext_count < MAX_DOUBLE_EXTENSIONS) {
                         extension = 2; // Double extension
                         ss->double_ext_count++;
+                        if(s_score < s_beta - 40) {
+                            extension = 3; // Triple extension
+                        }
                     }
                 } else if (s_beta >= beta) { // Multi-cut pruning
                     return s_beta;
