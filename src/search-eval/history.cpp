@@ -4,6 +4,18 @@
 int score_history[2][64][64]; // [stm][from][to] (butterfly history)
 int cont_hist[2][6][64][6][64]; // [stm][prevPiece][prevTo][piece][to] (continuation history)
 
+int kp_corrhist[16384][2]; // pawn hash * 2, side
+
+void updateCorrHist(Board& board, int static_eval, int best_score, int depth, Side side) {
+    const int prev_val = kp_corrhist[board.pawnHash() & 0x1ff][side];
+    const int eval_delta = best_score - static_eval;
+    const int weight = 2 * std::min(depth + 1, 16);
+    const int bonus = eval_delta * CORR_HIST_SCALE;
+    const int weighted_eval = (prev_val * (CORR_HIST_SCALE - weight) + bonus * weight) / CORR_HIST_SCALE;
+    const int clamp_extrema = std::min(std::abs(prev_val + max_increment), CORR_HIST_MAX);
+    kp_corrhist[board.pawnHash() & 0x1ff][side] = std::clamp(weighted_eval, -clamp_extrema, clamp_extrema);
+}
+
 void resetHistory() {
     memset(score_history, 0, sizeof(score_history));
     memset(cont_hist, 0, sizeof(cont_hist));
