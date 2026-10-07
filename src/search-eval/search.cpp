@@ -598,7 +598,7 @@ int search(
 
                 if (s_score < s_beta) {
                     extension = 1; // singular
-                    if (!is_pv && s_score < s_beta - 20 && ss->double_ext_count < 1) {
+                    if (!is_pv && s_score < s_beta - 20 && ss->double_ext_count < 7) {
                         extension = 2; // Double extension
                         ss->double_ext_count++;
                     }
