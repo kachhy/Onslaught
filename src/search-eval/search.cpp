@@ -32,6 +32,16 @@ bool syz_dtz = true;
 
 int LMR_TABLE[LMR_TABLE_SIZE][LMR_TABLE_SIZE];
 constexpr int CAPTURE_VALUES[6] = { 300, 900, 800, 2000, 2400, 20000 }; // PBNRQK
+constexpr int SCORE_NONE = SCORE_MAX + 1;
+
+// Correction history only learns from quiet best moves with non-mate scores
+static inline bool corrHistUsable(Move best_move, int best_score, TTBound bound, int corr_eval) {
+    if (corr_eval == SCORE_NONE || Capture(best_move) || Prom(best_move) || std::abs(best_score) >= TB_WIN_SCORE - MAX_PLY) {
+        return false;
+    }
+
+    return !(bound == LOWERBOUND && best_score <= corr_eval) && !(bound == UPPERBOUND && best_score >= corr_eval);
+}
 
 void initLMR() {
     for (int depth = 1; depth < LMR_TABLE_SIZE; depth++) {
@@ -151,11 +161,11 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
     }
 
     if (ply >= MAX_PLY) {
-        return eval(board);
+        return correctEval(board, eval(board));
     }
 
     if (in_check && qply >= 2) {
-        return eval(board);
+        return correctEval(board, eval(board));
     }
 
     Entry tt_entry;
@@ -169,7 +179,6 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         }
     }
 
-    constexpr int SCORE_NONE = SCORE_MAX + 1;
     int static_eval = SCORE_NONE; // TODO: add some SCORE_NONE to prevent fragile usage
     int best_value;
     MoveList moves;
@@ -178,7 +187,7 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         best_value = -SCORE_MAX + std::min(ply, (int)MAX_PLY - 1);
         getLegalMoves(board, moves);
     } else {
-        static_eval = eval(board);
+        static_eval = correctEval(board, eval(board));
         if (tt_hit && tt_entry.bound == (tt_entry.score > static_eval ? LOWERBOUND : UPPERBOUND)) {
             static_eval = tt_entry.score;
         }
@@ -311,7 +320,7 @@ int search(
     }
 
     if (ply >= MAX_PLY) {
-        return eval(board);
+        return correctEval(board, eval(board));
     }
 
     pv_table[ply].cur_move = 0;
@@ -414,20 +423,17 @@ int search(
         depth++; // check extension
     }
 
-    if (in_check) { // important; this prevents the improving flag from being false after check sequence finsishes
+    // raw_eval/corr_eval are the actual evals
+    int raw_eval = SCORE_NONE;
+    int corr_eval = SCORE_NONE;
+    if (in_check) { // important: this prevents the improving flag from being false after check sequence finsishes
         ss->static_eval = (ply >= 2 ? (ss - 2)->static_eval : 0);
     } else {
-        if (tt_searched) {
-            if (tt_entry.bound == EXACTBOUND) {
-                ss->static_eval = tt_entry.score;
-            } else {
-                ss->static_eval = eval(board);
-                if (tt_entry.bound == (tt_entry.score > ss->static_eval ? LOWERBOUND : UPPERBOUND)) {
-                    ss->static_eval = tt_entry.score;
-                }
-            }
-        } else {
-            ss->static_eval = eval(board);
+        raw_eval = eval(board);
+        corr_eval = correctEval(board, raw_eval);
+        ss->static_eval = corr_eval;
+        if (tt_searched && (tt_entry.bound == EXACTBOUND || tt_entry.bound == (tt_entry.score > corr_eval ? LOWERBOUND : UPPERBOUND))) {
+            ss->static_eval = tt_entry.score;
         }
     }
 
@@ -703,6 +709,10 @@ int search(
         if (score >= beta) {
             if (ss->excluded == NO_MOVE) {
                 tt.insert(board, best_move, scoreToTT(best_score, ply), LOWERBOUND, depth);
+
+                if (corrHistUsable(best_move, best_score, LOWERBOUND, corr_eval)) {
+                    updateCorrHist(board, raw_eval, best_score, depth);
+                }
             }
 
             if (!Capture(best_move) && !Prom(best_move)) {
@@ -738,6 +748,10 @@ int search(
     TTBound bound = (best_score > original_alpha) ? EXACTBOUND : UPPERBOUND;
     if (ss->excluded == NO_MOVE) {
         tt.insert(board, best_move, scoreToTT(best_score, ply), bound, depth);
+
+        if (corrHistUsable(best_move, best_score, bound, corr_eval)) {
+            updateCorrHist(board, raw_eval, best_score, depth);
+        }
     }
 
     return best_score;

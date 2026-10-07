@@ -1,19 +1,36 @@
 #include "history.h"
+#include "eval.h"
+#include <algorithm>
 #include <cstring>
 
 int score_history[2][64][64]; // [stm][from][to] (butterfly history)
 int cont_hist[2][6][64][6][64]; // [stm][prevPiece][prevTo][piece][to] (continuation history)
 
-int kp_corrhist[16384][2]; // pawn hash * 2, side
+thread_local int kp_corrhist[CORR_HIST_SIZE][2]; // [pawn hash][stm]
 
-void updateCorrHist(Board& board, int static_eval, int best_score, int depth, Side side) {
-    const int prev_val = kp_corrhist[board.pawnHash() & 0x1ff][side];
-    const int eval_delta = best_score - static_eval;
+static inline int corrHistIndex(const Board& board) {
+    return board.pawnHash() & (CORR_HIST_SIZE - 1);
+}
+
+void resetCorrHist() {
+    memset(kp_corrhist, 0, sizeof(kp_corrhist));
+}
+
+int correctEval(const Board& board, int raw_eval) {
+    const int corrected = raw_eval + kp_corrhist[corrHistIndex(board)][board.getSTM()] / CORR_HIST_SCALE;
+    return std::clamp(corrected, -TB_WIN_SCORE + MAX_PLY + 1, TB_WIN_SCORE - MAX_PLY - 1); // Never look like a TB/mate score
+}
+
+void updateCorrHist(const Board& board, int raw_eval, int best_score, int depth) {
+    int& entry = kp_corrhist[corrHistIndex(board)][board.getSTM()];
+    
+    // Error is measured against the raw eval
+    const int error = (best_score - raw_eval) * CORR_HIST_SCALE;
     const int weight = 2 * std::min(depth + 1, 16);
-    const int bonus = eval_delta * CORR_HIST_SCALE;
-    const int weighted_eval = (prev_val * (CORR_HIST_SCALE - weight) + bonus * weight) / CORR_HIST_SCALE;
-    const int clamp_extrema = std::min(std::abs(prev_val + max_increment), CORR_HIST_MAX);
-    kp_corrhist[board.pawnHash() & 0x1ff][side] = std::clamp(weighted_eval, -clamp_extrema, clamp_extrema);
+    const int weighted = (entry * (CORR_HIST_SCALE - weight) + error * weight) / CORR_HIST_SCALE;
+
+    // Limit how far a single update can move the entry, then keep it in range
+    entry = std::clamp(std::clamp(weighted, entry - CORR_MAX_BONUS, entry + CORR_MAX_BONUS), -CORR_HIST_MAX, CORR_HIST_MAX);
 }
 
 void resetHistory() {
