@@ -4,6 +4,7 @@
 #include "board/board.h"
 #include "core/movelist.h"
 #include "core/types.h"
+#include "core/fast2darray.h"
 
 constexpr int MAX_HISTORY = 8192;
 
@@ -21,7 +22,7 @@ constexpr int CORR_HIST_SIZE = 16384; // Must be a power of two
 constexpr int CORR_HIST_SCALE = 256;
 constexpr int CORR_MAX_BONUS = 2200;
 constexpr int CORR_HIST_MAX = 16384;
-extern thread_local int kp_corrhist[CORR_HIST_SIZE][2]; // [pawn hash][stm]
+extern thread_local FlattenedArray<int, CORR_HIST_SIZE, 2> kp_corrhist; // [pawn hash, stm]
 
 void resetCorrHist();
 int correctEval(const Board& board, int raw_eval);
