@@ -37,6 +37,9 @@
     INT (LMR_IMPROVING,           1013,     0,  3072,  128)                    \
     INT (LMR_KILLER_REDUCTION,    1011,     0,  3072,  128)                    \
     INT (LMR_GIVES_CHECK_REDUCTION, 803,   0,  3072,  128)                    \
+    /* Singular extension */                                                   \
+    INT (DOUBLE_EXTENSION_BETA,         20,     0,  60,  1)                    \
+    INT (MAX_DOUBLE_EXTENSIONS,            7,   4,  14,  1)                    \
     /* Floating point terms, stored scaled by 1e6. The scale has to hold the   \
        original six-decimal constants exactly */                               \
     REAL(LMR_VALUE,             987609,  200000, 1600000,  70000, 1000000.0)   \
