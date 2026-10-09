@@ -2,6 +2,7 @@
 #define FAST_2D_ARRAY_H
 
 #include <cassert>
+#include <cstddef>
 #include <cstring>
 
 template <typename T, size_t M, size_t N> // Array size MxN
@@ -26,7 +27,7 @@ public:
         return arr[j * M + i];
     }
 private:
-    static_assert("FlattenedArray initialized to zero size." && (M != 0 || N != 0));
+    static_assert(M != 0 && N != 0, "FlattenedArray initialized to zero size.");
     T arr[M * N];
 };
 
