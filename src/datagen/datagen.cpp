@@ -5,6 +5,7 @@
 #include "hash/transposition.h"
 #include "movegen/movegen.h"
 #include "search-eval/eval.h"
+#include "search-eval/history.h"
 #include "search-eval/search.h"
 #include "nnue/nnue.h"
 #include "uci/uci.h"
@@ -162,6 +163,7 @@ static void datagenWorker(int thread_id) {
         bool discard_game = false;
 
         tt.clear();
+        resetCorrHist(); // Per worker thread
 
         while (1) { // Run game
             if (isDraw(board, 0)) {
