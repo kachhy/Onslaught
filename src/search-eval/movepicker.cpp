@@ -1,6 +1,7 @@
 #include "movepicker.h"
 #include "movegen/attacks.h"
 #include "see.h"
+#include "uci/uci.h"
 #include <utility>
 
 // Will also return false if the move is NO_MOVE
@@ -30,21 +31,25 @@ static bool isLegal(Move move, const Board& board) {
         BitBoard xstm_threats = board.getThreatenedByXSTM();
 
         if (stm == WHITE) {
-            if (to == G1) {
-                return (cr & WHITE_KS) && !((xstm_threats | occ) & WHITE_KINGSIDE_CASTLE_MASK);
+            Square rook = c960 ? c960_info.wkr : G1;
+            if (to == rook) {
+                return (cr & WHITE_KS) && !((xstm_threats & castle_masks.white_kingside_threat) | (occ & castle_masks.white_kingside_occ));
             }
 
-            if (to == C1) {
-                return (cr & WHITE_QS) && !((xstm_threats & WHITE_QUEENSIDE_CASTLE_THREAT_MASK) | (occ & WHITE_QUEENSIDE_CASTLE_OCC_MASK));
+            rook = c960 ? c960_info.wqr : C1;
+            if (to == rook) {
+                return (cr & WHITE_QS) && !((xstm_threats & castle_masks.white_queenside_threat) | (occ & castle_masks.white_queenside_occ));
             }
             return false;
         } else {
-            if (to == G8) {
-                return (cr & BLACK_KS) && !((xstm_threats | occ) & BLACK_KINGSIDE_CASTLE_MASK);
+            Square rook = c960 ? c960_info.bkr : G8;
+            if (to == rook) {
+                return (cr & BLACK_KS) && !((xstm_threats & castle_masks.black_kingside_threat) | (occ & castle_masks.black_kingside_occ));
             }
 
-            if (to == C8) {
-                return (cr & BLACK_QS) && !((xstm_threats & BLACK_QUEENSIDE_CASTLE_THREAT_MASK) | (occ & BLACK_QUEENSIDE_CASTLE_OCC_MASK));
+            rook = c960 ? c960_info.bqr : C8;
+            if (to == rook) {
+                return (cr & BLACK_QS) && !((xstm_threats & castle_masks.black_queenside_threat) | (occ & castle_masks.black_queenside_occ));
             }
 
             return false;
