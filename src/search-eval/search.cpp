@@ -518,10 +518,7 @@ int search(
 
         // razoring = save movegen cost on pruned nodes by checking if it can beat alpha with quiesce, otherwise fail low
         if (!is_pv && !in_check && depth <= RAZORING_DEPTH_MAX && static_eval + RAZOR_MARGIN * depth < alpha) {
-            int quiescent_score = quiesce(board, alpha - 1, alpha, ply + 1, 0);
-            if (quiescent_score < alpha) {
-                return quiescent_score;
-            }
+            return quiesce(board, alpha, beta, ply + 1, 0);
         }
     }
 
