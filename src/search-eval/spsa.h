@@ -40,6 +40,8 @@
     /* Singular extension */                                                   \
     INT (DOUBLE_EXTENSION_BETA,         20,     0,  60,  1)                    \
     INT (MAX_DOUBLE_EXTENSIONS,            7,   4,  14,  1)                    \
+    INT (TRIPLE_EXTENSION_BETA,         40,     0,  100,  1)                    \
+    INT (MAX_TRIPLE_EXTENSIONS,            3,   1,   10,  1)                    \
     /* Floating point terms, stored scaled by 1e6. The scale has to hold the   \
        original six-decimal constants exactly */                               \
     REAL(LMR_VALUE,             987609,  200000, 1600000,  70000, 1000000.0)   \

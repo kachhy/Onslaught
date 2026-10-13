@@ -600,7 +600,7 @@ int search(
                     extension = 1; // singular
                     if (!is_pv && s_score < s_beta - DOUBLE_EXTENSION_BETA && ss->double_ext_count < MAX_DOUBLE_EXTENSIONS) {
                         extension = 2; // Double extension
-                        if (s_score < s_beta - 40) {
+                        if (s_score < s_beta - TRIPLE_EXTENSION_BETA && ss->triple_ext_count < MAX_TRIPLE_EXTENSIONS) {
                             extension = 3; // Triple extension
                         }
                         else {
