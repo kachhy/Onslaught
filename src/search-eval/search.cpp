@@ -445,7 +445,7 @@ int search(
     if constexpr (Type != ROOT_NODE) {
         // rfp (prune worse positions harder with improving position)
         if (!is_pv && !in_check && depth <= RFP_DEPTH_MAX && static_eval - RFP_MARGIN * (depth - (improving && depth > 1)) >= beta) {
-            return static_eval;
+            return (static_eval + beta) / 2;
         }
 
         // nmp
