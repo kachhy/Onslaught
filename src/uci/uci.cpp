@@ -187,7 +187,7 @@ static inline void position(Board& board) {
             const int king_file = getFile(board.getKingSquare());
 
             // Kingside threat and king occ
-            for (int i = min(king_file, 6); i <= max(king_file, 6); i++) {
+            for (int i = std::min(king_file, 6); i <= std::max(king_file, 6); i++) {
                 setBit(castle_masks.white_kingside_threat, A1 + i);
                 setBit(castle_masks.black_kingside_threat, A8 + i);
                 setBit(castle_masks.white_kingside_occ, A1 + i);
@@ -201,7 +201,7 @@ static inline void position(Board& board) {
             }
 
             // Queenside threat and king occ
-            for (int i = min(king_file, 2); i <= max(king_file, 2); i++) {
+            for (int i = std::min(king_file, 2); i <= std::max(king_file, 2); i++) {
                 setBit(castle_masks.white_queenside_threat, A1 + i);
                 setBit(castle_masks.black_queenside_threat, A8 + i);
                 setBit(castle_masks.white_queenside_occ, A1 + i);
@@ -215,7 +215,7 @@ static inline void position(Board& board) {
             }
 
             // Kingside rook occ
-            for (int i = min(kingside_rook_file, 5); i <= max(kingside_rook_file, 5); i++) {
+            for (int i = std::min(kingside_rook_file, 5); i <= std::max(kingside_rook_file, 5); i++) {
                 setBit(castle_masks.white_kingside_occ, A1 + i);
                 setBit(castle_masks.black_kingside_occ, A8 + i);
 
@@ -227,7 +227,7 @@ static inline void position(Board& board) {
             }
 
             // Queenside rook occ
-            for (int i = min(queenside_rook_file, 3); i <= max(queenside_rook_file, 3); i++) {
+            for (int i = std::min(queenside_rook_file, 3); i <= std::max(queenside_rook_file, 3); i++) {
                 setBit(castle_masks.white_queenside_occ, A1 + i);
                 setBit(castle_masks.black_queenside_occ, A8 + i);
                 
