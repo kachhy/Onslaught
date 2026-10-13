@@ -2,6 +2,7 @@
 #include "core/types.h"
 #include "hash/zobrist.h"
 #include "movegen/attacks.h"
+#include "uci/uci.h"
 #include <cassert>
 #include <iostream>
 #include <sstream>
@@ -441,6 +442,26 @@ bool Board::probeDTZ(TbRootMoves& results, bool has_repeated) { // Meant to be u
 void Board::makeMove(Move move) {
     Square from = From(move);
     Square to = To(move);
+
+    // For chess 960 castling, set destination square to actual destination
+    if (c960 && Castle(move)) {
+        if (stm == WHITE) {
+            if (to == c960_info.wkr) {
+                to = G1;
+            } else {
+                assert(to == c960_info.wqr);
+                to = C1;
+            }
+        } else {
+            if (to == c960_info.bkr) {
+                to = G8;
+            } else {
+                assert(to == c960_info.bqr);
+                to = C8;
+            }
+        }
+    }
+
     Piece piece = MovePiece(move);
     Piece captured = IsEP(move) ? makePiece(PAWN, xstm) : piece_board[to];
 
@@ -472,63 +493,71 @@ void Board::makeMove(Move move) {
     if (Castle(move)) {
         switch (to) {
         // K
-        case G1:
-            // move H rook
-            popBit(piece_bb[WHITE_ROOK], H1);
+        case G1: {
+            // move kingside rook
+            const Square rook_square = c960 ? c960_info.wkr : H1;
+            popBit(piece_bb[WHITE_ROOK], rook_square);
             setBit(piece_bb[WHITE_ROOK], F1);
-            flipBit(occ[stm], H1);
-            flipBit(occ[BOTH], H1);
+            flipBit(occ[stm], rook_square);
+            flipBit(occ[BOTH], rook_square);
             flipBit(occ[stm], F1);
             flipBit(occ[BOTH], F1);
-            piece_board[H1] = NO_PIECE;
+            piece_board[rook_square] = NO_PIECE;
             piece_board[F1] = WHITE_ROOK;
-            zobrist_hash ^= piece_keys[WHITE_ROOK][H1];
+            zobrist_hash ^= piece_keys[WHITE_ROOK][rook_square];
             zobrist_hash ^= piece_keys[WHITE_ROOK][F1];
-            material_pst_score += pst[WHITE_ROOK][F1] - pst[WHITE_ROOK][H1];
+            material_pst_score += pst[WHITE_ROOK][F1] - pst[WHITE_ROOK][rook_square];
             break;
+        }
         // Q
-        case C1:
-            // move A rook
-            popBit(piece_bb[WHITE_ROOK], A1);
+        case C1: {
+            // move queenside rook
+            const Square rook_square = c960 ? c960_info.wqr : A1;
+            popBit(piece_bb[WHITE_ROOK], rook_square);
             setBit(piece_bb[WHITE_ROOK], D1);
-            flipBit(occ[stm], A1);
-            flipBit(occ[BOTH], A1);
+            flipBit(occ[stm], rook_square);
+            flipBit(occ[BOTH], rook_square);
             flipBit(occ[stm], D1);
             flipBit(occ[BOTH], D1);
-            piece_board[A1] = NO_PIECE;
+            piece_board[rook_square] = NO_PIECE;
             piece_board[D1] = WHITE_ROOK;
-            zobrist_hash ^= piece_keys[WHITE_ROOK][A1];
+            zobrist_hash ^= piece_keys[WHITE_ROOK][rook_square];
             zobrist_hash ^= piece_keys[WHITE_ROOK][D1];
-            material_pst_score += pst[WHITE_ROOK][D1] - pst[WHITE_ROOK][A1];
+            material_pst_score += pst[WHITE_ROOK][D1] - pst[WHITE_ROOK][rook_square];
             break;
+        }
         // k
-        case G8:
-            popBit(piece_bb[BLACK_ROOK], H8);
+        case G8: {
+            const Square rook_square = c960 ? c960_info.bkr : H8;
+            popBit(piece_bb[BLACK_ROOK], rook_square);
             setBit(piece_bb[BLACK_ROOK], F8);
-            flipBit(occ[stm], H8);
-            flipBit(occ[BOTH], H8);
+            flipBit(occ[stm], rook_square);
+            flipBit(occ[BOTH], rook_square);
             flipBit(occ[stm], F8);
             flipBit(occ[BOTH], F8);
-            piece_board[H8] = NO_PIECE;
+            piece_board[rook_square] = NO_PIECE;
             piece_board[F8] = BLACK_ROOK;
-            zobrist_hash ^= piece_keys[BLACK_ROOK][H8];
+            zobrist_hash ^= piece_keys[BLACK_ROOK][rook_square];
             zobrist_hash ^= piece_keys[BLACK_ROOK][F8];
-            material_pst_score -= pst[BLACK_ROOK][F8] - pst[BLACK_ROOK][H8];
+            material_pst_score -= pst[BLACK_ROOK][F8] - pst[BLACK_ROOK][rook_square];
             break;
+        }
         // q
-        case C8:
-            popBit(piece_bb[BLACK_ROOK], A8);
+        case C8: {
+            const Square rook_square = c960 ? c960_info.bqr : A8;
+            popBit(piece_bb[BLACK_ROOK], rook_square);
             setBit(piece_bb[BLACK_ROOK], D8);
-            flipBit(occ[stm], A8);
-            flipBit(occ[BOTH], A8);
+            flipBit(occ[stm], rook_square);
+            flipBit(occ[BOTH], rook_square);
             flipBit(occ[stm], D8);
             flipBit(occ[BOTH], D8);
-            piece_board[A8] = NO_PIECE;
+            piece_board[rook_square] = NO_PIECE;
             piece_board[D8] = BLACK_ROOK;
-            zobrist_hash ^= piece_keys[BLACK_ROOK][A8];
+            zobrist_hash ^= piece_keys[BLACK_ROOK][rook_square];
             zobrist_hash ^= piece_keys[BLACK_ROOK][D8];
-            material_pst_score -= pst[BLACK_ROOK][D8] - pst[BLACK_ROOK][A8];
+            material_pst_score -= pst[BLACK_ROOK][D8] - pst[BLACK_ROOK][rook_square];
             break;
+        }
         default: // should never get here, removing warning
             break;
         }
