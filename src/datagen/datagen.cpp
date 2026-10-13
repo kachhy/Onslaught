@@ -79,7 +79,7 @@ static viriformat::Move toViriMove(Move move) {
         type = MoveType::EN_PASSANT;
     } else if (Castle(move)) {
         // Viriformat encodes castling Chess960-style: "to" is the rook's origin square
-        switch (to) {
+        if (!c960) switch (to) {
             case G1: to = H1; break;
             case C1: to = A1; break;
             case G8: to = H8; break;
