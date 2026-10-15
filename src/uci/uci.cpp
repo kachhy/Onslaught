@@ -4,6 +4,7 @@
 #include "search-eval/eval.h"
 #include "search-eval/history.h"
 #include "search-eval/search.h"
+#include "search-eval/mcts.h"
 #include "syzygy/tbprobe.h"
 #include <sstream>
 
@@ -18,6 +19,7 @@ Board board;
 thread_local bool searching = false;
 thread_local bool stdin_enabled = true;
 bool debug_mode = false;
+bool mcts_enabled = false;
 std::unordered_map<std::string, UCIOption> options_map;
 
 void setOption(std::string key, UCIOption value) { options_map[key] = std::move(value); }
@@ -146,6 +148,9 @@ static inline void initOptions() {
             };
         }
     } });
+
+    // If we add more search algorithms we should switch this to a string 
+    setOption("MCTS", CheckOption{ false, [](bool mcts) { mcts_enabled = mcts; } });
 }
 
 static inline void position(Board& board) {
@@ -237,8 +242,14 @@ static inline void go(Board& board) {
     }
 
     searching = true;
-    int best_score;
-    Move best_move = search(board, (params.infinite || params.depth == -1) ? 256 : params.depth, best_score, params);
+    Move best_move;
+    if (!mcts_enabled) {
+        int best_score;
+        best_move = search(board, (params.infinite || params.depth == -1) ? 256 : params.depth, best_score, params);
+    }
+    else {
+        best_move = mcts(board, params);
+    }
     std::cout << "bestmove " << moveToStr(best_move) << std::endl;
 }
 
