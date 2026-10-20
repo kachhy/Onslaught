@@ -72,16 +72,6 @@ extern thread_local bool stdin_enabled;
 extern bool debug_mode;
 extern std::unordered_map<std::string, UCIOption> options_map;
 
-struct c960info {
-    Square wkr = NO_SQUARE; // white kingside rook
-    Square wqr = NO_SQUARE; // white queenside rook
-    Square bkr = NO_SQUARE; // black kingside rook
-    Square bqr = NO_SQUARE; // black queenside rook
-
-    void reset() { wkr = wqr = bkr = bqr = NO_SQUARE; }
-};
-
 extern bool c960;
-extern c960info c960_info;
 
 #endif // UCI_H

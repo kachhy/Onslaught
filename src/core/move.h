@@ -31,6 +31,9 @@ constexpr inline bool IsEP(Move move) { return Flags(move) == EP_FLAG; }
 constexpr inline bool Castle(Move move) { return Flags(move) == CASTLE_FLAG; }
 constexpr inline bool Prom(Move move) { return (Flags(move) & PROMO_FLAG) != 0; }
 
+// For Chess 960 impl. Gets the actual square that the king moves to (for castling moves)
+Square castle_destination_to_actual(Move m, Side stm);
+
 class Board;
 
 std::string moveToStr(Move move);

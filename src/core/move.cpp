@@ -5,6 +5,27 @@
 #include "movegen/attacks.h"
 #include "uci/uci.h"
 #include <cmath>
+#include <cassert>
+
+Square castle_destination_to_actual(Move m, Side stm) {
+    Square to = To(m);
+    if (stm == WHITE) {
+        if (to == castling.rstart[0]) {
+            to = G1;
+        } else {
+            assert(to == castling.rstart[1]);
+            to = C1;
+        }
+    } else {
+        if (to == castling.rstart[2]) {
+            to = G8;
+        } else {
+            assert(to == castling.rstart[3]);
+            to = C8;
+        }
+    }
+    return to;
+}
 
 std::string moveToStr(Move move) {
     if (move == NO_MOVE) {

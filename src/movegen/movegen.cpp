@@ -1,7 +1,6 @@
 #include "movegen.h"
 #include "attacks.h"
 #include "core/movelist.h"
-#include "uci/uci.h"
 
 void getQuietMoves(const Board& board, MoveList& moves) {
     if (multipleActiveBits(board.getCheckersMask())) {
@@ -323,26 +322,18 @@ void addLegalKingMoves(MoveList& moves, const Board& board, MoveFlag move_flag) 
     BitBoard xstm_threats = board.getThreatenedByXSTM();
 
     if (stm == WHITE) {
-        if (castling_rights & WHITE_KS && !((xstm_threats & castle_masks.white_kingside_threat) | (occ & castle_masks.white_kingside_occ))) {
-            if (c960) {
-                moves.emplace_back(GenerateMove(board.getKingSquare(), c960_info.wkr, WHITE_KING, CASTLE_FLAG));
-            } else moves.emplace_back(GenerateMove(E1, G1, WHITE_KING, CASTLE_FLAG));
+        if (castling_rights & WHITE_KS && !((xstm_threats & castling.threat[0]) | (occ & castling.occ[0]))) {
+            moves.emplace_back(GenerateMove(castling.kstart[0], castling.rstart[0], WHITE_KING, CASTLE_FLAG));
         }
-        if (castling_rights & WHITE_QS && !((xstm_threats & castle_masks.white_queenside_threat) | (occ & castle_masks.white_queenside_occ))) {
-            if (c960) {
-                moves.emplace_back(GenerateMove(board.getKingSquare(), c960_info.wqr, WHITE_KING, CASTLE_FLAG));
-            } else moves.emplace_back(GenerateMove(E1, C1, WHITE_KING, CASTLE_FLAG));
+        if (castling_rights & WHITE_QS && !((xstm_threats & castling.threat[1]) | (occ & castling.occ[1]))) {
+            moves.emplace_back(GenerateMove(castling.kstart[0], castling.rstart[1], WHITE_KING, CASTLE_FLAG));
         }
     } else {
-        if (castling_rights & BLACK_KS && !((xstm_threats & castle_masks.black_kingside_threat) | (occ & castle_masks.black_kingside_occ))) {
-            if (c960) {
-                moves.emplace_back(GenerateMove(board.getKingSquare(), c960_info.bkr, BLACK_KING, CASTLE_FLAG));
-            } else moves.emplace_back(GenerateMove(E8, G8, BLACK_KING, CASTLE_FLAG));
+        if (castling_rights & BLACK_KS && !((xstm_threats & castling.threat[2]) | (occ & castling.occ[2]))) {
+            moves.emplace_back(GenerateMove(castling.kstart[1], castling.rstart[2], BLACK_KING, CASTLE_FLAG));
         }
-        if (castling_rights & BLACK_QS && !((xstm_threats & castle_masks.black_queenside_threat) | (occ & castle_masks.black_queenside_occ))) {
-            if (c960) {
-                moves.emplace_back(GenerateMove(board.getKingSquare(), c960_info.bqr, BLACK_KING, CASTLE_FLAG));
-            } else moves.emplace_back(GenerateMove(E8, C8, BLACK_KING, CASTLE_FLAG));
+        if (castling_rights & BLACK_QS && !((xstm_threats & castling.threat[3]) | (occ & castling.occ[3]))) {
+            moves.emplace_back(GenerateMove(castling.kstart[1], castling.rstart[3], BLACK_KING, CASTLE_FLAG));
         }
     }
 }

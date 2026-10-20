@@ -14,7 +14,6 @@
 #endif
 
 bool c960 = false;
-c960info c960_info;
 
 Board board;
 thread_local bool searching = false;
@@ -112,9 +111,7 @@ static inline void newGame(Board& board) {
     // reset the board to the starting position
     board.clear();
     board.loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-
-    c960_info.reset();
-    castle_masks.reset();
+    castling = default_castling;
 }
 
 static inline void initOptions() {
@@ -186,66 +183,64 @@ static inline void position(Board& board) {
             const int queenside_rook_file = getFile((Square)popLSB(bb));
             const int king_file = getFile(board.getKingSquare());
 
+            castling.kstart[0] = (Square)(A1 + king_file);
+            castling.kstart[1] = (Square)(A8 + king_file);
+            castling.rstart[0] = (Square)(A1 + kingside_rook_file);
+            castling.rstart[1] = (Square)(A1 + queenside_rook_file);
+            castling.rstart[2] = (Square)(A8 + kingside_rook_file);
+            castling.rstart[3] = (Square)(A8 + queenside_rook_file);
+
             // Kingside threat and king occ
             for (int i = std::min(king_file, 6); i <= std::max(king_file, 6); i++) {
-                setBit(castle_masks.white_kingside_threat, A1 + i);
-                setBit(castle_masks.black_kingside_threat, A8 + i);
-                setBit(castle_masks.white_kingside_occ, A1 + i);
-                setBit(castle_masks.black_kingside_occ, A8 + i);
+                setBit(castling.threat[0], A1 + i);
+                setBit(castling.threat[2], A8 + i);
+                setBit(castling.occ[0], A1 + i);
+                setBit(castling.occ[2], A8 + i);
 
                 // Don't check king square itself for occupancy
                 if (i == king_file) {
-                    popBit(castle_masks.white_kingside_occ, A1 + i);
-                    popBit(castle_masks.black_kingside_occ, A8 + i);
+                    popBit(castling.occ[0], A1 + i);
+                    popBit(castling.occ[2], A8 + i);
                 }
             }
 
             // Queenside threat and king occ
             for (int i = std::min(king_file, 2); i <= std::max(king_file, 2); i++) {
-                setBit(castle_masks.white_queenside_threat, A1 + i);
-                setBit(castle_masks.black_queenside_threat, A8 + i);
-                setBit(castle_masks.white_queenside_occ, A1 + i);
-                setBit(castle_masks.black_queenside_occ, A8 + i);
+                setBit(castling.threat[1], A1 + i);
+                setBit(castling.threat[3], A8 + i);
+                setBit(castling.occ[1], A1 + i);
+                setBit(castling.occ[3], A8 + i);
 
                 // Don't check king square itself for occupancy
                 if (i == king_file) {
-                    popBit(castle_masks.white_queenside_occ, A1 + i);
-                    popBit(castle_masks.black_queenside_occ, A8 + i);
+                    popBit(castling.occ[1], A1 + i);
+                    popBit(castling.occ[3], A8 + i);
                 }
             }
 
             // Kingside rook occ
             for (int i = std::min(kingside_rook_file, 5); i <= std::max(kingside_rook_file, 5); i++) {
-                setBit(castle_masks.white_kingside_occ, A1 + i);
-                setBit(castle_masks.black_kingside_occ, A8 + i);
+                setBit(castling.occ[0], A1 + i);
+                setBit(castling.occ[2], A8 + i);
 
                 // Don't check rook square for occupancy
                 if (i == kingside_rook_file) {
-                    popBit(castle_masks.white_kingside_occ, A1 + i);
-                    popBit(castle_masks.black_kingside_occ, A8 + i);
+                    popBit(castling.occ[0], A1 + i);
+                    popBit(castling.occ[2], A8 + i);
                 }
             }
 
             // Queenside rook occ
             for (int i = std::min(queenside_rook_file, 3); i <= std::max(queenside_rook_file, 3); i++) {
-                setBit(castle_masks.white_queenside_occ, A1 + i);
-                setBit(castle_masks.black_queenside_occ, A8 + i);
+                setBit(castling.occ[1], A1 + i);
+                setBit(castling.occ[3], A8 + i);
                 
                 // Don't check rook square for occupancy
                 if (i == kingside_rook_file) {
-                    popBit(castle_masks.white_queenside_occ, A1 + i);
-                    popBit(castle_masks.black_queenside_occ, A8 + i);
+                    popBit(castling.occ[1], A1 + i);
+                    popBit(castling.occ[3], A8 + i);
                 }
             }
-
-            /*
-            c960_info.wkr = (Square)popLSB(bb);
-            c960_info.wqr = (Square)popLSB(bb);
-
-            bb = board.getPieceBB(Piece::BLACK_ROOK);
-            c960_info.bkr = (Square)popLSB(bb);
-            c960_info.bqr = (Square)popLSB(bb);
-            */
         }
     }
 

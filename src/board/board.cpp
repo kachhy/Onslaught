@@ -7,7 +7,42 @@
 #include <iostream>
 #include <sstream>
 
-castling_masks castle_masks;
+static castling_info make_default_castling() {
+    castling_info info;
+
+    info.king_target[0] = G1;
+    info.king_target[2] = G8;
+    info.king_target[1] = C1;
+    info.king_target[3] = C8;
+
+    info.rook_target[0] = F1;
+    info.rook_target[2] = F8;
+    info.rook_target[1] = D1;
+    info.rook_target[3] = D8;
+
+    info.rstart[0] = H1;
+    info.rstart[1] = A1;
+    info.rstart[2] = H8;
+    info.rstart[3] = A8;
+
+    info.occ[0] = 0x6000000000000000;
+    info.occ[1] = 0x0E00000000000000;
+    info.occ[2] = 0x0000000000000060;
+    info.occ[3] = 0x000000000000000E;
+
+    info.threat[0] = 0x6000000000000000;
+    info.threat[1] = 0x0C00000000000000;
+    info.threat[2] = 0x0000000000000060;
+    info.threat[3] = 0x000000000000000C;
+
+    info.kstart[0] = E1;
+    info.kstart[1] = E8;
+
+    return info;
+}
+
+castling_info castling = make_default_castling();
+const castling_info default_castling = make_default_castling();
 
 Board::Board() { loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); }
 
@@ -54,26 +89,26 @@ Piece Board::pieceAt(uint8_t sq, bool reset) const {
 
 std::string Board::getCastlingString() const {
     std::string out = "";
-    if (castling & 8) {
-        out += 'K';
+    if (castling & WHITE_KS) {
+        out += c960 ? 'A' + getFile(::castling.rstart[0]) : 'K';
     } else {
         out += '-';
     }
 
-    if (castling & 4) {
-        out += 'Q';
+    if (castling & WHITE_QS) {
+        out += c960 ? 'A' + getFile(::castling.rstart[1]) : 'Q';
     } else {
         out += '-';
     }
 
-    if (castling & 2) {
-        out += 'k';
+    if (castling & BLACK_KS) {
+        out += c960 ? 'a' + getFile(::castling.rstart[2]) : 'k';
     } else {
         out += '-';
     }
 
-    if (castling & 1) {
-        out += 'q';
+    if (castling & BLACK_QS) {
+        out += c960 ? 'a' + getFile(::castling.rstart[3]) : 'q';
     } else {
         out += '-';
     }
@@ -135,16 +170,16 @@ std::string Board::toFEN() const {
         out += '-';
     } else {
         if (castling & WHITE_KS) {
-            out += 'K';
+            out += c960 ? 'A' + getFile(::castling.rstart[0]) : 'K';
         }
         if (castling & WHITE_QS) {
-            out += 'Q';
+            out += c960 ? 'A' + getFile(::castling.rstart[1]) : 'Q';
         }
         if (castling & BLACK_KS) {
-            out += 'k';
+            out += c960 ? 'a' + getFile(::castling.rstart[2]) : 'k';
         }
         if (castling & BLACK_QS) {
-            out += 'q';
+            out += c960 ? 'a' + getFile(::castling.rstart[3]) : 'q';
         }
     }
 
@@ -218,14 +253,14 @@ void Board::clear() {
     }
 
     // White king and rooks
-    castling_rights[E1] = 0xf ^ (WHITE_KS | WHITE_QS);
-    castling_rights[H1] = 0xf ^ WHITE_KS;
-    castling_rights[A1] = 0xf ^ WHITE_QS;
+    castling_rights[::castling.kstart[0]] = 0xf ^ (WHITE_KS | WHITE_QS);
+    castling_rights[::castling.rstart[0]] = 0xf ^ WHITE_KS;
+    castling_rights[::castling.rstart[1]] = 0xf ^ WHITE_QS;
 
     // Black king and rooks
-    castling_rights[E8] = 0xf ^ (BLACK_KS | BLACK_QS);
-    castling_rights[H8] = 0xf ^ BLACK_KS;
-    castling_rights[A8] = 0xf ^ BLACK_QS;
+    castling_rights[::castling.kstart[1]] = 0xf ^ (BLACK_KS | BLACK_QS);
+    castling_rights[::castling.rstart[2]] = 0xf ^ BLACK_KS;
+    castling_rights[::castling.rstart[3]] = 0xf ^ BLACK_QS;
 
     // Accumulator state
     acc_ply = 0;
@@ -298,12 +333,22 @@ bool Board::loadFEN(const std::string& fen) {
     castling = 0;
     if (castling_str != "-") {
         for (char ch : castling_str) {
-            switch (ch) {
-            case 'K': castling |= WHITE_KS; break;
-            case 'Q': castling |= WHITE_QS; break;
-            case 'k': castling |= BLACK_KS; break;
-            case 'q': castling |= BLACK_QS; break;
-            default: break;
+            if (c960) {
+                if (ch == 'A' + getFile(::castling.rstart[0])) {
+                    castling |= WHITE_KS;
+                } else if (ch == 'A' + getFile(::castling.rstart[1])) {
+                    castling |= WHITE_QS;
+                } else if (ch == 'a' + getFile(::castling.rstart[2])) {
+                    castling |= BLACK_KS;
+                } else if (ch == 'a' + getFile(::castling.rstart[3])) {
+                    castling |= BLACK_QS;
+                }
+            } else switch (ch) {
+                case 'K': castling |= WHITE_KS; break;
+                case 'Q': castling |= WHITE_QS; break;
+                case 'k': castling |= BLACK_KS; break;
+                case 'q': castling |= BLACK_QS; break;
+                default: break;
             }
         }
     }
@@ -388,8 +433,8 @@ viriformat::PackedBoard Board::toPackedBoard(int score, uint8_t result) const {
         uint8_t type = makeDefaultPiece(p) & 0x7;
         // Viriformat marks castling-eligible rooks with type code 6, rather than 3
         if (type == ROOK) {
-            if ((sq == A1 && (castling & WHITE_QS)) || (sq == H1 && (castling & WHITE_KS)) || (sq == A8 && (castling & BLACK_QS)) ||
-                (sq == H8 && (castling & BLACK_KS))) {
+            if ((sq == ::castling.rstart[1] && (castling & WHITE_QS)) || (sq == ::castling.rstart[0] && (castling & WHITE_KS))
+                || (sq == ::castling.rstart[3] && (castling & BLACK_QS)) || (sq == ::castling.rstart[2] && (castling & BLACK_KS))) {
                 type = 6;
             }
         }
@@ -443,23 +488,8 @@ void Board::makeMove(Move move) {
     Square from = From(move);
     Square to = To(move);
 
-    // For chess 960 castling, set destination square to actual destination
     if (c960 && Castle(move)) {
-        if (stm == WHITE) {
-            if (to == c960_info.wkr) {
-                to = G1;
-            } else {
-                assert(to == c960_info.wqr);
-                to = C1;
-            }
-        } else {
-            if (to == c960_info.bkr) {
-                to = G8;
-            } else {
-                assert(to == c960_info.bqr);
-                to = C8;
-            }
-        }
+        to = castle_destination_to_actual(move, stm);
     }
 
     Piece piece = MovePiece(move);
@@ -495,67 +525,63 @@ void Board::makeMove(Move move) {
         // K
         case G1: {
             // move kingside rook
-            const Square rook_square = c960 ? c960_info.wkr : H1;
-            popBit(piece_bb[WHITE_ROOK], rook_square);
+            popBit(piece_bb[WHITE_ROOK], ::castling.rstart[0]);
             setBit(piece_bb[WHITE_ROOK], F1);
-            flipBit(occ[stm], rook_square);
-            flipBit(occ[BOTH], rook_square);
+            flipBit(occ[stm], ::castling.rstart[0]);
+            flipBit(occ[BOTH], ::castling.rstart[0]);
             flipBit(occ[stm], F1);
             flipBit(occ[BOTH], F1);
-            piece_board[rook_square] = NO_PIECE;
+            piece_board[::castling.rstart[0]] = NO_PIECE;
             piece_board[F1] = WHITE_ROOK;
-            zobrist_hash ^= piece_keys[WHITE_ROOK][rook_square];
+            zobrist_hash ^= piece_keys[WHITE_ROOK][::castling.rstart[0]];
             zobrist_hash ^= piece_keys[WHITE_ROOK][F1];
-            material_pst_score += pst[WHITE_ROOK][F1] - pst[WHITE_ROOK][rook_square];
+            material_pst_score += pst[WHITE_ROOK][F1] - pst[WHITE_ROOK][::castling.rstart[0]];
             break;
         }
         // Q
         case C1: {
             // move queenside rook
-            const Square rook_square = c960 ? c960_info.wqr : A1;
-            popBit(piece_bb[WHITE_ROOK], rook_square);
+            popBit(piece_bb[WHITE_ROOK], ::castling.rstart[1]);
             setBit(piece_bb[WHITE_ROOK], D1);
-            flipBit(occ[stm], rook_square);
-            flipBit(occ[BOTH], rook_square);
+            flipBit(occ[stm], ::castling.rstart[1]);
+            flipBit(occ[BOTH], ::castling.rstart[1]);
             flipBit(occ[stm], D1);
             flipBit(occ[BOTH], D1);
-            piece_board[rook_square] = NO_PIECE;
+            piece_board[::castling.rstart[1]] = NO_PIECE;
             piece_board[D1] = WHITE_ROOK;
-            zobrist_hash ^= piece_keys[WHITE_ROOK][rook_square];
+            zobrist_hash ^= piece_keys[WHITE_ROOK][::castling.rstart[1]];
             zobrist_hash ^= piece_keys[WHITE_ROOK][D1];
-            material_pst_score += pst[WHITE_ROOK][D1] - pst[WHITE_ROOK][rook_square];
+            material_pst_score += pst[WHITE_ROOK][D1] - pst[WHITE_ROOK][::castling.rstart[1]];
             break;
         }
         // k
         case G8: {
-            const Square rook_square = c960 ? c960_info.bkr : H8;
-            popBit(piece_bb[BLACK_ROOK], rook_square);
+            popBit(piece_bb[BLACK_ROOK], ::castling.rstart[2]);
             setBit(piece_bb[BLACK_ROOK], F8);
-            flipBit(occ[stm], rook_square);
-            flipBit(occ[BOTH], rook_square);
+            flipBit(occ[stm], ::castling.rstart[2]);
+            flipBit(occ[BOTH], ::castling.rstart[2]);
             flipBit(occ[stm], F8);
             flipBit(occ[BOTH], F8);
-            piece_board[rook_square] = NO_PIECE;
+            piece_board[::castling.rstart[2]] = NO_PIECE;
             piece_board[F8] = BLACK_ROOK;
-            zobrist_hash ^= piece_keys[BLACK_ROOK][rook_square];
+            zobrist_hash ^= piece_keys[BLACK_ROOK][::castling.rstart[2]];
             zobrist_hash ^= piece_keys[BLACK_ROOK][F8];
-            material_pst_score -= pst[BLACK_ROOK][F8] - pst[BLACK_ROOK][rook_square];
+            material_pst_score -= pst[BLACK_ROOK][F8] - pst[BLACK_ROOK][::castling.rstart[2]];
             break;
         }
         // q
         case C8: {
-            const Square rook_square = c960 ? c960_info.bqr : A8;
-            popBit(piece_bb[BLACK_ROOK], rook_square);
+            popBit(piece_bb[BLACK_ROOK], ::castling.rstart[3]);
             setBit(piece_bb[BLACK_ROOK], D8);
-            flipBit(occ[stm], rook_square);
-            flipBit(occ[BOTH], rook_square);
+            flipBit(occ[stm], ::castling.rstart[3]);
+            flipBit(occ[BOTH], ::castling.rstart[3]);
             flipBit(occ[stm], D8);
             flipBit(occ[BOTH], D8);
-            piece_board[rook_square] = NO_PIECE;
+            piece_board[::castling.rstart[3]] = NO_PIECE;
             piece_board[D8] = BLACK_ROOK;
-            zobrist_hash ^= piece_keys[BLACK_ROOK][rook_square];
+            zobrist_hash ^= piece_keys[BLACK_ROOK][::castling.rstart[3]];
             zobrist_hash ^= piece_keys[BLACK_ROOK][D8];
-            material_pst_score -= pst[BLACK_ROOK][D8] - pst[BLACK_ROOK][rook_square];
+            material_pst_score -= pst[BLACK_ROOK][D8] - pst[BLACK_ROOK][::castling.rstart[3]];
             break;
         }
         default: // should never get here, removing warning
@@ -656,6 +682,10 @@ void Board::undoMove(Move move) {
     Square to = To(move);
     Piece piece = MovePiece(move);
 
+    if (c960 && Castle(move)) {
+        to = castle_destination_to_actual(move, stm);
+    }
+
     history_ply--;
     BoardHistory& hist_data = history[history_ply];
     castling = hist_data.castling;
@@ -693,52 +723,52 @@ void Board::undoMove(Move move) {
 
     if (Castle(move)) {
         switch (to) {
-        // White Kingside (K) - Rook was on F1, move back to H1
+        // White Kingside (K) - Rook was on F1, move back to original square
         case G1:
             popBit(piece_bb[WHITE_ROOK], F1);
-            setBit(piece_bb[WHITE_ROOK], H1);
+            setBit(piece_bb[WHITE_ROOK], ::castling.rstart[0]);
             flipBit(occ[stm], F1);
             flipBit(occ[BOTH], F1);
-            flipBit(occ[stm], H1);
-            flipBit(occ[BOTH], H1);
+            flipBit(occ[stm], ::castling.rstart[0]);
+            flipBit(occ[BOTH], ::castling.rstart[0]);
             piece_board[F1] = NO_PIECE;
-            piece_board[H1] = WHITE_ROOK;
+            piece_board[::castling.rstart[0]] = WHITE_ROOK;
             break;
 
-        // White Queenside (Q) - Rook was on D1, move back to A1
+        // White Queenside (Q) - Rook was on D1, move back to original square
         case C1:
             popBit(piece_bb[WHITE_ROOK], D1);
-            setBit(piece_bb[WHITE_ROOK], A1);
+            setBit(piece_bb[WHITE_ROOK], ::castling.rstart[1]);
             flipBit(occ[stm], D1);
             flipBit(occ[BOTH], D1);
-            flipBit(occ[stm], A1);
-            flipBit(occ[BOTH], A1);
+            flipBit(occ[stm], ::castling.rstart[1]);
+            flipBit(occ[BOTH], ::castling.rstart[1]);
             piece_board[D1] = NO_PIECE;
-            piece_board[A1] = WHITE_ROOK;
+            piece_board[::castling.rstart[1]] = WHITE_ROOK;
             break;
 
-        // Black Kingside (k) - Rook was on F8, move back to H8
+        // Black Kingside (k) - Rook was on F8, move back to original square
         case G8:
             popBit(piece_bb[BLACK_ROOK], F8);
-            setBit(piece_bb[BLACK_ROOK], H8);
+            setBit(piece_bb[BLACK_ROOK], ::castling.rstart[2]);
             flipBit(occ[stm], F8);
             flipBit(occ[BOTH], F8);
-            flipBit(occ[stm], H8);
-            flipBit(occ[BOTH], H8);
+            flipBit(occ[stm], ::castling.rstart[2]);
+            flipBit(occ[BOTH], ::castling.rstart[2]);
             piece_board[F8] = NO_PIECE;
-            piece_board[H8] = BLACK_ROOK;
+            piece_board[::castling.rstart[2]] = BLACK_ROOK;
             break;
 
-        // Black Queenside (q) - Rook was on D8, move back to A8
+        // Black Queenside (q) - Rook was on D8, move back to original square
         case C8:
             popBit(piece_bb[BLACK_ROOK], D8);
-            setBit(piece_bb[BLACK_ROOK], A8);
+            setBit(piece_bb[BLACK_ROOK], ::castling.rstart[3]);
             flipBit(occ[stm], D8);
             flipBit(occ[BOTH], D8);
-            flipBit(occ[stm], A8);
-            flipBit(occ[BOTH], A8);
+            flipBit(occ[stm], ::castling.rstart[3]);
+            flipBit(occ[BOTH], ::castling.rstart[3]);
             piece_board[D8] = NO_PIECE;
-            piece_board[A8] = BLACK_ROOK;
+            piece_board[::castling.rstart[3]] = BLACK_ROOK;
             break;
         default: // should never get here
             break;

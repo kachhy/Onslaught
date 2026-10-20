@@ -19,22 +19,19 @@ constexpr uint8_t WHITE_QS = 0x4;
 constexpr uint8_t BLACK_KS = 0x2;
 constexpr uint8_t BLACK_QS = 0x1;
 
-struct castling_masks {
-    // BitBoard WHITE_KINGSIDE_CASTLE_MASK = 0x6000000000000000;
-    BitBoard white_kingside_occ = 0x6000000000000000;
-    BitBoard white_kingside_threat = 0x6000000000000000;
-    BitBoard white_queenside_occ = 0x0E00000000000000;
-    BitBoard white_queenside_threat = 0x0C00000000000000;
-
-    // BitBoard BLACK_KINGSIDE_CASTLE_MASK = 0x0000000000000060;
-    BitBoard black_kingside_occ = 0x0000000000000060;
-    BitBoard black_kingside_threat = 0x0000000000000060;
-    BitBoard black_queenside_occ = 0x000000000000000E;
-    BitBoard black_queenside_threat = 0x000000000000000C;
-
-    void reset() { *this = castling_masks(); };
+struct castling_info {
+    // Indices 0/1 for white k/q-side, 2/3 for black k/q-side
+    Square king_target[4];
+    Square rook_target[4];
+    Square rstart[4];
+    BitBoard occ[4];
+    BitBoard threat[4];
+    
+    // Indices 0 for white, 1 for black
+    Square kstart[2];
 };
-extern castling_masks castle_masks;
+extern castling_info castling;
+extern const castling_info default_castling;
 
 // Engine constants
 constexpr uint16_t MAX_PLY = 256;

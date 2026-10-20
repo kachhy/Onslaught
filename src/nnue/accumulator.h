@@ -55,7 +55,10 @@ public:
         const Side us = stm;
         const Side them = static_cast<Side>(us ^ 1);
         const Square from = From(move);
-        const Square to = To(move);
+        Square to = To(move);
+        if (c960 && Castle(move)) {
+            to = castle_destination_to_actual(move, stm);
+        }
 
         if (moved_dp == KING) { // same bucket + mirror only
             king_sq[us] = static_cast<uint8_t>(to);
@@ -65,19 +68,19 @@ public:
             Square rook_from = NO_SQUARE, rook_to = NO_SQUARE;
             switch (to) {
             case G1:
-                rook_from = H1;
+                rook_from = castling.rstart[0];
                 rook_to = F1;
                 break;
             case C1:
-                rook_from = A1;
+                rook_from = castling.rstart[1];
                 rook_to = D1;
                 break;
             case G8:
-                rook_from = H8;
+                rook_from = castling.rstart[2];
                 rook_to = F8;
                 break;
             case C8:
-                rook_from = A8;
+                rook_from = castling.rstart[3];
                 rook_to = D8;
                 break;
             default: seedFrom(prev); return;
