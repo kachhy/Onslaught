@@ -29,10 +29,40 @@ short syz_probe_depth = 1;
 short syz_probe_limit = 7;
 bool syz_fmr = true;
 bool syz_dtz = true;
+bool use_wdl = false;
 
 int LMR_TABLE[LMR_TABLE_SIZE][LMR_TABLE_SIZE];
 constexpr int CAPTURE_VALUES[6] = { 300, 900, 800, 2000, 2400, 20000 }; // PBNRQK
 constexpr int SCORE_NONE = SCORE_MAX + 1;
+
+// WDL parameters
+static constexpr double WDL_A = 161.56;
+static constexpr double WDL_B = -9.22;
+static constexpr double WDL_C = 1.17;
+
+static std::tuple<int, int, int> wdl(int score) {
+    // Compute logits
+    double win_logit  =  (score - WDL_B) / WDL_A;
+    double loss_logit = -(score + WDL_B) / WDL_A;
+    double draw_logit = WDL_C;
+
+    // Softmax (subtract max for numerical stability)
+    double max_logit = std::max({win_logit, draw_logit, loss_logit});
+    double exp_w = std::exp(win_logit  - max_logit);
+    double exp_d = std::exp(draw_logit - max_logit);
+    double exp_l = std::exp(loss_logit - max_logit);
+    double sum   = exp_w + exp_d + exp_l;
+
+    int w = static_cast<int>(1000.0 * exp_w / sum);
+    int l = static_cast<int>(1000.0 * exp_l / sum);
+    int d = 1000 - w - l;  // derive d last to guarantee sum = 1000
+
+    return {w, d, l};
+}
+
+static int normalize(int score) {
+    return static_cast<int>(score * 100.0 / WDL_A);
+}
 
 // Correction history only learns from quiet best moves with non-mate scores
 static inline bool corrHistUsable(Move best_move, int best_score, TTBound bound, int corr_eval) {
@@ -87,12 +117,16 @@ int scoreFromTT(int score, int ply) {
 void printInfo(const Board& src, int depth, int seldepth, int score, const char* bound, long long nodes, int nps, PVLine* pv, int multipv = -1) {
     std::cout << "info depth " << depth << " seldepth " << seldepth;
     if (std::abs(score) < SCORE_MAX - MAX_GAME_MOVES) {
-        std::cout << " score cp " << score;
+        std::cout << " score cp " << normalize(score);
     } else {
         std::cout << " score mate " << scoreToMateScore(score);
     }
     if (bound) {
         std::cout << " " << bound;
+    }
+    if (use_wdl) {
+        auto [w, d, l] = wdl(score);
+        std::cout << " wdl " << w << " " << d << " " << l;
     }
     std::cout << " nodes " << nodes << " nps " << nps << " tbhits " << tb_hits;
     if (multipv != -1) {

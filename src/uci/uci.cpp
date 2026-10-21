@@ -120,6 +120,7 @@ static inline void initOptions() {
     setOption("MultiPV", SpinOption{ 1, 255, 1, [](int mpv) { multi_pv = mpv; } });
     setOption("MoveOverhead", SpinOption{ 0, 5000, 20, [](int mo) { move_overhead = mo; } });
     setOption("NNUE", CheckOption{ true, [](bool val) { use_nnue = val; } });
+    setOption("UCI_ShowWDL", CheckOption{ false, [](bool wdl) { use_wdl = wdl; } });
     setOption("SyzygyPath", StringOption{ "", [](std::string path) {
         tb_free();
         if (tb_init(path.c_str())) {
