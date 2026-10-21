@@ -14,7 +14,7 @@
 #include <vector>
 
 // Version descriptor
-constexpr std::string_view version = "2.0";
+constexpr std::string_view version = "2.1";
 
 // Variadic overload helper for std::visit
 template<class... Ts>
