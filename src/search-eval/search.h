@@ -20,6 +20,7 @@ extern short syz_probe_depth;
 extern short syz_probe_limit;
 extern bool syz_fmr;
 extern bool syz_dtz;
+extern bool use_wdl;
 
 struct GoParams;
 
