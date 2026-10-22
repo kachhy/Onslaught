@@ -573,6 +573,7 @@ int search(
 
     // history malus. apply penalties when all moves fail low
     MoveList quiets_tried;
+    MoveList captures_tried;
 
     // futility pruning
     bool futility_pruning = !is_pv && !in_check && depth <= FP_DEPTH_MAX && static_eval + FUTILITY_MARGIN * depth <= alpha;
@@ -615,6 +616,8 @@ int search(
 
         if (is_quiet_move) {
             quiets_tried.emplace_back(move);
+        } else if (Capture(move)) {
+            captures_tried.emplace_back(move);
         }
 
         // singular extensions: if the TT move is much better than all alternatives
@@ -756,9 +759,12 @@ int search(
                 }
 
                 updateScoreHistory(depth, board.getSTM(), best_move, quiets_tried);
+                applyCaptureMalus(board, depth, captures_tried);
                 if (ply >= 1) {
                     updateContHistory(depth, board.getSTM(), best_move, ss, quiets_tried);
                 }
+            } else if (Capture(best_move)) {
+                updateCaptureHistory(board, depth, best_move, captures_tried);
             }
 
             return best_score;

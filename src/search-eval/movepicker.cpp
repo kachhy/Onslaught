@@ -162,7 +162,7 @@ int MovePicker::scoreLoudMove(Move move) {
         DefaultPiece attacker = makeDefaultPiece(MovePiece(move));
         Piece victim_piece = IsEP(move) ? makePiece(PAWN, board.getXSTM()) : board.pieceAt(To(move));
         DefaultPiece victim = makeDefaultPiece(victim_piece);
-        return 50000 + MVV_LVA[victim][attacker];
+        return 50000 + MVV_LVA[victim][attacker] + getCaptureHistory(move, victim);
     }
 
     if (Prom(move)) {
@@ -173,7 +173,7 @@ int MovePicker::scoreLoudMove(Move move) {
     DefaultPiece attacker = makeDefaultPiece(MovePiece(move));
     Piece victim_piece = IsEP(move) ? makePiece(PAWN, board.getXSTM()) : board.pieceAt(To(move));
     DefaultPiece victim = makeDefaultPiece(victim_piece);
-    return MVV_LVA[victim][attacker];
+    return MVV_LVA[victim][attacker] + getCaptureHistory(move, victim);
 }
 
 void MovePicker::initCaptures() {

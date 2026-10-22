@@ -4,11 +4,13 @@
 #include "board/board.h"
 #include "core/movelist.h"
 #include "core/types.h"
+#include "spsa.h"
 
 constexpr int MAX_HISTORY = 8192;
 
 extern int score_history[2][64][64]; // [stm][from][to] (butterfly history)
 extern int cont_hist[2][6][64][6][64]; // [stm][prevPiece][prevTo][piece][to] (continuation history)
+extern int capture_hist[12][64][6]; // [moving piece][to][captured type] (capture history)
 
 struct SearchStack {
     int static_eval;
@@ -29,7 +31,10 @@ void updateCorrHist(const Board& board, int raw_eval, int best_score, int depth)
 
 void resetHistory();
 void updateScoreHistory(int depth, Side stm, Move move, const MoveList& quiets_tried);
+void applyCaptureMalus(const Board& board, int depth, const MoveList& captures_tried);
+void updateCaptureHistory(const Board& board, int depth, Move move, const MoveList& captures_tried);
 int getScoreHistory(Side stm, Move move);
+int getCaptureHistory(Move move, DefaultPiece capturing);
 void updateContHistory(int depth, Side stm, Move move, SearchStack* ss, const MoveList& quiets_tried);
 int getContHist(SearchStack* ss, Side stm, Move move);
 
