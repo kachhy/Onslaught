@@ -1,4 +1,5 @@
 #include "history.h"
+#include "spsa.h"
 #include "eval.h"
 #include <algorithm>
 #include <cstring>

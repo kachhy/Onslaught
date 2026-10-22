@@ -8,7 +8,8 @@
     INT (RAZOR_MARGIN,             492,   150,   900,   37)                    \
     INT (PROB_BETA_OFFSET,         184,    50,   400,   17)                    \
     INT (ASPIRATION_MARGIN,         15,     5,    60,    3)                    \
-    INT (HIST_LMR_DIVISOR,        905,   256,  8192,  100)                    \
+    INT (HIST_LMR_DIVISOR,        905,   256,  8192,  100)                     \
+    INT (CAPTURE_HISTORY_DIVISOR,    1,   1,  1024,  16)                       \
     /* Depth cutoffs */                                                        \
     INT (NMP_DEPTH_CUTOFF,           3,     1,     8,    1)                    \
     INT (RAZORING_DEPTH_MAX,         2,     1,     6,    1)                    \

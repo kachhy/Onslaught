@@ -4,7 +4,6 @@
 #include "board/board.h"
 #include "core/movelist.h"
 #include "core/types.h"
-#include "spsa.h"
 
 constexpr int MAX_HISTORY = 8192;
 
