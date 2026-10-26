@@ -245,7 +245,7 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         } else if (Capture(moves[i]) || IsEP(moves[i])) {
             DefaultPiece attacker = makeDefaultPiece(MovePiece(moves[i]));
             Piece victim_piece = IsEP(moves[i]) ? makePiece(PAWN, board.getXSTM()) : board.pieceAt(To(moves[i]));
-            scores[i] = MVV_LVA[makeDefaultPiece(victim_piece)][attacker];
+            scores[i] = MVV_LVA[makeDefaultPiece(victim_piece)][attacker] + getCaptureHistory(moves[i], makeDefaultPiece(victim_piece));
         } else {
             scores[i] = 0; // only here if in check
         }
