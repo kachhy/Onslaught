@@ -34,12 +34,6 @@ void bench() {
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
     std::cout << nodes << " nodes " << static_cast<size_t>((static_cast<double>(nodes) / duration.count()) * 1000) << " nps" << std::endl;
-    for (int d = 0; d < MAX_PLY; d++)
-        for (int m = 0; m < 255; m++)
-            if (reductions[d][m] >= 1000)
-                printf("d%2d mc%2d  n=%10llu  rate=%6.3f%% \n", d, m,
-                    (unsigned long long)reductions[d][m],
-                    100.0 * reduction_fails[d][m] / reductions[d][m]);
 }
 
 int main(int argc, char** argv) {

@@ -22,9 +22,6 @@ extern bool syz_fmr;
 extern bool syz_dtz;
 extern bool use_wdl;
 
-extern size_t reductions[MAX_PLY][255];
-extern size_t reduction_fails[MAX_PLY][255];
-
 struct GoParams;
 
 Move search(Board& board, int max_depth, int& best_score, const GoParams& params);
