@@ -31,25 +31,20 @@ static bool isLegal(Move move, const Board& board) {
         BitBoard xstm_threats = board.getThreatenedByXSTM();
 
         if (stm == WHITE) {
-            Square rook = c960 ? c960_info.wkr : G1;
-            if (to == rook) {
-                return (cr & WHITE_KS) && !((xstm_threats & castle_masks.white_kingside_threat) | (occ & castle_masks.white_kingside_occ));
+            if (to == castling.rstart[0]) {
+                return (cr & WHITE_KS) && !((xstm_threats & castling.threat[0]) | (occ & castling.occ[0]));
             }
-
-            rook = c960 ? c960_info.wqr : C1;
-            if (to == rook) {
-                return (cr & WHITE_QS) && !((xstm_threats & castle_masks.white_queenside_threat) | (occ & castle_masks.white_queenside_occ));
+            if (to == castling.rstart[1]) {
+                return (cr & WHITE_QS) && !((xstm_threats & castling.threat[1]) | (occ & castling.occ[1]));
             }
             return false;
         } else {
-            Square rook = c960 ? c960_info.bkr : G8;
-            if (to == rook) {
-                return (cr & BLACK_KS) && !((xstm_threats & castle_masks.black_kingside_threat) | (occ & castle_masks.black_kingside_occ));
+            if (to == castling.rstart[2]) {
+                return (cr & BLACK_KS) && !((xstm_threats & castling.threat[2]) | (occ & castling.occ[2]));
             }
 
-            rook = c960 ? c960_info.bqr : C8;
-            if (to == rook) {
-                return (cr & BLACK_QS) && !((xstm_threats & castle_masks.black_queenside_threat) | (occ & castle_masks.black_queenside_occ));
+            if (to == castling.rstart[3]) {
+                return (cr & BLACK_QS) && !((xstm_threats & castling.threat[3]) | (occ & castling.occ[3]));
             }
 
             return false;
