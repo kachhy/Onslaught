@@ -135,7 +135,7 @@ static inline void initOptions() {
     setOption("SyzygyRootDTZProbe", CheckOption{ true, [](bool sdtz) { syz_dtz = sdtz; } });
     setOption("SyzygyProbeLimit", SpinOption{ 0, 7, 7, [](int spl) { syz_probe_limit = spl; } });
 
-    setOption("EvalFile", StringOption{ "nn-abd46cb3aae8e9ac-v2.nnue", [](std::string path) {
+    setOption("EvalFile", StringOption{ "nn-a99aafd2a45ad047-v3-preview.nnue", [](std::string path) {
         if (path == default_net && loadNNUEFromMemory(gNNUEWeightsData, gNNUEWeightsSize)) {
             std::cout << "info string NNUE eval by " << default_net << std::endl;
         } else {
