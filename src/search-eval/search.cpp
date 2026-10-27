@@ -31,6 +31,9 @@ bool syz_fmr = true;
 bool syz_dtz = true;
 bool use_wdl = false;
 
+size_t reductions[MAX_PLY][255];
+size_t reduction_fails[MAX_PLY][255];
+
 int LMR_TABLE[LMR_TABLE_SIZE][LMR_TABLE_SIZE];
 constexpr int CAPTURE_VALUES[6] = { 300, 900, 800, 2000, 2400, 20000 }; // PBNRQK
 constexpr int SCORE_NONE = SCORE_MAX + 1;
@@ -580,6 +583,8 @@ int search(
     MovePicker picker(board, REGULAR, tt_hit ? tt_entry.best_move : NO_MOVE, ss->killers[0], ss->killers[1], ss);
     Move move;
 
+    bool has_failed_lmr = false;
+
     while ((move = picker.nextMove()) != NO_MOVE) {
         legal_seen++;
 
@@ -696,13 +701,21 @@ int search(
                     reduction -= LMR_GIVES_CHECK_REDUCTION;
                 }
 
+                // Idea: If a sibling has required an LMR re-search at low depth, then this sibling will be reduced less
+                if (depth < 5 && moves_searched < 6 && has_failed_lmr) {
+                    reduction -= LMR_SIBLING_RESEARCH_REDUCTION;
+                }
+
                 int lmr_reduction = std::max(0, std::min(reduction / LMR_GRAIN, new_depth - 1));
 
                 if (lmr_reduction > 0) {
+                    reductions[depth][moves_searched]++;
                     score = -search<NON_ROOT_NODE>(
                         board, new_depth - lmr_reduction, -alpha - 1, -alpha, true, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply, rml
                     );
                     do_full_search = score > alpha;
+                    reduction_fails[depth][moves_searched] += do_full_search;
+                    has_failed_lmr = has_failed_lmr || do_full_search;
                 } else {
                     do_full_search = true;
                 }
@@ -792,6 +805,9 @@ int search(
 }
 
 Move search(Board& board, int max_depth, int& best_score, const GoParams& params) {
+    memset(reductions, 0, sizeof(reductions));
+    memset(reduction_fails, 0, sizeof(reduction_fails));
+
     Move best_move = NO_MOVE;
     PVLine pv_table[MAX_PLY + 1]; // pre-allocated, indexed by ply
     nodes = 0;
