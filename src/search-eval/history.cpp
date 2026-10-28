@@ -1,5 +1,4 @@
 #include "history.h"
-#include "spsa.h"
 #include "eval.h"
 #include <algorithm>
 #include <cstring>
@@ -92,7 +91,7 @@ int getScoreHistory(Side stm, Move move) {
 }
 
 int getCaptureHistory(Move move, DefaultPiece capturing) {
-    return capture_hist[MovePiece(move)][To(move)][capturing] / CAPTURE_HISTORY_DIVISOR;
+    return capture_hist[MovePiece(move)][To(move)][capturing];
 }
 
 void updateContHistory(int depth, Side stm, Move move, SearchStack* ss, const MoveList& quiets_tried) {

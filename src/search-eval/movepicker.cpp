@@ -1,7 +1,13 @@
 #include "movepicker.h"
 #include "movegen/attacks.h"
 #include "see.h"
+#include "spsa.h"
 #include <utility>
+
+// Capture scores are MVV_LVA * CAPTURE_MVV_SCALE + capture history, which stays below 65536 over the
+// whole SPSA range, so these offsets keep good captures, promotions and bad captures apart
+constexpr int GOOD_CAPTURE_SCORE = 1 << 20;
+constexpr int PROMOTION_SCORE = 1 << 19;
 
 // Will also return false if the move is NO_MOVE
 static bool isLegal(Move move, const Board& board) {
@@ -162,18 +168,18 @@ int MovePicker::scoreLoudMove(Move move) {
         DefaultPiece attacker = makeDefaultPiece(MovePiece(move));
         Piece victim_piece = IsEP(move) ? makePiece(PAWN, board.getXSTM()) : board.pieceAt(To(move));
         DefaultPiece victim = makeDefaultPiece(victim_piece);
-        return 50000 + MVV_LVA[victim][attacker] + getCaptureHistory(move, victim);
+        return GOOD_CAPTURE_SCORE + MVV_LVA[victim][attacker] * CAPTURE_MVV_SCALE + getCaptureHistory(move, victim);
     }
 
     if (Prom(move)) {
-        return 40000;
+        return PROMOTION_SCORE;
     }
 
     // Bad SEE capture
     DefaultPiece attacker = makeDefaultPiece(MovePiece(move));
     Piece victim_piece = IsEP(move) ? makePiece(PAWN, board.getXSTM()) : board.pieceAt(To(move));
     DefaultPiece victim = makeDefaultPiece(victim_piece);
-    return MVV_LVA[victim][attacker] + getCaptureHistory(move, victim);
+    return MVV_LVA[victim][attacker] * CAPTURE_MVV_SCALE + getCaptureHistory(move, victim);
 }
 
 void MovePicker::initCaptures() {
@@ -208,7 +214,7 @@ Move MovePicker::nextMove() {
                 }
             }
 
-            if (loud_scores[best_index] < 40000) { // Only bad captures remain
+            if (loud_scores[best_index] < PROMOTION_SCORE) { // Only bad captures remain
                 break;
             }
 
