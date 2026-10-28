@@ -609,8 +609,9 @@ int search(
             continue;
         }
 
+        // SEE pruning: skip captures that lose too much material, with more slack for captures with a good history
         if (!in_check && moves_searched > 0 && Capture(move) && depth <= SEE_DEPTH_MAX
-            && !staticExchangeEval(board, move, -SEE_CAPTURE_MARGIN * depth * depth)) {
+            && !staticExchangeEval(board, move, -SEE_CAPTURE_MARGIN * depth * depth - getCaptureHistory(board, move) / CAPHIST_PRUNE_DIV)) {
             continue;
         }
 

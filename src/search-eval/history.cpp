@@ -1,4 +1,5 @@
 #include "history.h"
+#include "spsa.h"
 #include "eval.h"
 #include <algorithm>
 #include <cstring>
@@ -61,8 +62,13 @@ static inline DefaultPiece capturedType(const Board& board, Move move) {
     return IsEP(move) ? PAWN : makeDefaultPiece(board.pieceAt(To(move)));
 }
 
+// Linear bonus
+static inline int captureHistBonus(int depth) {
+    return std::min(CAPHIST_BONUS_MUL * depth, CAPHIST_BONUS_MAX);
+}
+
 void applyCaptureMalus(const Board& board, int depth, const MoveList& captures_tried) {
-    const int malus = -std::min(depth * depth, MAX_HISTORY);
+    const int malus = -captureHistBonus(depth);
     // malus: penalize all loud moves searched before this cutoff (didn't cause a cutoff)
     for (const Move capture : captures_tried) {
         auto& h = capture_hist[MovePiece(capture)][To(capture)][capturedType(board, capture)];
@@ -71,7 +77,7 @@ void applyCaptureMalus(const Board& board, int depth, const MoveList& captures_t
 }
 
 void updateCaptureHistory(const Board& board, int depth, Move move, const MoveList& captures_tried) {
-    const int bonus = std::min(depth * depth, MAX_HISTORY);
+    const int bonus = captureHistBonus(depth);
     auto& cap_hist = capture_hist[MovePiece(move)][To(move)][capturedType(board, move)];
     cap_hist += bonus - (cap_hist * std::abs(bonus) / MAX_HISTORY);
 
@@ -92,6 +98,10 @@ int getScoreHistory(Side stm, Move move) {
 
 int getCaptureHistory(Move move, DefaultPiece capturing) {
     return capture_hist[MovePiece(move)][To(move)][capturing];
+}
+
+int getCaptureHistory(const Board& board, Move move) {
+    return getCaptureHistory(move, capturedType(board, move));
 }
 
 void updateContHistory(int depth, Side stm, Move move, SearchStack* ss, const MoveList& quiets_tried) {

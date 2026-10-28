@@ -34,6 +34,7 @@ void applyCaptureMalus(const Board& board, int depth, const MoveList& captures_t
 void updateCaptureHistory(const Board& board, int depth, Move move, const MoveList& captures_tried);
 int getScoreHistory(Side stm, Move move);
 int getCaptureHistory(Move move, DefaultPiece capturing);
+int getCaptureHistory(const Board& board, Move move);
 void updateContHistory(int depth, Side stm, Move move, SearchStack* ss, const MoveList& quiets_tried);
 int getContHist(SearchStack* ss, Side stm, Move move);
 
