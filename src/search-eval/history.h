@@ -19,13 +19,17 @@ struct SearchStack {
 
 constexpr int CORR_HIST_SIZE = 16384; // Must be a power of two
 constexpr int CORR_HIST_SCALE = 256;
-constexpr int CORR_MAX_BONUS = 2200;
 constexpr int CORR_HIST_MAX = 16384;
 extern thread_local int kp_corrhist[CORR_HIST_SIZE][2]; // [pawn hash][stm]
+extern thread_local int np_corrhist[CORR_HIST_SIZE][2]; // [non-pawn hash][stm]
+
+static inline int corrHistIndex(const Board& board, uint64_t hash) {
+    return hash & (CORR_HIST_SIZE - 1);
+}
 
 void resetCorrHist();
 int correctEval(const Board& board, int raw_eval);
-void updateCorrHist(const Board& board, int raw_eval, int best_score, int depth);
+void updateCorrHist(const Board& board, int& entry, int raw_eval, int best_score, int depth);
 
 void resetHistory();
 void updateScoreHistory(int depth, Side stm, Move move, const MoveList& quiets_tried);

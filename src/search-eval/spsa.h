@@ -37,6 +37,10 @@
     INT (LMR_IMPROVING,           1013,     0,  3072,  128)                    \
     INT (LMR_KILLER_REDUCTION,    1011,     0,  3072,  128)                    \
     INT (LMR_GIVES_CHECK_REDUCTION, 803,   0,  3072,  128)                    \
+    /* Correction history scalars. */                                         \
+    INT (CORRH_PAWN_CONTRIBUTATION,         128,    50,     256,   10)         \
+    INT (CORRH_NONPAWN_CONTRIBUTATION,      128,    50,     256,   10)         \
+    INT (CORR_MAX_BONUS,                    2200,   1024,   8192,  256)        \
     /* Floating point terms, stored scaled by 1e6. The scale has to hold the   \
        original six-decimal constants exactly */                               \
     REAL(LMR_VALUE,             987609,  200000, 1600000,  70000, 1000000.0)   \

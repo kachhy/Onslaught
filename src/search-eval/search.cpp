@@ -745,7 +745,8 @@ int search(
                 tt.insert(board, best_move, scoreToTT(best_score, ply), LOWERBOUND, depth);
 
                 if (corrHistUsable(best_move, best_score, LOWERBOUND, corr_eval)) {
-                    updateCorrHist(board, raw_eval, best_score, depth);
+                    updateCorrHist(board, kp_corrhist[corrHistIndex(board, board.pawnHash())][board.getSTM()], raw_eval, best_score, depth);
+                    updateCorrHist(board, np_corrhist[corrHistIndex(board, board.nonPawnHash())][board.getSTM()], raw_eval, best_score, depth);
                 }
             }
 
@@ -784,7 +785,8 @@ int search(
         tt.insert(board, best_move, scoreToTT(best_score, ply), bound, depth);
 
         if (corrHistUsable(best_move, best_score, bound, corr_eval)) {
-            updateCorrHist(board, raw_eval, best_score, depth);
+            updateCorrHist(board, kp_corrhist[corrHistIndex(board, board.pawnHash())][board.getSTM()], raw_eval, best_score, depth);
+            updateCorrHist(board, np_corrhist[corrHistIndex(board, board.nonPawnHash())][board.getSTM()], raw_eval, best_score, depth);
         }
     }
 
