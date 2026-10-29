@@ -9,13 +9,13 @@
     INT (PROB_BETA_OFFSET,         184,    50,   400,   17)                    \
     INT (ASPIRATION_MARGIN,         15,     5,    60,    3)                    \
     INT (HIST_LMR_DIVISOR,        905,   256,  8192,  100)                     \
-    INT (CAPTURE_MVV_SCALE,        253,     1,  1024,   16)                    \
+    INT (CAPTURE_MVV_SCALE,        247,     1,  1024,   16)                    \
     /* Capture history: bonus = min(MUL * depth, MAX), and the SEE             \
        thresholds move by history / DIV */                                     \
-    INT (CAPHIST_BONUS_MUL,         96,    16,   512,   24)                    \
-    INT (CAPHIST_BONUS_MAX,       1280,   256,  4096,  192)                    \
-    INT (CAPHIST_SEE_DIV,           64,    16,   512,   24)                    \
-    INT (CAPHIST_PRUNE_DIV,         64,    16,   512,   24)                    \
+    INT (CAPHIST_BONUS_MUL,         91,    16,   512,   24)                    \
+    INT (CAPHIST_BONUS_MAX,       1399,   256,  4096,  192)                    \
+    INT (CAPHIST_SEE_DIV,           67,    16,   512,   24)                    \
+    INT (CAPHIST_PRUNE_DIV,         70,    16,   512,   24)                    \
     /* Depth cutoffs */                                                        \
     INT (NMP_DEPTH_CUTOFF,           3,     1,     8,    1)                    \
     INT (RAZORING_DEPTH_MAX,         2,     1,     6,    1)                    \
