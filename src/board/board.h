@@ -67,6 +67,7 @@ public:
     uint8_t getFMR() const { return fmr; }
     int phase() const { return std::clamp(phase_score, 0, 24); }
     uint64_t pawnHash() const { return pawn_hash; }
+    uint64_t nonPawnHash() const { return zobrist_hash & ~pawn_hash; }
     Score getMaterialPST() const { return material_pst_score; }
     Accumulator& getAccumulator() const { return accumulator_stack[acc_ply]; }
     void refreshAccumulator() { accumulator_stack[acc_ply].refresh(*this); }
