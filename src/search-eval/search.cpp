@@ -245,7 +245,7 @@ int quiesce(Board& board, int alpha, int beta, int ply, int qply) {
         } else if (Capture(moves[i]) || IsEP(moves[i])) {
             DefaultPiece attacker = makeDefaultPiece(MovePiece(moves[i]));
             Piece victim_piece = IsEP(moves[i]) ? makePiece(PAWN, board.getXSTM()) : board.pieceAt(To(moves[i]));
-            scores[i] = MVV_LVA[makeDefaultPiece(victim_piece)][attacker];
+            scores[i] = MVV_LVA[makeDefaultPiece(victim_piece)][attacker] * CAPTURE_MVV_SCALE + getCaptureHistory(moves[i], makeDefaultPiece(victim_piece));
         } else {
             scores[i] = 0; // only here if in check
         }
@@ -573,6 +573,7 @@ int search(
 
     // history malus. apply penalties when all moves fail low
     MoveList quiets_tried;
+    MoveList captures_tried;
 
     // futility pruning
     bool futility_pruning = !is_pv && !in_check && depth <= FP_DEPTH_MAX && static_eval + FUTILITY_MARGIN * depth <= alpha;
@@ -608,13 +609,16 @@ int search(
             continue;
         }
 
+        // SEE pruning: skip captures that lose too much material, with more slack for captures with a good history
         if (!in_check && moves_searched > 0 && Capture(move) && depth <= SEE_DEPTH_MAX
-            && !staticExchangeEval(board, move, -SEE_CAPTURE_MARGIN * depth * depth)) {
+            && !staticExchangeEval(board, move, -SEE_CAPTURE_MARGIN * depth * depth - getCaptureHistory(board, move) / CAPHIST_PRUNE_DIV)) {
             continue;
         }
 
         if (is_quiet_move) {
             quiets_tried.emplace_back(move);
+        } else if (Capture(move)) {
+            captures_tried.emplace_back(move);
         }
 
         // singular extensions: if the TT move is much better than all alternatives
@@ -669,7 +673,7 @@ int search(
                 int reduction = LMR_TABLE[std::min(depth, LMR_TABLE_SIZE - 1)][std::min(moves_searched, LMR_TABLE_SIZE - 1)];
 
                 // history-based reduction: reduce good-history quiets less, bad-history more
-                const int move_hist = getScoreHistory(board.getXSTM(), move) + getContHist(ss, board.getXSTM(), move);
+                const int move_hist = getScoreHistory(board.getXSTM(), move) + getContHist(ss, board.getXSTM(), move); // TODO: capture history here
                 reduction -= move_hist * LMR_GRAIN / HIST_LMR_DIVISOR;
 
                 if (cutnode) {
@@ -756,9 +760,12 @@ int search(
                 }
 
                 updateScoreHistory(depth, board.getSTM(), best_move, quiets_tried);
+                applyCaptureMalus(board, depth, captures_tried);
                 if (ply >= 1) {
                     updateContHistory(depth, board.getSTM(), best_move, ss, quiets_tried);
                 }
+            } else if (Capture(best_move)) {
+                updateCaptureHistory(board, depth, best_move, captures_tried);
             }
 
             return best_score;

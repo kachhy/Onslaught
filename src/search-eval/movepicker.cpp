@@ -1,7 +1,13 @@
 #include "movepicker.h"
 #include "movegen/attacks.h"
 #include "see.h"
+#include "spsa.h"
 #include <utility>
+
+// Capture scores are MVV_LVA * CAPTURE_MVV_SCALE + capture history, which stays below 65536 over the
+// whole SPSA range, so these offsets keep good captures, promotions and bad captures apart
+constexpr int GOOD_CAPTURE_SCORE = 1 << 20;
+constexpr int PROMOTION_SCORE = 1 << 19;
 
 // Will also return false if the move is NO_MOVE
 static bool isLegal(Move move, const Board& board) {
@@ -157,23 +163,23 @@ int MovePicker::scoreQuietMove(Move move) {
 }
 
 int MovePicker::scoreLoudMove(Move move) {
-    // Good SEE capture
-    if ((Capture(move) || IsEP(move)) && staticExchangeEval(board, move, 0)) {
-        DefaultPiece attacker = makeDefaultPiece(MovePiece(move));
-        Piece victim_piece = IsEP(move) ? makePiece(PAWN, board.getXSTM()) : board.pieceAt(To(move));
-        DefaultPiece victim = makeDefaultPiece(victim_piece);
-        return 50000 + MVV_LVA[victim][attacker];
+    if (!Capture(move)) { // A quiet promotion has no victim to look up
+        return PROMOTION_SCORE;
     }
 
-    if (Prom(move)) {
-        return 40000;
-    }
-
-    // Bad SEE capture
     DefaultPiece attacker = makeDefaultPiece(MovePiece(move));
     Piece victim_piece = IsEP(move) ? makePiece(PAWN, board.getXSTM()) : board.pieceAt(To(move));
     DefaultPiece victim = makeDefaultPiece(victim_piece);
-    return MVV_LVA[victim][attacker];
+    const int history = getCaptureHistory(move, victim);
+    const int score = MVV_LVA[victim][attacker] * CAPTURE_MVV_SCALE + history;
+
+    // Good SEE capture. A good history lets a capture give up a little material and still count as good, and a bad history makes it win some
+    if (staticExchangeEval(board, move, -history / CAPHIST_SEE_DIV)) {
+        return GOOD_CAPTURE_SCORE + score;
+    }
+
+    // Bad SEE capture
+    return score;
 }
 
 void MovePicker::initCaptures() {
@@ -208,7 +214,7 @@ Move MovePicker::nextMove() {
                 }
             }
 
-            if (loud_scores[best_index] < 40000) { // Only bad captures remain
+            if (loud_scores[best_index] < PROMOTION_SCORE) { // Only bad captures remain
                 break;
             }
 
