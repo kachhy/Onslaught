@@ -1,4 +1,5 @@
 #include "perft.h"
+#include "uci.h"
 #include <chrono>
 #include <cstdlib>
 #include <iomanip>
@@ -75,6 +76,42 @@ constexpr unsigned long long nodes_position_6[] = {
     287188994746ULL, // 287 billion
     11923589843526ULL,
     490154852788714ULL,
+};
+
+constexpr unsigned long long c960_position_1[] = {
+    21ULL,
+    528ULL,
+    12189ULL,
+    326672ULL,
+    8146062ULL,
+    227689589ULL
+};
+
+constexpr unsigned long long c960_position_2[] = {
+    21ULL,
+    807ULL,
+    18002ULL,
+    667366ULL,
+    16253601ULL,
+    590751109ULL
+};
+
+constexpr unsigned long long c960_position_3[] = {
+    20ULL,
+    479ULL,
+    10471ULL,
+    273318ULL,
+    6417013ULL,
+    177654692ULL
+};
+
+constexpr unsigned long long c960_position_4[] = {
+    22ULL,
+    593ULL,
+    13440ULL,
+    382958ULL,
+    9183776ULL,
+    274103539ULL
 };
 
 struct PerftKey {
@@ -169,4 +206,11 @@ void perftTests() {
     runTimePerftTest(depths[3], nodes_position_4, "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1");
     runTimePerftTest(depths[4], nodes_position_5, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
     runTimePerftTest(depths[5], nodes_position_6, "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10");
+
+    // chess 960 tests
+    c960 = true;
+    runTimePerftTest(6, c960_position_1, "bqnb1rkr/pp3ppp/3ppn2/2p5/5P2/P2P4/NPP1P1PP/BQ1BNRKR w HFhf - 2 9");
+    runTimePerftTest(6, c960_position_2, "2nnrbkr/p1qppppp/8/1ppb4/6PP/3PP3/PPP2P2/BQNNRBKR w HEhe - 1 9");
+    runTimePerftTest(6, c960_position_3, "b1q1rrkb/pppppppp/3nn3/8/P7/1PPP4/4PPPP/BQNNRKRB w GE - 1 9");
+    runTimePerftTest(6, c960_position_4, "qbbnnrkr/2pp2pp/p7/1p2pp2/8/P3PP2/1PPP1KPP/QBBNNR1R w hf - 0 9");
 }
