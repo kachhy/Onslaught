@@ -4,11 +4,11 @@
 #include <algorithm>
 #include <cstring>
 
-int score_history[2][64][64]; // [stm][from][to] (butterfly history)
-int cont_hist[2][6][64][6][64]; // [stm][prevPiece][prevTo][piece][to] (continuation history)
-int capture_hist[12][64][6]; // [moving piece][to][captured type] (capture history)
+int16_t score_history[2][64][64]; // [stm][from][to] (butterfly history)
+int16_t cont_hist[2][6][64][6][64]; // [stm][prevPiece][prevTo][piece][to] (continuation history)
+int16_t capture_hist[12][64][6]; // [moving piece][to][captured type] (capture history)
 
-thread_local int kp_corrhist[CORR_HIST_SIZE][2]; // [pawn hash][stm]
+thread_local int16_t kp_corrhist[CORR_HIST_SIZE][2]; // [pawn hash][stm]
 
 static inline int corrHistIndex(const Board& board) {
     return board.pawnHash() & (CORR_HIST_SIZE - 1);
@@ -24,7 +24,7 @@ int correctEval(const Board& board, int raw_eval) {
 }
 
 void updateCorrHist(const Board& board, int raw_eval, int best_score, int depth) {
-    int& entry = kp_corrhist[corrHistIndex(board)][board.getSTM()];
+    int16_t& entry = kp_corrhist[corrHistIndex(board)][board.getSTM()];
     
     // Error is measured against the raw eval
     const int error = (best_score - raw_eval) * CORR_HIST_SCALE;

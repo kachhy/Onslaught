@@ -7,9 +7,9 @@
 
 constexpr int MAX_HISTORY = 8192;
 
-extern int score_history[2][64][64]; // [stm][from][to] (butterfly history)
-extern int cont_hist[2][6][64][6][64]; // [stm][prevPiece][prevTo][piece][to] (continuation history)
-extern int capture_hist[12][64][6]; // [moving piece][to][captured type] (capture history)
+extern int16_t score_history[2][64][64]; // [stm][from][to] (butterfly history)
+extern int16_t cont_hist[2][6][64][6][64]; // [stm][prevPiece][prevTo][piece][to] (continuation history)
+extern int16_t capture_hist[12][64][6]; // [moving piece][to][captured type] (capture history)
 
 struct SearchStack {
     int static_eval;
@@ -22,7 +22,7 @@ constexpr int CORR_HIST_SIZE = 16384; // Must be a power of two
 constexpr int CORR_HIST_SCALE = 256;
 constexpr int CORR_MAX_BONUS = 2200;
 constexpr int CORR_HIST_MAX = 16384;
-extern thread_local int kp_corrhist[CORR_HIST_SIZE][2]; // [pawn hash][stm]
+extern thread_local int16_t kp_corrhist[CORR_HIST_SIZE][2]; // [pawn hash][stm]
 
 void resetCorrHist();
 int correctEval(const Board& board, int raw_eval);
