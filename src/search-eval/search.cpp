@@ -35,6 +35,8 @@ int LMR_TABLE[LMR_TABLE_SIZE][LMR_TABLE_SIZE];
 constexpr int CAPTURE_VALUES[6] = { 300, 900, 800, 2000, 2400, 20000 }; // PBNRQK
 constexpr int SCORE_NONE = SCORE_MAX + 1;
 
+int lmr_correction[64][64][LMR_TABLE_SIZE]; // [from][to][min(depth, LMR_TABLE_SIZE - 1)]
+
 // WDL parameters
 static constexpr double WDL_A = 161.56;
 static constexpr double WDL_B = -9.22;
@@ -700,6 +702,9 @@ int search(
                     reduction -= LMR_GIVES_CHECK_REDUCTION;
                 }
 
+                int& lmr_corr = lmr_correction[From(move)][To(move)][std::min(depth, LMR_TABLE_SIZE - 1)];
+                reduction += lmr_corr;
+
                 int lmr_reduction = std::max(0, std::min(reduction / LMR_GRAIN, new_depth - 1));
 
                 if (lmr_reduction > 0) {
@@ -707,6 +712,10 @@ int search(
                         board, new_depth - lmr_reduction, -alpha - 1, -alpha, true, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply, rml
                     );
                     do_full_search = score > alpha;
+
+                    // A fail high means we reduced too much, a fail low means the reduction is solid
+                    const int lmr_bonus = do_full_search ? -LMR_CORR_FH_BONUS : LMR_CORR_FL_BONUS;
+                    lmr_corr += lmr_bonus - (lmr_corr * std::abs(lmr_bonus) / LMR_CORR_MAX);
                 } else {
                     do_full_search = true;
                 }
@@ -804,6 +813,9 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
     nodes = 0;
     tb_hits = 0;
     best_score = 0;
+
+    // Reset LMR correction
+    memset(lmr_correction, 0, sizeof(lmr_correction));
 
     // Setup search stack. Pad the front by 4 so continuation history can read
     // (ss - 1/2/4) at low plies without underflowing; padding is zero-init (NO_MOVE).

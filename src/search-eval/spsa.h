@@ -44,6 +44,11 @@
     INT (LMR_IMPROVING,           1013,     0,  3072,  128)                    \
     INT (LMR_KILLER_REDUCTION,    1011,     0,  3072,  128)                    \
     INT (LMR_GIVES_CHECK_REDUCTION, 803,   0,  3072,  128)                    \
+    /* LMR correction gravity update. Keep FH_BONUS <= CORR_MAX so the entry   \
+       stays bounded */                                                        \
+    INT (LMR_CORR_FH_BONUS,        256,    64,   512,   32)                    \
+    INT (LMR_CORR_FL_BONUS,         32,     4,   128,    8)                    \
+    INT (LMR_CORR_MAX,            1024,   512,  4096,  192)                    \
     /* Floating point terms, stored scaled by 1e6. The scale has to hold the   \
        original six-decimal constants exactly */                               \
     REAL(LMR_VALUE,             987609,  200000, 1600000,  70000, 1000000.0)   \
