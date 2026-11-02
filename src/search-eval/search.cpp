@@ -35,7 +35,7 @@ int LMR_TABLE[LMR_TABLE_SIZE][LMR_TABLE_SIZE];
 constexpr int CAPTURE_VALUES[6] = { 300, 900, 800, 2000, 2400, 20000 }; // PBNRQK
 constexpr int SCORE_NONE = SCORE_MAX + 1;
 
-int lmr_correction[64][64][LMR_TABLE_SIZE]; // [from][to][min(depth, LMR_TABLE_SIZE - 1)]
+int16_t lmr_correction[64][64][LMR_TABLE_SIZE]; // [from][to][min(depth, LMR_TABLE_SIZE - 1)]
 
 // WDL parameters
 static constexpr double WDL_A = 161.56;
@@ -702,7 +702,7 @@ int search(
                     reduction -= LMR_GIVES_CHECK_REDUCTION;
                 }
 
-                int& lmr_corr = lmr_correction[From(move)][To(move)][std::min(depth, LMR_TABLE_SIZE - 1)];
+                int16_t& lmr_corr = lmr_correction[From(move)][To(move)][std::min(depth, LMR_TABLE_SIZE - 1)];
                 reduction += lmr_corr;
 
                 int lmr_reduction = std::max(0, std::min(reduction / LMR_GRAIN, new_depth - 1));
