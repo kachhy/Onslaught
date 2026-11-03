@@ -529,6 +529,10 @@ int search(
                 std::swap(scores[i], scores[best_move_index]);
 
                 Move move = pc_moves[i];
+                if (!staticExchangeEval(board, move, prob_beta - ss->static_eval)) {
+                    continue;
+                }
+
                 board.makeMove(move);
                 tt.prefetch(board.hash());
                 ss->move = move;
