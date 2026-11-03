@@ -7,6 +7,9 @@ struct mctsNode {
     Move move;
     int visits = 0;
     double value = 0.0;
+    double utc = 0.0;
+    double explorationConstant = 1.414; // sqrt(2) for UCT formula
+
     std::vector<mctsNode*> children;
     mctsNode* parent = nullptr;
 

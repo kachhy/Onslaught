@@ -27,11 +27,50 @@ Move searchMCTS(Board& board, int iterations, const GoParams& params) {
 
 //selects the best child node to explore next
 mctsNode* selectNode(mctsNode* node, Board& board) {
-    while (!node->children.empty()) {
-        node = node->children[0]; // Placeholder for selection logic
-        board.makeMove(node->move);
+    while (true) {
+        MoveList legalMoves;
+        getLegalMoves(board, legalMoves);
+
+        if (node->children.size() < legalMoves.size()) {
+            return node;
+        }
+
+        if (node->children.empty()) {
+            return node;
+        }
+
+        mctsNode* bestChild = nullptr;
+        double bestUCT = -std::numeric_limits<double>::infinity();
+
+        for (mctsNode* child : node->children) {
+            double uct;
+
+            if (child->visits == 0) {
+                uct = std::numeric_limits<double>::infinity();
+            } else {
+                double exploitation = child->value / child->visits;
+
+                if (board.getSTM() == BLACK) {
+                    exploitation = -exploitation;
+                }
+
+                double exploration = child->explorationConstant *
+                    sqrt(log(node->visits) / child->visits);
+
+                uct = exploitation + exploration;
+            }
+
+            child->uct = uct;
+
+            if (uct > bestUCT || bestChild == nullptr) {
+                bestUCT = uct;
+                bestChild = child;
+            }
+        }
+
+        board.makeMove(bestChild->move);
+        node = bestChild;
     }
-    return node;
 }
 
 //expands the node by adding a child for the next unexplored move and returns the new child node
@@ -62,6 +101,7 @@ mctsNode* expandNode(mctsNode* node, Board& board, MoveList legalMoves) {
 //simulate a random playout from the current board state
 //returns a value based on the outcome of the game (1 for win, 0 for loss, 0.5 for draw)
 //current problem there is no determination of who won the game, also random moves suck.
+//want to switch this to the alpha beta search we have
 double simulate(Board& board) {
     while (true) {
         if (isDraw(board, 0)) {
