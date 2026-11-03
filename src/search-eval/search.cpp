@@ -478,14 +478,14 @@ int search(
 
     if constexpr (Type != ROOT_NODE) {
         // rfp (prune worse positions harder with improving position)
-        if (!is_pv && !in_check && depth <= RFP_DEPTH_MAX && static_eval - RFP_MARGIN * (depth - (improving && depth > 1)) >= beta) {
+        if (!is_pv && !in_check && depth <= RFP_DEPTH_MAX && ss->excluded == NO_MOVE && static_eval - RFP_MARGIN * (depth - (improving && depth > 1)) >= beta) {
             return static_eval;
         }
 
         // nmp
         BitBoard non_pawn_material =
             board.getOcc(board.getSTM()) & ~board.getPieceBB(makePiece(PAWN, board.getSTM())) & ~board.getPieceBB(makePiece(KING, board.getSTM()));
-        if (!is_pv && can_make_null_move && !in_check && depth >= NMP_DEPTH_CUTOFF && static_eval >= beta && non_pawn_material) {
+        if (!is_pv && can_make_null_move && !in_check && depth >= NMP_DEPTH_CUTOFF && ss->excluded == NO_MOVE && static_eval >= beta && non_pawn_material) {
             int nmp_reduction = NMP_BASE + depth / NMP_DEPTH_DIVISOR;
             ss->move = NO_MOVE;
             board.makeNullMove();
@@ -505,7 +505,7 @@ int search(
 
         // Probcut
         int prob_beta = beta + PROB_BETA_OFFSET;
-        if (!is_pv && !in_check && depth >= PROBCUT_DEPTH_MIN
+        if (!is_pv && !in_check && depth >= PROBCUT_DEPTH_MIN && ss->excluded == NO_MOVE
             && (!tt_hit || tt_entry.score >= prob_beta || tt_entry.depth < depth - PROBCUT_TT_DEPTH_MARGIN)) {
             // Check noisy moves
             MoveList pc_moves;
@@ -529,6 +529,7 @@ int search(
                 std::swap(scores[i], scores[best_move_index]);
 
                 Move move = pc_moves[i];
+
                 board.makeMove(move);
                 tt.prefetch(board.hash());
                 ss->move = move;
