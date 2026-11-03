@@ -2,7 +2,8 @@
 #include "uci/uci.h"
 #include "core/move.h"
 #include "core/movelist.h"
-#include "core/movegen.h"
+#include "movegen/movegen.h"
+#include "board/rules.h"
 #include "search.h"
 
 //The basic search and its loop for MCTS
@@ -19,7 +20,7 @@ Move searchMCTS(Board& board, int iterations, const GoParams& params) {
             node = expandNode(node, tempBoard, legalMoves);
         }
 
-        double result = simulate(tempBoard);
+        double result = simulate(tempBoard, params);
 
         backpropagate(node, result);
     }
@@ -103,7 +104,7 @@ mctsNode* expandNode(mctsNode* node, Board& board, MoveList legalMoves) {
 //returns a value based on the outcome of the game (1 for win, 0 for loss, 0.5 for draw)
 //current problem there is no determination of who won the game, also random moves suck.
 //want to switch this to the alpha beta search we have
-double simulate(Board& board) {
+double simulate(Board& board, const GoParams& params) {
     while (true) {
         if (isDraw(board, 0)) {
             return 0; // Draw
@@ -116,7 +117,8 @@ double simulate(Board& board) {
             }
             return board.getSTM() == 0 ? -1.0 : 1.0; // White wins or Black wins
         }
-        Move nextMove = search(board, );
+        int best_score;
+        Move nextMove = search(board, (params.infinite || params.depth == -1) ? 256 : params.depth, best_score, params);
         board.makeMove(nextMove);
     }
 }
@@ -128,4 +130,16 @@ void backpropagate(mctsNode* node, double result) {
         node->value += result; // Assuming result is 1 for win, -1 for loss, 0 for draw
         node = node->parent;
     }
+}
+
+mctsNode* mostVisitedChild(mctsNode* node) {
+    mctsNode* bestChild = nullptr;
+    int maxVisits = -1;
+    for (mctsNode* child : node->children) {
+        if (child->visits > maxVisits) {
+            maxVisits = child->visits;
+            bestChild = child;
+        }
+    }
+    return bestChild;
 }
