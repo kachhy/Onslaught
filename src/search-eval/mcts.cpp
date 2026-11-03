@@ -3,6 +3,7 @@
 #include "core/move.h"
 #include "core/movelist.h"
 #include "core/movegen.h"
+#include "search.h"
 
 //The basic search and its loop for MCTS
 Move searchMCTS(Board& board, int iterations, const GoParams& params) {
@@ -115,8 +116,8 @@ double simulate(Board& board) {
             }
             return board.getSTM() == 0 ? -1.0 : 1.0; // White wins or Black wins
         }
-        Move randomMove = legalMoves[rand() % legalMoves.size()];
-        board.makeMove(randomMove);
+        Move nextMove = search(board, );
+        board.makeMove(nextMove);
     }
 }
 
