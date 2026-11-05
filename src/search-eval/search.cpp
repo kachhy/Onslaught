@@ -340,8 +340,8 @@ static int scoreMove(Board& board, Move move, Move tt_move, SearchStack* ss) {
         return 100000 + MVV_LVA[victim][attacker];
     }
 
-    int history = getScoreHistory(board.getSTM(), move) + getContHist(ss, board.getSTM(), move);
-    return history;
+    return (getScoreHistory(board.getSTM(), move) * PICKER_SCORE_HIST_WEIGHT
+            + getContHist(ss, board.getSTM(), move) * PICKER_CONT_HIST_WEIGHT) / 16384;
 }
 
 template <NodeType Type>
@@ -673,7 +673,8 @@ int search(
                 int reduction = LMR_TABLE[std::min(depth, LMR_TABLE_SIZE - 1)][std::min(moves_searched, LMR_TABLE_SIZE - 1)];
 
                 // history-based reduction: reduce good-history quiets less, bad-history more
-                const int move_hist = getScoreHistory(board.getXSTM(), move) + getContHist(ss, board.getXSTM(), move); // TODO: capture history here
+                const int move_hist = (getScoreHistory(board.getXSTM(), move) * LMR_SCORE_HIST_WEIGHT
+                                        + getContHist(ss, board.getXSTM(), move) * LMR_SCORE_HIST_WEIGHT) / 16384; // TODO: capture history here
                 reduction -= move_hist * LMR_GRAIN / HIST_LMR_DIVISOR;
 
                 if (cutnode) {

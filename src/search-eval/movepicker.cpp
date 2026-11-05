@@ -159,7 +159,7 @@ static bool isLegal(Move move, const Board& board) {
 }
 
 int MovePicker::scoreQuietMove(Move move) {
-    return getScoreHistory(board.getSTM(), move) + getContHist(ss, board.getSTM(), move);
+    return (getScoreHistory(board.getSTM(), move) * PICKER_SCORE_HIST_WEIGHT + getContHist(ss, board.getSTM(), move) * PICKER_CONT_HIST_WEIGHT) / 16384;
 }
 
 int MovePicker::scoreLoudMove(Move move) {
