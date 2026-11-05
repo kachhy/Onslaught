@@ -341,7 +341,7 @@ static int scoreMove(Board& board, Move move, Move tt_move, SearchStack* ss) {
     }
 
     return (getScoreHistory(board.getSTM(), move) * PICKER_SCORE_HIST_WEIGHT
-            + getContHist(ss, board.getSTM(), move) * PICKER_CONT_HIST_WEIGHT) / 16384;
+            + getContHist(ss, board.getSTM(), move) * PICKER_CONT_HIST_WEIGHT) / 256;
 }
 
 template <NodeType Type>
@@ -674,7 +674,7 @@ int search(
 
                 // history-based reduction: reduce good-history quiets less, bad-history more
                 const int move_hist = (getScoreHistory(board.getXSTM(), move) * LMR_SCORE_HIST_WEIGHT
-                                        + getContHist(ss, board.getXSTM(), move) * LMR_SCORE_HIST_WEIGHT) / 16384; // TODO: capture history here
+                                        + getContHist(ss, board.getXSTM(), move) * LMR_SCORE_HIST_WEIGHT) / 256; // TODO: capture history here
                 reduction -= move_hist * LMR_GRAIN / HIST_LMR_DIVISOR;
 
                 if (cutnode) {
