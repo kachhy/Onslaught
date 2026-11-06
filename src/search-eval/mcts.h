@@ -7,7 +7,6 @@ struct mctsNode {
     Move move;
     int visits = 0;
     double value = 0.0;
-    double utc = 0.0;
     double explorationConstant = 1.414; // sqrt(2) for UCT formula
 
     std::vector<mctsNode*> children;
@@ -16,6 +15,8 @@ struct mctsNode {
     mctsNode(Move m, mctsNode* p) : move(m), parent(p) {}
 };
 
-Move searchMCTS(Board& board, const GoParams& params);
+struct GoParams;
+
+Move searchMCTS(Board& board, int iterations, const GoParams& params);
 
 #endif // MCTS_H

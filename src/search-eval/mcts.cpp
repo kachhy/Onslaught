@@ -5,27 +5,7 @@
 #include "movegen/movegen.h"
 #include "board/rules.h"
 #include "search.h"
-
-//The basic search and its loop for MCTS
-Move searchMCTS(Board& board, int iterations, const GoParams& params) {
-    mctsNode* root = new mctsNode(NO_MOVE, nullptr);
-    for (int i = 0; i < iterations; i++) {
-        Board tempBoard = board; 
-
-        mctsNode* node = selectNode(root, tempBoard);
-
-        MoveList legalMoves;
-        getLegalMoves(tempBoard, legalMoves);
-        if (!legalMoves.empty()&&!isDraw(tempBoard, i)) {
-            node = expandNode(node, tempBoard, legalMoves);
-        }
-
-        double result = simulate(tempBoard, params);
-
-        backpropagate(node, result);
-    }
-    return mostVisitedChild(root)->move;
-}
+#include <cmath>
 
 //selects the best child node to explore next
 mctsNode* selectNode(mctsNode* node, Board& board) {
@@ -57,12 +37,10 @@ mctsNode* selectNode(mctsNode* node, Board& board) {
                 }
 
                 double exploration = child->explorationConstant *
-                    sqrt(log(node->visits) / child->visits);
+                    std::sqrt(std::log10(node->visits) / child->visits);
 
                 uct = exploitation + exploration;
             }
-
-            child->uct = uct;
 
             if (uct > bestUCT || bestChild == nullptr) {
                 bestUCT = uct;
@@ -142,4 +120,23 @@ mctsNode* mostVisitedChild(mctsNode* node) {
         }
     }
     return bestChild;
+}
+
+//The basic search and its loop for MCTS
+Move searchMCTS(Board& board, int iterations, const GoParams& params) {
+    mctsNode* root = new mctsNode(NO_MOVE, nullptr);
+    for (int i = 0; i < iterations; i++) {
+        mctsNode* node = selectNode(root, board);
+
+        MoveList legalMoves;
+        getLegalMoves(board, legalMoves);
+        if (!legalMoves.empty()&&!isDraw(board, i)) {
+            node = expandNode(node, board, legalMoves);
+        }
+
+        double result = simulate(board, params);
+
+        backpropagate(node, result);
+    }
+    return mostVisitedChild(root)->move;
 }
