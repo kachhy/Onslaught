@@ -11,10 +11,10 @@
     INT (HIST_LMR_DIVISOR,        905,   256,  8192,  100)                     \
     INT (CAPTURE_MVV_SCALE,        247,     1,  1024,   16)                    \
     /* Move picker and LMR history weights*/                                   \
-    INT (PICKER_SCORE_HIST_WEIGHT,  115,    16,   512,   24)                    \
-    INT (PICKER_CONT_HIST_WEIGHT,   152,    16,   512,   24)                    \
-    INT (LMR_SCORE_HIST_WEIGHT,  141,    16,   512,   24)                    \
-    INT (LMR_CONT_HIST_WEIGHT,   124,    16,   512,   24)                    \
+    INT (PICKER_SCORE_HIST_WEIGHT,  82,    16,   512,   24)                    \
+    INT (PICKER_CONT_HIST_WEIGHT,   170,    16,   512,   24)                    \
+    INT (LMR_SCORE_HIST_WEIGHT,  150,    16,   512,   24)                    \
+    INT (LMR_CONT_HIST_WEIGHT,   111,    16,   512,   24)                    \
     /* Capture history: bonus = min(MUL * depth, MAX), and the SEE             \
        thresholds move by history / DIV */                                     \
     INT (CAPHIST_BONUS_MUL,         91,    16,   512,   24)                    \
