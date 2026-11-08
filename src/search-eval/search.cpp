@@ -706,7 +706,20 @@ int search(
                     score = -search<NON_ROOT_NODE>(
                         board, new_depth - lmr_reduction, -alpha - 1, -alpha, true, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply, rml
                     );
-                    do_full_search = score > alpha;
+
+                    do_full_search = false;
+                    
+                    // We adjust the re-search based on the LMR result. Sometimes, we want to re-search with an increased or decreased depth
+                    if (score > alpha) {
+                        const bool do_deeper = score > best_score + LMR_DO_DEEPER_THRES;
+                        const bool do_shallower = score < best_score + new_depth + 1;
+                        const int lmr_research_depth = new_depth + do_deeper - do_shallower;
+
+                        score = -search<NON_ROOT_NODE>(board, lmr_research_depth, -alpha - 1, -alpha, !cutnode, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply, rml);
+                        if (score > alpha && score < beta) { // PVS
+                            score = -search<NON_ROOT_NODE>(board, new_depth, -beta, -alpha, false, hard_cap, max_nodes, start, ply + 1, ss + 1, true, pv_table, max_ply, rml);
+                        }
+                    }
                 } else {
                     do_full_search = true;
                 }

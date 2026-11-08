@@ -39,12 +39,13 @@
     INT (PROBCUT_REDUCTION,          4,     2,     8,    1)                    \
     /* LMR reduction adjustments, in 1/LMR_GRAIN (1024) ply */                 \
     INT (LMR_CUTNODE,             1972,     0,  4096,  128)                    \
-    INT (LMR_NO_TT_PV,            855,     0,  3072,  128)                    \
+    INT (LMR_NO_TT_PV,            855,     0,  3072,  128)                     \
     INT (LMR_PV_NODE,             2023,     0,  4096,  128)                    \
     INT (LMR_IMPROVING,           1013,     0,  3072,  128)                    \
     INT (LMR_KILLER_REDUCTION,    1011,     0,  3072,  128)                    \
-    INT (LMR_GIVES_CHECK_REDUCTION, 803,   0,  3072,  128)                    \
-    /* Correction history scalars. */                                         \
+    INT (LMR_GIVES_CHECK_REDUCTION, 803,   0,  3072,  128)                     \
+    INT (LMR_DO_DEEPER_THRES,        50,   0,  128,  16)                       \
+    /* Correction history scalars. */                                          \
     INT (CORRH_PAWN_CONTRIBUTATION,         130,    50,     256,   10)         \
     INT (CORRH_NONPAWN_CONTRIBUTATION,      126,    50,     256,   10)         \
     INT (CORR_MAX_BONUS,                    2253,   1024,   8192,  256)        \
