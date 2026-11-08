@@ -114,7 +114,7 @@ int scoreFromTT(int score, int ply) {
     return score;
 }
 
-void printInfo(const Board& src, int depth, int seldepth, int score, const char* bound, long long nodes, int nps, PVLine* pv, int multipv = -1) {
+void printInfo(const Board& src, int depth, int seldepth, int score, int alpha, int beta, const char* bound, long long nodes, int nps, PVLine* pv, int multipv = -1) {
     std::cout << "info depth " << depth << " seldepth " << seldepth;
     if (std::abs(score) < SCORE_MAX - MAX_GAME_MOVES) {
         std::cout << " score cp " << normalize(score);
@@ -143,6 +143,12 @@ void printInfo(const Board& src, int depth, int seldepth, int score, const char*
         for (int i = 0; i < seldepth; i++) {
             Entry tt_entry;
             bool tt_hit = tt.fetch(board, tt_entry);
+
+            if (i != 0 && 
+                ((score <= alpha && tt_entry.bound != LOWERBOUND)
+                || (score >= beta && tt_entry.bound != UPPERBOUND))) {
+                break;
+            }
 
             if (!tt_hit || tt_entry.best_move == NO_MOVE) {
                 break;
@@ -942,8 +948,8 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
 
                 if (iter_score <= alpha) {
                     // fail low = true score is at most alpha (upper bound)
-                    if (!params.silent) {
-                        printInfo(board, depth, seldepth, iter_score, "upperbound", nodes, nps, pv_table, pv_idx + 1);
+                    if (!params.silent && duration.count() > 3000) {
+                        printInfo(board, depth, seldepth, iter_score, alpha, beta, "upperbound", nodes, nps, pv_table, pv_idx + 1);
                     }
 
                     beta = alpha;
@@ -951,8 +957,8 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
                     delta *= (1 + ASPIRATION_SCALAR);
                 } else if (iter_score >= beta) {
                     // fail high = true score is at least beta (lower bound)
-                    if (!params.silent) {
-                        printInfo(board, depth, seldepth, iter_score, "lowerbound", nodes, nps, pv_table, pv_idx + 1);
+                    if (!params.silent && duration.count() > 3000) {
+                        printInfo(board, depth, seldepth, iter_score, alpha, beta, "lowerbound", nodes, nps, pv_table, pv_idx + 1);
                     }
                     
                     alpha = std::max(beta - delta, alpha);
@@ -1003,7 +1009,7 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
 
             for (int rank = 0; rank < pv_count; rank++) {
                 int pv_idx = order[rank];
-                printInfo(board, depth, seldepth, multipv_score[pv_idx], nullptr, nodes, nps, &multipv_pv[pv_idx], rank + 1);
+                printInfo(board, depth, seldepth, multipv_score[pv_idx], 0, 0, nullptr, nodes, nps, &multipv_pv[pv_idx], rank + 1);
             }
         }
 
