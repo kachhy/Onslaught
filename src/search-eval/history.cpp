@@ -5,12 +5,12 @@
 #include <algorithm>
 #include <cstring>
 
-int score_history[2][64][64]; // [stm][from][to] (butterfly history)
-int cont_hist[2][6][64][6][64]; // [stm][prevPiece][prevTo][piece][to] (continuation history)
-int capture_hist[12][64][6]; // [moving piece][to][captured type] (capture history)
+int16_t score_history[2][64][64]; // [stm][from][to] (butterfly history)
+int16_t cont_hist[2][6][64][6][64]; // [stm][prevPiece][prevTo][piece][to] (continuation history)
+int16_t capture_hist[12][64][6]; // [moving piece][to][captured type] (capture history)
 
-thread_local int kp_corrhist[CORR_HIST_SIZE][2]; // [pawn hash][stm]
-thread_local int np_corrhist[CORR_HIST_SIZE][2]; // [non-pawn hash][stm]
+thread_local int16_t kp_corrhist[CORR_HIST_SIZE][2]; // [pawn hash][stm]
+thread_local int16_t np_corrhist[CORR_HIST_SIZE][2]; // [non-pawn hash][stm]
 
 void resetCorrHist() {
     memset(kp_corrhist, 0, sizeof(kp_corrhist));
@@ -24,7 +24,7 @@ int correctEval(const Board& board, int raw_eval) {
     return std::clamp(corrected, -TB_WIN_SCORE + MAX_PLY + 1, TB_WIN_SCORE - MAX_PLY - 1); // Never look like a TB/mate score
 }
 
-void updateCorrHist(const Board& board, int& entry, int raw_eval, int best_score, int depth) {
+void updateCorrHist(const Board& board, int16_t& entry, int raw_eval, int best_score, int depth) {
     // Error is measured against the raw eval
     const int error = (best_score - raw_eval) * CORR_HIST_SCALE;
     const int weight = 2 * std::min(depth + 1, 16);
