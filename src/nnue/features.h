@@ -7,21 +7,21 @@
 #include <cstdint>
 
 // Architecture: (INPUT_SIZE -> HIDDEN_SIZE)x2 -> 8
-constexpr size_t NUM_KING_BUCKETS = 4;
+constexpr size_t NUM_KING_BUCKETS = 10;
 constexpr size_t NUM_OUTPUT_BUCKETS = 8;
 constexpr size_t INPUT_SIZE = 768;
 constexpr size_t HIDDEN_SIZE = 1024;
 
 // King buckets (Bullet's ChessBucketsMirrored)
 constexpr uint8_t KING_BUCKETS[32] = {
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    1, 1, 1, 1,
-    1, 1, 1, 1,
-    2, 2, 2, 2,
-    2, 2, 2, 2,
-    3, 3, 3, 3,
-    3, 3, 3, 3,
+    0, 1, 2, 3,
+    4, 4, 5, 5,
+    6, 6, 6, 6,
+    7, 7, 7, 7,
+    8, 8, 8, 8,
+    8, 8, 8, 8,
+    9, 9, 9, 9,
+    9, 9, 9, 9
 };
 
 // Horizontal mirror flip files when king is on e-h files

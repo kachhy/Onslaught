@@ -1,7 +1,7 @@
 CXX ?= g++
 CXXFLAGS=-Wall -MMD -MP -Wno-switch -Isrc -std=c++17 -DSPSA_TUNE
 LDFLAGS=
-EVALFILE=nn-abd46cb3aae8e9ac-v2.nnue
+EVALFILE=nn-0c9bc67b8c73abe8-v3.nnue
 
 CXXFLAGS += -DEVALFILE='"$(EVALFILE)"'
 
