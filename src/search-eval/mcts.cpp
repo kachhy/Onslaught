@@ -124,8 +124,45 @@ mctsNode* mostVisitedChild(mctsNode* node) {
 
 //The basic search and its loop for MCTS
 Move searchMCTS(Board& board, int iterations, const GoParams& params) {
+    //time management
+    auto start = std::chrono::high_resolution_clock::now();
+    size_t hard_cap = 0, soft_cap = 0; // 0 means no limit
+
+    const int clock = board.getSTM() == WHITE ? params.wtime : params.btime;
+    const int inc = board.getSTM() == WHITE ? params.winc : params.binc;
+
+    if (params.movetime != -1) {
+        hard_cap = std::max(params.movetime, 1);
+        soft_cap = params.movetime;
+    } else if (clock != -1) {
+        const int64_t left = std::max(clock - move_overhead, 1);
+        int64_t soft, hard;
+
+        if (params.movestogo > 0) {
+            soft = hard = left / params.movestogo + inc;
+        } else {
+            soft = left / 30 + inc / 3;
+            hard = left / 20 + inc / 2;
+        }
+
+        hard = std::max<int64_t>(1, std::min(hard, left * 4 / 5));
+        hard_cap = hard;
+        soft_cap = std::clamp<int64_t>(soft, 1, hard);
+    }
+
+    GoParams searchParams = params;
+    searchParams.movetime = soft_cap/30;
+    searchParams.wtime = searchParams.btime = -1;
+    searchParams.winc = searchParams.binc = 0;
+    searchParams.movestogo = 0;
     mctsNode* root = new mctsNode(NO_MOVE, nullptr);
     for (int i = 0; i < iterations; i++) {
+        // Stop the search if it has been interrupted
+        checkStdin(start, iterations, i, hard_cap);
+        if(!searching){
+            break;
+        }
+
         std::cout << "Info Iteration " << i << " best value " << (root->children.empty() ? 0 : mostVisitedChild(root)->value) << std::endl;
         mctsNode* node = selectNode(root, board);
 
@@ -135,6 +172,7 @@ Move searchMCTS(Board& board, int iterations, const GoParams& params) {
             node = expandNode(node, board, legalMoves);
         }
 
+        //gotta deal with time management
         double result = simulate(board, params);
 
         backpropagate(node, result);
