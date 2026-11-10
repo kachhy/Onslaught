@@ -346,7 +346,8 @@ static int scoreMove(Board& board, Move move, Move tt_move, SearchStack* ss) {
         return 100000 + MVV_LVA[victim][attacker];
     }
 
-    int history = getScoreHistory(board.getSTM(), move) + getContHist(ss, board.getSTM(), move);
+    int history = (getScoreHistory(board.getSTM(), move) * PICKER_SCORE_HIST_WEIGHT + getContHist(ss, board.getSTM(), move) * PICKER_CONT_HIST_WEIGHT)
+                  / HIST_WEIGHT_SCALE;
     return history;
 }
 
@@ -679,7 +680,8 @@ int search(
                 int reduction = LMR_TABLE[std::min(depth, LMR_TABLE_SIZE - 1)][std::min(moves_searched, LMR_TABLE_SIZE - 1)];
 
                 // history-based reduction: reduce good-history quiets less, bad-history more
-                const int move_hist = getScoreHistory(board.getXSTM(), move) + getContHist(ss, board.getXSTM(), move); // TODO: capture history here
+                const int move_hist = (getScoreHistory(board.getXSTM(), move) * LMR_SCORE_HIST_WEIGHT
+                                       + getContHist(ss, board.getXSTM(), move) * LMR_CONT_HIST_WEIGHT) / HIST_WEIGHT_SCALE; // TODO: capture history here
                 reduction -= move_hist * LMR_GRAIN / HIST_LMR_DIVISOR;
 
                 if (cutnode) {
@@ -817,9 +819,6 @@ Move search(Board& board, int max_depth, int& best_score, const GoParams& params
     // (ss - 1/2/4) at low plies without underflowing; padding is zero-init (NO_MOVE).
     SearchStack sstack_buf[MAX_PLY + 5] = {};
     SearchStack* sstack = sstack_buf + 4;
-
-    // Reset history
-    resetHistory();
 
     auto start = std::chrono::high_resolution_clock::now();
     size_t hard_cap = 0, soft_cap = 0; // 0 means no limit

@@ -8,7 +8,6 @@
     INT (RAZOR_MARGIN,             492,   150,   900,   37)                    \
     INT (PROB_BETA_OFFSET,         184,    50,   400,   17)                    \
     INT (ASPIRATION_MARGIN,         15,     5,    60,    3)                    \
-    INT (HIST_LMR_DIVISOR,        905,   256,  8192,  100)                     \
     INT (CAPTURE_MVV_SCALE,        247,     1,  1024,   16)                    \
     /* Capture history: bonus = min(MUL * depth, MAX), and the SEE             \
        thresholds move by history / DIV */                                     \
@@ -48,6 +47,10 @@
     INT (CORRH_PAWN_CONTRIBUTATION,         130,    50,     256,   10)         \
     INT (CORRH_NONPAWN_CONTRIBUTATION,      126,    50,     256,   10)         \
     INT (CORR_MAX_BONUS,                    2253,   1024,   8192,  256)        \
+    /* Movepicker/LMR history contributions */                                 \
+    INT (PICKER_CONT_HIST_WEIGHT,          128,    16,    1024,   24)          \
+    INT (LMR_SCORE_HIST_WEIGHT,            128,    16,    1024,   24)          \
+    INT (LMR_CONT_HIST_WEIGHT,             128,    16,    1024,   24)          \
     /* Floating point terms, stored scaled by 1e6. The scale has to hold the   \
        original six-decimal constants exactly */                               \
     REAL(LMR_VALUE,             987609,  200000, 1600000,  70000, 1000000.0)   \

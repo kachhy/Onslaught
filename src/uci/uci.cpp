@@ -311,6 +311,9 @@ void uci() {
         } else if (buffer == "ucinewgame") {
             newGame(board);
             tt.clear();
+
+            // Reset history
+            resetHistory();
             resetCorrHist();
         } else if (buffer == "isready") {
             std::cout << "readyok\n";
