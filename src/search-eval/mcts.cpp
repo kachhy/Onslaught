@@ -126,6 +126,7 @@ mctsNode* mostVisitedChild(mctsNode* node) {
 Move searchMCTS(Board& board, int iterations, const GoParams& params) {
     mctsNode* root = new mctsNode(NO_MOVE, nullptr);
     for (int i = 0; i < iterations; i++) {
+        std::cout << "Info Iteration " << i << " best value " << (root->children.empty() ? 0 : mostVisitedChild(root)->value) << std::endl;
         mctsNode* node = selectNode(root, board);
 
         MoveList legalMoves;
@@ -138,5 +139,6 @@ Move searchMCTS(Board& board, int iterations, const GoParams& params) {
 
         backpropagate(node, result);
     }
+    std::cout << "Info Best childs value " << mostVisitedChild(root)->value << std::endl;
     return mostVisitedChild(root)->move;
 }
