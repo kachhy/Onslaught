@@ -5,9 +5,9 @@
 #include <algorithm>
 #include <cstring>
 
-int16_t score_history[2][64][64]; // [stm][from][to] (butterfly history)
-int16_t cont_hist[2][6][64][6][64]; // [stm][prevPiece][prevTo][piece][to] (continuation history)
-int16_t capture_hist[12][64][6]; // [moving piece][to][captured type] (capture history)
+thread_local int16_t score_history[2][64][64]; // [stm][from][to] (butterfly history)
+thread_local int16_t cont_hist[2][6][64][6][64]; // [stm][prevPiece][prevTo][piece][to] (continuation history)
+thread_local int16_t capture_hist[12][64][6]; // [moving piece][to][captured type] (capture history)
 
 thread_local int16_t kp_corrhist[CORR_HIST_SIZE][2]; // [pawn hash][stm]
 thread_local int16_t np_corrhist[CORR_HIST_SIZE][2]; // [non-pawn hash][stm]
