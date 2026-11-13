@@ -28,6 +28,7 @@
     INT (ASPIRATION_DEPTH_CUTOFF,    3,     1,     8,    1)                    \
     INT (SEE_DEPTH_MAX,              8,     3,    15,    1)                    \
     INT (SEE_CAPTURE_MARGIN,        20,     5,    60,    3)                    \
+    INT (SEE_QUIET_MARGIN,          15,     5,    60,    3)                    \
     INT (TT_HIT_DEPTH_BONUS,         6,     0,    12,    1)                    \
     INT (RFP_DEPTH_MAX,              6,     3,    12,    1)                    \
     /* Null move reduction: NMP_BASE + depth / NMP_DEPTH_DIVISOR */            \
