@@ -49,7 +49,7 @@
     INT (CORR_MAX_BONUS,                    2253,   1024,   8192,  256)        \
     /* Movepicker/LMR history contributions */                                 \
     INT (PICKER_CONT_HIST_WEIGHT,          128,    16,    1024,   24)          \
-    INT (LMR_SCORE_HIST_WEIGHT,            128,    16,    1024,   24)          \
+    INT (HIST_LMR_DIVISOR,                3000,  1000,    8192,  300)          \
     INT (LMR_CONT_HIST_WEIGHT,             128,    16,    1024,   24)          \
     /* Floating point terms, stored scaled by 1e6. The scale has to hold the   \
        original six-decimal constants exactly */                               \
