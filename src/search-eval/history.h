@@ -8,7 +8,7 @@
 constexpr int MAX_HISTORY = 8192;
 constexpr int HIST_WEIGHT_SCALE = 128;
 constexpr int PICKER_SCORE_HIST_WEIGHT = HIST_WEIGHT_SCALE;
-constexpr int HIST_LMR_DIVISOR = 3000;
+constexpr int LMR_SCORE_HIST_WEIGHT = HIST_WEIGHT_SCALE;
 
 extern thread_local int16_t score_history[2][64][64]; // [stm][from][to] (butterfly history)
 extern thread_local int16_t cont_hist[2][6][64][6][64]; // [stm][prevPiece][prevTo][piece][to] (continuation history)
