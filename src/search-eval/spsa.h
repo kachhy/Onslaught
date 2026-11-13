@@ -11,10 +11,10 @@
     INT (CAPTURE_MVV_SCALE,        247,     1,  1024,   16)                    \
     /* Capture history: bonus = min(MUL * depth, MAX), and the SEE             \
        thresholds move by history / DIV */                                     \
-    INT (CAPHIST_BONUS_MUL,         91,    16,   512,   24)                    \
-    INT (CAPHIST_BONUS_MAX,       1399,   256,  4096,  192)                    \
-    INT (CAPHIST_SEE_DIV,           67,    16,   512,   24)                    \
-    INT (CAPHIST_PRUNE_DIV,         70,    16,   512,   24)                    \
+    INT (CAPHIST_BONUS_MUL,         99,    16,   512,   24)                    \
+    INT (CAPHIST_BONUS_MAX,       1521,   256,  4096,  192)                    \
+    INT (CAPHIST_SEE_DIV,           66,    16,   512,   24)                    \
+    INT (CAPHIST_PRUNE_DIV,         54,    16,   512,   24)                    \
     /* Depth cutoffs */                                                        \
     INT (NMP_DEPTH_CUTOFF,           3,     1,     8,    1)                    \
     INT (RAZORING_DEPTH_MAX,         2,     1,     6,    1)                    \
@@ -37,24 +37,24 @@
     INT (PROBCUT_TT_DEPTH_MARGIN,    4,     1,     6,    1)                    \
     INT (PROBCUT_REDUCTION,          4,     2,     8,    1)                    \
     /* LMR reduction adjustments, in 1/LMR_GRAIN (1024) ply */                 \
-    INT (LMR_CUTNODE,             1972,     0,  4096,  128)                    \
-    INT (LMR_NO_TT_PV,            855,     0,  3072,  128)                    \
-    INT (LMR_PV_NODE,             2023,     0,  4096,  128)                    \
-    INT (LMR_IMPROVING,           1013,     0,  3072,  128)                    \
-    INT (LMR_KILLER_REDUCTION,    1011,     0,  3072,  128)                    \
-    INT (LMR_GIVES_CHECK_REDUCTION, 803,   0,  3072,  128)                    \
+    INT (LMR_CUTNODE,             1934,     0,  4096,  128)                    \
+    INT (LMR_NO_TT_PV,            868,     0,  3072,  128)                    \
+    INT (LMR_PV_NODE,             2011,     0,  4096,  128)                    \
+    INT (LMR_IMPROVING,           1015,     0,  3072,  128)                    \
+    INT (LMR_KILLER_REDUCTION,    929,     0,  3072,  128)                    \
+    INT (LMR_GIVES_CHECK_REDUCTION, 669,   0,  3072,  128)                    \
     /* Correction history scalars. */                                         \
     INT (CORRH_PAWN_CONTRIBUTATION,         130,    50,     256,   10)         \
     INT (CORRH_NONPAWN_CONTRIBUTATION,      126,    50,     256,   10)         \
     INT (CORR_MAX_BONUS,                    2253,   1024,   8192,  256)        \
     /* Movepicker/LMR history contributions */                                 \
-    INT (PICKER_CONT_HIST_WEIGHT,          128,    16,    1024,   24)          \
-    INT (LMR_SCORE_HIST_WEIGHT,            128,    16,    1024,   24)          \
-    INT (LMR_CONT_HIST_WEIGHT,             128,    16,    1024,   24)          \
+    INT (PICKER_CONT_HIST_WEIGHT,          154,    16,    1024,   24)          \
+    INT (LMR_SCORE_HIST_WEIGHT,            137,    16,    1024,   24)          \
+    INT (LMR_CONT_HIST_WEIGHT,             141,    16,    1024,   24)          \
     /* Floating point terms, stored scaled by 1e6. The scale has to hold the   \
        original six-decimal constants exactly */                               \
-    REAL(LMR_VALUE,             987609,  200000, 1600000,  70000, 1000000.0)   \
-    REAL(LMR_SCALAR,           1519640, 1000000, 4000000, 150000, 1000000.0)   \
+    REAL(LMR_VALUE,            1020575,  200000, 1600000,  70000, 1000000.0)   \
+    REAL(LMR_SCALAR,           1659721, 1000000, 4000000, 150000, 1000000.0)   \
     REAL(ASPIRATION_SCALAR,    1214100,  500000, 3000000, 125000, 1000000.0)
 
 #ifdef SPSA_TUNE
