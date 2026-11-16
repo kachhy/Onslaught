@@ -15,7 +15,8 @@ inline int staticExchangeEval(const Board& board, Move move, int threshold) {
     Square from = From(move);
     Square to = To(move);
 
-    int v = SEE_VALUES[makeDefaultPiece(board.pieceAt(to))] - threshold;
+    const Piece victim = board.pieceAt(to); // NO_PIECE for quiet moves
+    int v = (victim == NO_PIECE ? 0 : SEE_VALUES[makeDefaultPiece(victim)]) - threshold;
     if (v < 0) {
         return 0;
     }

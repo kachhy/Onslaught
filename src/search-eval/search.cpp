@@ -621,6 +621,11 @@ int search(
             continue;
         }
 
+        // SEE Quiet pruning
+        if (!in_check && !Capture(move) && !Prom(move) && !staticExchangeEval(board, move, -SEE_QUIET_MARGIN * depth * depth)) {
+            continue;
+        }
+
         if (is_quiet_move) {
             quiets_tried.emplace_back(move);
         } else if (Capture(move)) {
