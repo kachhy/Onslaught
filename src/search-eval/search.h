@@ -25,4 +25,6 @@ struct GoParams;
 
 Move search(Board& board, int max_depth, int& best_score, const GoParams& params);
 
+int quiesce(Board& board, int alpha, int beta, int ply, int qply);
+
 #endif // SEARCH_H

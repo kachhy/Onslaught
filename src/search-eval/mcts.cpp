@@ -5,6 +5,7 @@
 #include "movegen/movegen.h"
 #include "board/rules.h"
 #include "search.h"
+#include "eval.h"
 #include <cmath>
 
 //selects the best child node to explore next
@@ -82,7 +83,7 @@ mctsNode* expandNode(mctsNode* node, Board& board, MoveList legalMoves) {
 //returns a value based on the outcome of the game (1 for win, 0 for loss, 0.5 for draw)
 //current problem there is no determination of who won the game, also random moves suck.
 //want to switch this to the alpha beta search we have
-double simulate(Board& board, const GoParams& params) {
+double simulate(Board& board, const GoParams& params, int ply) {
     while (true) {
         if (isDraw(board, 0)) {
             return 0; // Draw
@@ -95,9 +96,24 @@ double simulate(Board& board, const GoParams& params) {
             }
             return board.getSTM() == 0 ? -1.0 : 1.0; // White wins or Black wins
         }
-        int best_score;
-        Move nextMove = search(board, (params.infinite || params.depth == -1) ? 256 : params.depth, best_score, params);
-        board.makeMove(nextMove);
+        bool play_random_move = false;
+        if(play_random_move){
+            Move randomMove = legalMoves[rand() % legalMoves.size()];
+            board.makeMove(randomMove);
+        } else {
+            int bestScore = -std::numeric_limits<int>::max();
+            Move bestMove = NO_MOVE;
+            for(Move move : legalMoves){
+                board.makeMove(move);
+                int value = quiesce(board, -SCORE_MAX, SCORE_MAX, ply, 0);
+                if(value > bestScore){
+                    bestScore = value;
+                    bestMove = move;
+                }
+                board.undoMove(move);
+            }
+            board.makeMove(bestMove);
+        }
     }
 }
 
@@ -180,7 +196,7 @@ Move searchMCTS(Board& board, int iterations, const GoParams& params) {
         }
 
         //gotta deal with time management
-        double result = simulate(board, simulateParams);
+        double result = simulate(board, simulateParams, i);
 
         backpropagate(node, result);
     }
