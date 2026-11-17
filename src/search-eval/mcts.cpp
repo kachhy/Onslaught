@@ -122,6 +122,13 @@ mctsNode* mostVisitedChild(mctsNode* node) {
     return bestChild;
 }
 
+void freeMCTSNode(mctsNode* node) {
+    for (mctsNode* child : node->children) {
+        freeMCTSNode(child);
+    }
+    delete node;
+}
+
 //The basic search and its loop for MCTS
 Move searchMCTS(Board& board, int iterations, const GoParams& params) {
     //time management
@@ -150,11 +157,11 @@ Move searchMCTS(Board& board, int iterations, const GoParams& params) {
         soft_cap = std::clamp<int64_t>(soft, 1, hard);
     }
 
-    GoParams searchParams = params;
-    searchParams.movetime = soft_cap/30;
-    searchParams.wtime = searchParams.btime = -1;
-    searchParams.winc = searchParams.binc = 0;
-    searchParams.movestogo = 0;
+    GoParams simulateParams = params;
+    simulateParams.movetime = soft_cap/30;
+    simulateParams.wtime = simulateParams.btime = soft_cap/60;
+    simulateParams.winc = simulateParams.binc = 0;
+    simulateParams.movestogo = -1;
     mctsNode* root = new mctsNode(NO_MOVE, nullptr);
     for (int i = 0; i < iterations; i++) {
         // Stop the search if it has been interrupted
@@ -173,10 +180,18 @@ Move searchMCTS(Board& board, int iterations, const GoParams& params) {
         }
 
         //gotta deal with time management
-        double result = simulate(board, params);
+        double result = simulate(board, simulateParams);
 
         backpropagate(node, result);
     }
+    if (root->children.empty()) {
+        return NO_MOVE;
+    }
+    
     std::cout << "Info Best childs value " << mostVisitedChild(root)->value << std::endl;
-    return mostVisitedChild(root)->move;
+
+    Move bestMove = mostVisitedChild(root)->move;
+    freeMCTSNode(root);
+
+    return bestMove;
 }

@@ -248,7 +248,7 @@ static inline void go(Board& board) {
         best_move = search(board, (params.infinite || params.depth == -1) ? 256 : params.depth, best_score, params);
     }
     else {
-        params.silent = true;
+        params.silent = false;
         best_move = searchMCTS(board, (params.infinite || params.depth == -1) ? 256 : params.depth, params);
     }
     std::cout << "bestmove " << moveToStr(best_move) << std::endl;
