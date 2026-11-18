@@ -163,7 +163,8 @@ static void datagenWorker(int thread_id) {
         bool discard_game = false;
 
         tt.clear();
-        resetCorrHist(); // Per worker thread
+        resetHistory();
+        resetCorrHist();
 
         while (1) { // Run game
             if (isDraw(board, 0)) {
