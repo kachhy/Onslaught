@@ -88,7 +88,7 @@ double simulate(Board& board, const GoParams& params, int ply) {
     while (true) {
         auto start = std::chrono::high_resolution_clock::now();
         if (isDraw(*simulationBoard, 0)) {
-            std::cout << "DRAW DETECTED" << std::endl;
+            std::cout << "Info DRAW DETECTED" << std::endl;
             delete simulationBoard;
             return 0;
         }
@@ -98,12 +98,12 @@ double simulate(Board& board, const GoParams& params, int ply) {
 
         if (legalMoves.empty()) {
             if (!simulationBoard->inCheck()) {
-                std::cout << "STALEMATE DETECTED" << std::endl;
+                std::cout << "Info STALEMATE DETECTED" << std::endl;
                 delete simulationBoard;
                 return 0;
             }
 
-            std::cout << "CHECKMATE DETECTED" << std::endl;
+            std::cout << "Info CHECKMATE DETECTED" << std::endl;
             double result = simulationBoard->getSTM() == WHITE ? -1.0 : 1.0;
             delete simulationBoard;
             return result;
