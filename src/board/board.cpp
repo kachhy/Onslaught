@@ -355,6 +355,8 @@ bool Board::loadFEN(const std::string& fen) {
     iss >> halfmove_str;
     iss >> fullmove_str;
 
+    Square king_squares[2];
+
     // Parse piece placement (ranks 8 -> 1)
     int rank = 0;
     int file = 0;
@@ -381,13 +383,13 @@ bool Board::loadFEN(const std::string& fen) {
         case 'B': setBit(piece_bb[WHITE_BISHOP], sq); break;
         case 'R': setBit(piece_bb[WHITE_ROOK], sq); break;
         case 'Q': setBit(piece_bb[WHITE_QUEEN], sq); break;
-        case 'K': setBit(piece_bb[WHITE_KING], sq); break;
+        case 'K': setBit(piece_bb[WHITE_KING], sq); king_squares[0] = sq; break;
         case 'p': setBit(piece_bb[BLACK_PAWN], sq); break;
         case 'n': setBit(piece_bb[BLACK_KNIGHT], sq); break;
         case 'b': setBit(piece_bb[BLACK_BISHOP], sq); break;
         case 'r': setBit(piece_bb[BLACK_ROOK], sq); break;
         case 'q': setBit(piece_bb[BLACK_QUEEN], sq); break;
-        case 'k': setBit(piece_bb[BLACK_KING], sq); break;
+        case 'k': setBit(piece_bb[BLACK_KING], sq); king_squares[1] = sq; break;
         default: return false;
         }
 
@@ -408,23 +410,53 @@ bool Board::loadFEN(const std::string& fen) {
     // Castling rights: KQkq -> bits 1,2,4,8
     castling = 0;
     if (castling_str != "-") {
-        for (char ch : castling_str) {
-            if (c960) {
-                if (ch == 'A' + getFile(::castling.rstart[0])) {
-                    castling |= WHITE_KS;
-                } else if (ch == 'A' + getFile(::castling.rstart[1])) {
-                    castling |= WHITE_QS;
-                } else if (ch == 'a' + getFile(::castling.rstart[2])) {
-                    castling |= BLACK_KS;
-                } else if (ch == 'a' + getFile(::castling.rstart[3])) {
-                    castling |= BLACK_QS;
+        if (c960) {
+            
+            int king_file = -1;
+            int rook_files[2] = { -1, -1 };
+            for (char ch : castling_str) {
+                if (std::is_lower(ch)) {
+                    if (king_file != -1) { assert(king_file == getFile(king_squares[1])); }
+                    king_file = getFile(king_squares[1]);
+
+                    int rook_file = (int)(ch - 'a');
+                    if (rook_file < king_file) { // queenside rook
+                        if (rook_files[1] != -1) { assert(rook_files[1] == rook_file); }
+                        rook_files[1] = rook_file;
+                        castling |= BLACK_QS;
+                    } else { // kingside rook
+                        if (rook_files[0] != -1) { assert(rook_files[0] == rook_file); }
+                        rook_files[0] = rook_file;
+                        castling |= BLACK_KS;
+                    }
+                } else {
+                    if (king_file != -1) { assert(king_file == getFile(king_squares[0])); }
+                    king_file = getFile(king_squares[0]);
+
+                    int rook_file = (int)(ch - 'A');
+                    if (rook_file < king_file) { // queenside rook
+                        if (rook_files[1] != -1) { assert(rook_files[1] == rook_file); }
+                        rook_files[1] = rook_file;
+                        castling |= WHITE_QS;
+                    } else { // kingside rook
+                        if (rook_files[0] != -1) { assert(rook_files[0] == rook_file); }
+                        rook_files[0] = rook_file;
+                        castling |= WHITE_KS;
+                    }
                 }
-            } else switch (ch) {
-                case 'K': castling |= WHITE_KS; break;
-                case 'Q': castling |= WHITE_QS; break;
-                case 'k': castling |= BLACK_KS; break;
-                case 'q': castling |= BLACK_QS; break;
-                default: break;
+            }
+            
+            if (rook_files[0] == -1) { rook_files[0] = 7 };
+            if (rook_files[1] == -1) { rook_files[1] = 0 };
+            ::castling = generate_castling_info(king_file, rook_files[0], rook_files[1]);
+
+        } else for (char ch : castling_str) {
+            switch (ch) {
+            case 'K': castling |= WHITE_KS; break;
+            case 'Q': castling |= WHITE_QS; break;
+            case 'k': castling |= BLACK_KS; break;
+            case 'q': castling |= BLACK_QS; break;
+            default: break;
             }
         }
     }
