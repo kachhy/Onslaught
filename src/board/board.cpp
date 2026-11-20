@@ -41,6 +41,82 @@ static castling_info make_default_castling() {
     return info;
 }
 
+castling_info generate_castling_info(int king_file, int kingside_rook_file, int queenside_rook_file) {
+    castling_info info;
+
+    info.kstart[0] = A1 + king_file;
+    info.kstart[1] = A8 + king_file;
+
+    info.rstart[0] = A1 + kingside_rook_file;
+    info.rstart[1] = A1 + queenside_rook_file;
+    info.rstart[2] = A8 + kingside_rook_file;
+    info.rstart[3] = A8 + queenside_rook_file;
+
+    // Kingside threat and king occ
+    for (int i = king_file; i <= kingside_rook_file; i++) {
+        setBit(info.threat[0], A1 + i);
+        setBit(info.threat[2], A8 + i);
+        setBit(info.occ[0], A1 + i);
+        setBit(info.occ[2], A8 + i);
+
+        // Don't check king square itself for occupancy
+        if (i == king_file) {
+            popBit(info.occ[0], A1 + i);
+            popBit(info.occ[2], A8 + i);
+        }
+    }
+
+    // Queenside threat and king occ
+    for (int i = queenside_rook_file; i <= king_file; i++) {
+        setBit(info.threat[1], A1 + i);
+        setBit(info.threat[3], A8 + i);
+        setBit(info.occ[1], A1 + i);
+        setBit(info.occ[3], A8 + i);
+
+        // Don't check king square itself for occupancy
+        if (i == king_file) {
+            popBit(info.occ[1], A1 + i);
+            popBit(info.occ[3], A8 + i);
+        }
+    }
+
+    // Kingside rook occ
+    for (int i = king_file; i <= kingside_rook_file; i++) {
+        setBit(info.occ[0], A1 + i);
+        setBit(info.occ[2], A8 + i);
+
+        // Don't check rook square for occupancy
+        if (i == kingside_rook_file) {
+            popBit(info.occ[0], A1 + i);
+            popBit(info.occ[2], A8 + i);
+        }
+    }
+
+    // Queenside rook occ
+    for (int i = queenside_rook_file; i <= king_file; i++) {
+        setBit(info.occ[1], A1 + i);
+        setBit(info.occ[3], A8 + i);
+        
+        // Don't check rook square for occupancy
+        if (i == kingside_rook_file) {
+            popBit(info.occ[1], A1 + i);
+            popBit(info.occ[3], A8 + i);
+        }
+    }
+    
+    info.king_target[0] = G1;
+    info.king_target[2] = G8;
+    info.king_target[1] = C1;
+    info.king_target[3] = C8;
+
+    info.rook_target[0] = F1;
+    info.rook_target[2] = F8;
+    info.rook_target[1] = D1;
+    info.rook_target[3] = D8;
+
+    return info;
+}
+
 castling_info castling = make_default_castling();
 const castling_info default_castling = make_default_castling();
 

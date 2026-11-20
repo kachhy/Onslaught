@@ -33,6 +33,8 @@ struct castling_info {
 extern castling_info castling;
 extern const castling_info default_castling;
 
+castling_info generate_castling_info(int king_file, int kingside_rook_file, int queenside_rook_file);
+
 // Engine constants
 constexpr uint16_t MAX_PLY = 256;
 
