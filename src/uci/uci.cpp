@@ -17,6 +17,7 @@
 
 Board board;
 thread_local bool searching = false;
+thread_local bool mcts_searching = false;
 thread_local bool stdin_enabled = true;
 bool debug_mode = false;
 bool mcts_enabled = false;
@@ -248,7 +249,8 @@ static inline void go(Board& board) {
         best_move = search(board, (params.infinite || params.depth == -1) ? 256 : params.depth, best_score, params);
     }
     else {
-        params.silent = true;
+        mcts_searching = true;
+        params.silent = false;
         best_move = searchMCTS(board, (params.infinite || params.depth == -1) ? 256 : params.depth, params);
     }
     std::cout << "bestmove " << moveToStr(best_move) << std::endl;
@@ -356,14 +358,20 @@ static bool stdinHasData() {
 #endif
 }
 
-void checkStdin(std::chrono::high_resolution_clock::time_point start, long long max_nodes, long long current_nodes, size_t hard_cap) {
+void checkStdin(std::chrono::high_resolution_clock::time_point start, long long max_nodes, long long current_nodes, size_t hard_cap, bool is_mcts) {
     auto now = std::chrono::high_resolution_clock::now();
     if (hard_cap != 0 && (size_t)std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count() >= hard_cap) {
+        if (is_mcts) {
+            mcts_searching = false;
+        }
         searching = false;
         return;
     }
 
     if (max_nodes != -1 && current_nodes >= max_nodes) {
+        if (is_mcts) {
+            mcts_searching = false;
+        }
         searching = false;
         return;
     }
@@ -379,6 +387,9 @@ void checkStdin(std::chrono::high_resolution_clock::time_point start, long long 
     std::string line;
     if (std::getline(std::cin, line)) {
         if (line == "stop") {
+            if (is_mcts) {
+                mcts_searching = false;
+            }
             searching = false;
         } else if (line == "quit") {
             exit(0);

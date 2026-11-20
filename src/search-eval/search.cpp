@@ -326,7 +326,7 @@ int search(
     pv_table[ply].cur_move = 0;
 
     if (!(nodes & 4095)) {
-        checkStdin(start, max_nodes, nodes, hard_cap);
+        checkStdin(start, max_nodes, nodes, hard_cap, false);
         if (!searching) {
             return eval(board);
         }

@@ -5,6 +5,7 @@
 #include "movegen/movegen.h"
 #include "board/rules.h"
 #include "search.h"
+#include "eval.h"
 #include <cmath>
 
 //selects the best child node to explore next
@@ -82,22 +83,55 @@ mctsNode* expandNode(mctsNode* node, Board& board, MoveList legalMoves) {
 //returns a value based on the outcome of the game (1 for win, 0 for loss, 0.5 for draw)
 //current problem there is no determination of who won the game, also random moves suck.
 //want to switch this to the alpha beta search we have
-double simulate(Board& board, const GoParams& params) {
+double simulate(Board& board, const GoParams& params, int ply) {
+    Board* simulationBoard = new Board(board);
     while (true) {
-        if (isDraw(board, 0)) {
-            return 0; // Draw
+        auto start = std::chrono::high_resolution_clock::now();
+        if (isDraw(*simulationBoard, 0)) {
+            std::cout << "Info DRAW DETECTED" << std::endl;
+            delete simulationBoard;
+            return 0;
         }
+
         MoveList legalMoves;
-        getLegalMoves(board, legalMoves);
+        getLegalMoves(*simulationBoard, legalMoves);
+
         if (legalMoves.empty()) {
-            if (!board.inCheck()) {
-                return 0; // Stalemate
+            if (!simulationBoard->inCheck()) {
+                std::cout << "Info STALEMATE DETECTED" << std::endl;
+                delete simulationBoard;
+                return 0;
             }
-            return board.getSTM() == 0 ? -1.0 : 1.0; // White wins or Black wins
+
+            std::cout << "Info CHECKMATE DETECTED" << std::endl;
+            double result = simulationBoard->getSTM() == WHITE ? -1.0 : 1.0;
+            delete simulationBoard;
+            return result;
         }
-        int best_score;
-        Move nextMove = search(board, (params.infinite || params.depth == -1) ? 256 : params.depth, best_score, params);
-        board.makeMove(nextMove);
+
+        bool play_random_move = (rand() % 100) < 20;
+        if(play_random_move){
+            Move randomMove = legalMoves[rand() % legalMoves.size()];
+            simulationBoard->makeMove(randomMove);
+        } else {
+            int bestScore = -std::numeric_limits<int>::max();
+            Move bestMove = NO_MOVE;
+            for(Move move : legalMoves){
+                simulationBoard->makeMove(move);
+                int value = quiesce(*simulationBoard, -SCORE_MAX, SCORE_MAX, ply, 0);
+                if(value > bestScore){
+                    bestScore = value;
+                    bestMove = move;
+                }
+                simulationBoard->undoMove(move);
+
+                checkStdin(start, 1, 0, params.movetime, false);
+                if(!searching){
+                    break;
+                }
+            }
+            simulationBoard->makeMove(bestMove);
+        }
     }
 }
 
@@ -122,10 +156,54 @@ mctsNode* mostVisitedChild(mctsNode* node) {
     return bestChild;
 }
 
+void freeMCTSNode(mctsNode* node) {
+    for (mctsNode* child : node->children) {
+        freeMCTSNode(child);
+    }
+    delete node;
+}
+
 //The basic search and its loop for MCTS
 Move searchMCTS(Board& board, int iterations, const GoParams& params) {
+    //time management
+    auto start = std::chrono::high_resolution_clock::now();
+    size_t hard_cap = 0, soft_cap = 0; // 0 means no limit
+
+    const int clock = board.getSTM() == WHITE ? params.wtime : params.btime;
+    const int inc = board.getSTM() == WHITE ? params.winc : params.binc;
+
+    if (params.movetime != -1) {
+        hard_cap = std::max(params.movetime, 1);
+        soft_cap = params.movetime;
+    } else if (clock != -1) {
+        const int64_t left = std::max(clock - move_overhead, 1);
+        int64_t soft, hard;
+
+        if (params.movestogo > 0) {
+            soft = hard = left / params.movestogo + inc;
+        } else {
+            soft = left / 30 + inc / 3;
+            hard = left / 20 + inc / 2;
+        }
+
+        hard = std::max<int64_t>(1, std::min(hard, left * 4 / 5));
+        hard_cap = hard;
+        soft_cap = std::clamp<int64_t>(soft, 1, hard);
+    }
+
+    GoParams simulateParams = params;
+    simulateParams.movetime = soft_cap/30;
+    simulateParams.wtime = simulateParams.btime = soft_cap/60;
+    simulateParams.winc = simulateParams.binc = 0;
+    simulateParams.movestogo = -1;
     mctsNode* root = new mctsNode(NO_MOVE, nullptr);
     for (int i = 0; i < iterations; i++) {
+        // Stop the search if it has been interrupted
+        checkStdin(start, iterations, i, hard_cap, true);
+        if(!mcts_searching){
+            break;
+        }
+
         std::cout << "Info Iteration " << i << " best value " << (root->children.empty() ? 0 : mostVisitedChild(root)->value) << std::endl;
         mctsNode* node = selectNode(root, board);
 
@@ -135,10 +213,32 @@ Move searchMCTS(Board& board, int iterations, const GoParams& params) {
             node = expandNode(node, board, legalMoves);
         }
 
-        double result = simulate(board, params);
+        //gotta deal with time management
+        double result = simulate(board, simulateParams, i);
+
+        std::cout << "Iteration: " << i
+          << " Simulation result: " << result
+          << std::endl;
+
+
+        searching = true;
 
         backpropagate(node, result);
+        mctsNode* current = node;
+
+        while (current->parent != nullptr) {
+            board.undoMove(current->move);
+            current = current->parent;
+        }
     }
+    if (root->children.empty()) {
+        return NO_MOVE;
+    }
+    
     std::cout << "Info Best childs value " << mostVisitedChild(root)->value << std::endl;
-    return mostVisitedChild(root)->move;
+
+    Move bestMove = mostVisitedChild(root)->move;
+    freeMCTSNode(root);
+
+    return bestMove;
 }
