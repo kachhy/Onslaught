@@ -224,6 +224,12 @@ Move searchMCTS(Board& board, int iterations, const GoParams& params) {
         searching = true;
 
         backpropagate(node, result);
+        mctsNode* current = node;
+
+        while (current->parent != nullptr) {
+            board.undoMove(current->move);
+            current = current->parent;
+        }
     }
     if (root->children.empty()) {
         return NO_MOVE;
