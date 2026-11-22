@@ -25,7 +25,7 @@ extern const unsigned int  gNNUEWeightsSize   = 0;
 // Global game board, declared in uci.cpp
 extern Board board;
 
-std::string nnue_path = "nn-434b2a78950525ce-v2.nnue"; // Default NNUE
+std::string nnue_path = "nn-206ba3b20bc6210d-v3.nnue"; // Default NNUE
 
 // Network storage
 alignas(64) int16_t network_weights[INPUT_SIZE * NUM_KING_BUCKETS][HIDDEN_SIZE] = {};

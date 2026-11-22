@@ -6,7 +6,7 @@
 #include <filesystem>
 
 extern std::string nnue_path;
-const std::string default_net("nn-434b2a78950525ce-v2.nnue");
+const std::string default_net("nn-206ba3b20bc6210d-v3.nnue");
 
 // Embedded network symbols (defined in nnue.cpp via INCBIN or fallback stubs)
 extern const unsigned char gNNUEWeightsData[];
